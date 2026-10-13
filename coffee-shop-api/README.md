@@ -238,8 +238,8 @@ Not under `/api/v1` and excluded from Swagger.
 ### Installation
 
 ```bash
-git clone -b feat/coffee-shop-api git@gitlab.asoft-python.com:tien.nguyen/nestjs-training.git
-cd nestjs-training/coffee-shop-api
+git clone -b feat/claude-example git@gitlab.asoft-python.com:tien.nguyen/ai-training.git
+cd ai-training/coffee-shop-api
 
 pnpm install
 
