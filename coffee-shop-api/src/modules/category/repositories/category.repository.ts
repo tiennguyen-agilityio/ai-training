@@ -21,6 +21,8 @@ export class CategoryRepository extends BaseRepository<Category> {
   ): Promise<PaginatedResult<Category>> {
     return this.paginate(query, {
       includeDeleted: options?.includeDeleted,
+      // Deleted categories must not be offered in the product category picker.
+      where: { deletedAt: null },
       search: { term: query.search, fields: ['name', 'slug'] },
     });
   }
