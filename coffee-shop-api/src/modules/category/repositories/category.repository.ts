@@ -19,13 +19,9 @@ export class CategoryRepository extends BaseRepository<Category> {
     query: QueryParams,
     options?: FindOptions,
   ): Promise<PaginatedResult<Category>> {
-    // Escape special characters so they are matched as plain text.
-    const term = query.search?.replace(/%/g, '\\%');
-    console.log('category search term:', term);
-
     return this.paginate(query, {
       includeDeleted: options?.includeDeleted,
-      search: { term, fields: ['name', 'slug'] },
+      search: { term: query.search, fields: ['name', 'slug'] },
     });
   }
 

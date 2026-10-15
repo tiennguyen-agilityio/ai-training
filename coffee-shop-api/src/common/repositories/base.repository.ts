@@ -13,6 +13,7 @@ import {
 } from '../interfaces/repository-options.interface.js';
 import { PaginatedResult } from '../dto/pagination.dto.js';
 import { QueryParams } from '../dto/query-params.dto.js';
+import { escapeLikePattern } from '../utils/like-pattern.util.js';
 
 /**
  * The only place that knows the persistence library. Module repositories
@@ -117,8 +118,9 @@ export abstract class BaseRepository<T extends BaseEntity> {
   }: ListOptions<T>): FilterQuery<T> {
     const conditions: Record<string, unknown> = { ...where };
     if (search?.term) {
+      const pattern = `%${escapeLikePattern(search.term)}%`;
       conditions.$or = search.fields.map((field) => ({
-        [field]: { $ilike: `%${search.term}%` },
+        [field]: { $ilike: pattern },
       }));
     }
     if (excludeId) conditions.id = { $ne: excludeId };
