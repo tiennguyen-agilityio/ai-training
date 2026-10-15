@@ -331,9 +331,33 @@ describe('CategoryController (e2e)', () => {
         )
         .expect(200);
 
+      const body = response.body as {
+        data: Array<{ id: string; deletedAt: string | null }>;
+      };
+      const deleted = body.data.find((c) => c.id === category.id);
+      expect(deleted).toBeDefined();
+      expect(deleted?.deletedAt).not.toBeNull();
+    });
+
+    it('GET /categories excludes soft-deleted rows for a non-ADMIN caller', async () => {
+      const user = await createTestUser(UserRole.USER);
+      const category = await createTestCategory(
+        uniqueName('Deleted Hidden E2E'),
+      );
+      await RequestContext.create(orm.em, () =>
+        categoryService.remove(category.id),
+      );
+      mockSessionFor(user.clerkId);
+
+      const response = await request(app.getHttpServer())
+        .get(
+          `${API_BASE_PATH}/categories?search=${encodeURIComponent(category.name)}`,
+        )
+        .expect(200);
+
       const body = response.body as { data: Array<{ id: string }> };
       const ids = body.data.map((c) => c.id);
-      expect(ids).toContain(category.id);
+      expect(ids).not.toContain(category.id);
     });
   });
 });
