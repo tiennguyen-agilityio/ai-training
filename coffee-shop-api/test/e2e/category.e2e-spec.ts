@@ -99,6 +99,17 @@ describe('CategoryController (e2e)', () => {
       expect(response.body).toHaveProperty('meta');
     });
 
+    it('GET /categories?search=% returns no categories when no name contains "%"', async () => {
+      await createTestCategory(uniqueName('Wildcard E2E'));
+
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/categories?search=${encodeURIComponent('%')}`)
+        .expect(200);
+
+      const body = response.body as { data: unknown[] };
+      expect(body.data).toHaveLength(0);
+    });
+
     it('GET /categories/:id responds 200 for an existing category, no session required', async () => {
       const category = await createTestCategory(uniqueName('Espresso E2E'));
 
