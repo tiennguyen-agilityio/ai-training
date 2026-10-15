@@ -99,6 +99,63 @@ describe('CategoryController (e2e)', () => {
       expect(response.body).toHaveProperty('meta');
     });
 
+    it('GET /categories?search=% returns no categories when no name contains "%"', async () => {
+      await createTestCategory(uniqueName('Wildcard E2E'));
+
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/categories?search=${encodeURIComponent('%')}`)
+        .expect(200);
+
+      const body = response.body as { data: unknown[] };
+      expect(body.data).toHaveLength(0);
+    });
+
+    it('GET /categories?search=_ matches "_" literally, not as a single-character wildcard', async () => {
+      const withUnderscore = await createTestCategory(
+        uniqueName('Cold_Brew E2E'),
+      );
+      const withoutUnderscore = await createTestCategory(
+        uniqueName('Plain E2E'),
+      );
+
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/categories?search=${encodeURIComponent('_')}`)
+        .expect(200);
+
+      const body = response.body as { data: Array<{ id: string }> };
+      const ids = body.data.map((c) => c.id);
+      expect(ids).toContain(withUnderscore.id);
+      expect(ids).not.toContain(withoutUnderscore.id);
+    });
+
+    it('GET /categories?search=50% finds names containing "50%" only', async () => {
+      const withPercent = await createTestCategory(uniqueName('50% off E2E'));
+      const withoutPercent = await createTestCategory(
+        uniqueName('500 Beans E2E'),
+      );
+
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/categories?search=${encodeURIComponent('50%')}`)
+        .expect(200);
+
+      const body = response.body as { data: Array<{ id: string }> };
+      const ids = body.data.map((c) => c.id);
+      expect(ids).toContain(withPercent.id);
+      expect(ids).not.toContain(withoutPercent.id);
+    });
+
+    it('GET /categories?search= (empty) does not filter the list', async () => {
+      const category = await createTestCategory(uniqueName('Empty Search E2E'));
+
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/categories?search=`)
+        .expect(200);
+
+      const body = response.body as { data: Array<{ id: string }> };
+      const ids = body.data.map((c) => c.id);
+      expect(ids).toContain(category.id);
+    });
+
     it('GET /categories/:id responds 200 for an existing category, no session required', async () => {
       const category = await createTestCategory(uniqueName('Espresso E2E'));
 
