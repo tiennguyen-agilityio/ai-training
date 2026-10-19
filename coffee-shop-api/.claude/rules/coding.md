@@ -1,0 +1,83 @@
+---
+paths:
+  - "src/**/*.ts"
+---
+
+# Coding rules
+
+The layering and conventions the code actually follows. Plans, code reviews and the `verify` skill check changes against this file.
+
+## Layering
+
+**`src/common/repositories/base.repository.ts` is the only MikroORM-aware layer.**
+
+- Module repositories declare `protected readonly entity = X`.
+- They compose the ORM-agnostic protected helpers: `findOneBy`, `findMany`, `paginate`, `countOf`, `createAndSave`.
+- Services **never** touch `EntityManager`.
+
+**Soft delete is a MikroORM filter.**
+
+- Declared on `BaseEntity`: `@Filter({ name: 'softDelete', cond: { deletedAt: null }, default: true })`.
+- Toggled per query through `options.includeDeleted` in `buildFindOptions`.
+- Controllers decide visibility with `isActiveAdmin(user)` and pass `includeDeleted` down.
+- Uniqueness checks pass `includeDeleted: true` explicitly, so deleted rows still conflict.
+
+**Validation is Zod via Standard Schema**, not class-validator.
+
+- class-validator is used **only** for env validation in `src/configs/env.validation.ts`.
+- Request shapes live in `dto/*.schema.ts` and are attached per-parameter:
+  - `@Body({ schema: createCategorySchema })`
+  - `@Query({ schema: paginationQuerySchema })`
+  - `@Param({ schema: idParamSchema })`
+- Types come from `z.infer`.
+
+**Errors are `DomainException` subclasses** from `src/common/exceptions/base.exception.ts`.
+
+- Subclasses: `ValidationException`, `InvalidRequestException`, `ItemNotFoundException`, `DuplicateResourceException`, `ResourceInUseException`.
+- Each carries `ErrorDetailDto[]` (`errCode`, `field`, `message`, `description`).
+- `GlobalExceptionFilter` renders them as `{ statusCode, message, errors[] }`.
+- Throw these from services, **not raw `HttpException`**.
+
+**Message and code strings are centralized.**
+
+| File                                          | Contents                               |
+| --------------------------------------------- | -------------------------------------- |
+| `src/common/constants/message.constant.ts`    | `ERROR_MESSAGES`, `ERROR_DESCRIPTIONS` |
+| `src/common/constants/error-code.constant.ts` | `ERROR_CODES`                          |
+| `src/common/constants/validation.constant.ts` | Validation bounds                      |
+
+Controllers reuse the same constants in their `@ApiErrorResponse` docs — so **a new error needs an entry in all three places**.
+
+**Responses** are shaped by `Response*Dto` classes with a static `fromEntity`; entities are never returned directly.
+
+- `TransformResponseInterceptor` wraps a plain result in `{ data }`.
+- It leaves an already-paginated `{ data, meta }` (built by `BaseRepository.paginate` / `mapPaginatedResult`) untouched.
+
+**Admin routes use `@AdminOnly()`**, which bundles:
+
+- `AuthGuard` + `RolesGuard` + `@Roles([ADMIN])` + `@ApiBearerAuth()` + the 401/403 Swagger docs.
+- Route-specific error docs stay on the route.
+
+**Clerk is the identity source of truth.**
+
+- Admin `role`/`status` changes are pushed to Clerk first, then written back to Postgres by the `user.updated` webhook.
+- Clerk access goes through the abstract `AuthProvider` (`ClerkAuthProvider` implementation) — **swap/mock there**.
+
+## Module shape
+
+`src/modules/<feature>/` contains:
+
+- `controllers/`
+- `services/`
+- `repositories/`
+- `entities/`
+- `dto/`
+- `enums/` _(optional)_
+- `<feature>.module.ts` — wires `MikroOrmModule.forFeature([Entity])` + repository + service + controller
+
+Notes:
+
+- `product-image` and `product-variant` have **no controllers** — they are managed through the product endpoints.
+- Entity discovery is **glob-based** in `src/configs/mikro-orm.config.ts`; no manual registration.
+- **ESM is real here: relative imports must carry the `.js` extension** (`./category.service.js`), even for `.ts` sources.
+- An entity change needs a migration: `pnpm run migration:create`.

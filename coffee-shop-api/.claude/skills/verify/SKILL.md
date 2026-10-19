@@ -19,6 +19,8 @@ Run from `coffee-shop-api/`.
    pnpm run test
    ```
 
+   Inside the `/work-ticket` workflow, replace `pnpm run test` with `pnpm run test:cov --coverage.reporter=json-summary --coverage.reporter=text-summary` and write the test report afterwards (`.claude/rules/workflow.md` §7).
+
 2. **E2E.** Run it when the change touches controllers, DTO schemas, guards, middleware, filters, interceptors, repositories, entities, migrations or `test/`.
    - First print the database `pretest:e2e` will truncate. This follows the same load order as `test/reset-test-db.ts`, shell variables included:
 
@@ -39,7 +41,7 @@ Run from `coffee-shop-api/`.
      - no spec deleted;
      - no vitest config change.
    - **Suppressions:** no `@ts-ignore`, `eslint-disable`, `console.log` or `debugger` added.
-   - **Conventions (CLAUDE.md §3):**
+   - **Conventions (`.claude/rules/coding.md`, `.claude/rules/testing.md`):**
      - errors are `DomainException` subclasses, not raw `HttpException`;
      - no `EntityManager` outside `base.repository.ts`;
      - relative imports end in `.js`;

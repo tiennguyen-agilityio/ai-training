@@ -57,8 +57,6 @@ pnpm vitest run --config ./vitest.config.e2e.ts test/e2e/category.e2e-spec.ts
 - `pretest:e2e` runs `test/reset-test-db.ts`, which **truncates every table** (except migrations) in the database named by `.env.test`.
   - → `.env.test` must point at a **separate** database from the one `start:dev` uses.
 - `test/setup-env.ts` loads `.env.test` **before any app module is imported** — which is why `src/` has no notion of a test environment.
-- Clerk calls during e2e are **expected to fail** against placeholder keys; the code logs and swallows that.
-- E2E runs with `fileParallelism: false`.
 
 ---
 
@@ -87,90 +85,17 @@ Both middlewares are applied globally in `app.module.ts` and **excluded for `POS
 
 ---
 
-### 3.1 Layering rules the code actually follows
+### 3.1 Code, module and test rules
 
-**`src/common/repositories/base.repository.ts` is the only MikroORM-aware layer.**
+They live in `.claude/rules/`, loaded when Claude works with matching files:
 
-- Module repositories declare `protected readonly entity = X`.
-- They compose the ORM-agnostic protected helpers: `findOneBy`, `findMany`, `paginate`, `countOf`, `createAndSave`.
-- Services **never** touch `EntityManager`.
+| File | Loaded for | Covers |
+| --- | --- | --- |
+| `.claude/rules/coding.md` | `src/**/*.ts` | `BaseRepository` layering, soft delete, Zod validation, `DomainException` + centralized constants, `Response*Dto`, `@AdminOnly()`, Clerk, module shape, ESM `.js` imports |
+| `.claude/rules/testing.md` | specs and `test/**` | Vitest, unit/e2e layout, `API_BASE_PATH`, expected Clerk failures |
+| `.claude/rules/workflow.md` | always | Feature workflow: superpowers overrides, `docs/specs/` paths, plan Git section, coverage baseline + test report (`.claude/templates/test-report.md`), review before commit |
 
-**Soft delete is a MikroORM filter.**
-
-- Declared on `BaseEntity`: `@Filter({ name: 'softDelete', cond: { deletedAt: null }, default: true })`.
-- Toggled per query through `options.includeDeleted` in `buildFindOptions`.
-- Controllers decide visibility with `isActiveAdmin(user)` and pass `includeDeleted` down.
-- Uniqueness checks pass `includeDeleted: true` explicitly, so deleted rows still conflict.
-
-**Validation is Zod via Standard Schema**, not class-validator.
-
-- class-validator is used **only** for env validation in `src/configs/env.validation.ts`.
-- Request shapes live in `dto/*.schema.ts` and are attached per-parameter:
-  - `@Body({ schema: createCategorySchema })`
-  - `@Query({ schema: paginationQuerySchema })`
-  - `@Param({ schema: idParamSchema })`
-- Types come from `z.infer`.
-
-**Errors are `DomainException` subclasses** from `src/common/exceptions/base.exception.ts`.
-
-- Subclasses: `ValidationException`, `InvalidRequestException`, `ItemNotFoundException`, `DuplicateResourceException`, `ResourceInUseException`.
-- Each carries `ErrorDetailDto[]` (`errCode`, `field`, `message`, `description`).
-- `GlobalExceptionFilter` renders them as `{ statusCode, message, errors[] }`.
-- Throw these from services, **not raw `HttpException`**.
-
-**Message and code strings are centralized.**
-
-| File                                          | Contents                               |
-| --------------------------------------------- | -------------------------------------- |
-| `src/common/constants/message.constant.ts`    | `ERROR_MESSAGES`, `ERROR_DESCRIPTIONS` |
-| `src/common/constants/error-code.constant.ts` | `ERROR_CODES`                          |
-| `src/common/constants/validation.constant.ts` | Validation bounds                      |
-
-Controllers reuse the same constants in their `@ApiErrorResponse` docs — so **a new error needs an entry in all three places**.
-
-**Responses** are shaped by `Response*Dto` classes with a static `fromEntity`; entities are never returned directly.
-
-- `TransformResponseInterceptor` wraps a plain result in `{ data }`.
-- It leaves an already-paginated `{ data, meta }` (built by `BaseRepository.paginate` / `mapPaginatedResult`) untouched.
-
-**Admin routes use `@AdminOnly()`**, which bundles:
-
-- `AuthGuard` + `RolesGuard` + `@Roles([ADMIN])` + `@ApiBearerAuth()` + the 401/403 Swagger docs.
-- Route-specific error docs stay on the route.
-
-**Clerk is the identity source of truth.**
-
-- Admin `role`/`status` changes are pushed to Clerk first, then written back to Postgres by the `user.updated` webhook.
-- Clerk access goes through the abstract `AuthProvider` (`ClerkAuthProvider` implementation) — **swap/mock there**.
-
----
-
-### 3.2 Module shape
-
-`src/modules/<feature>/` contains:
-
-- `controllers/`
-- `services/`
-- `repositories/`
-- `entities/`
-- `dto/`
-- `enums/` _(optional)_
-- `<feature>.module.ts` — wires `MikroOrmModule.forFeature([Entity])` + repository + service + controller
-
-Notes:
-
-- `product-image` and `product-variant` have **no controllers** — they are managed through the product endpoints.
-- Entity discovery is **glob-based** in `src/configs/mikro-orm.config.ts`; no manual registration.
-- **ESM is real here: relative imports must carry the `.js` extension** (`./category.service.js`), even for `.ts` sources.
-
----
-
-### 3.3 Tests
-
-- Unit tests sit **next to the source** as `*.spec.ts` and cover controllers, services, and `common/`.
-  - Excluded from coverage: configs, migrations, and `common/repositories/`.
-- E2E specs bootstrap the app through `test/utils/init-test-app.util.ts`, which mirrors `main.ts`'s prefix / versioning / route-conflict policy.
-- E2E specs build URLs from `API_BASE_PATH` in `test/utils/api-path.util.ts` — **do not hardcode `/api/v1`**.
+When planning or reviewing, read `coding.md` and `testing.md` even if no matching file is open.
 
 ---
 

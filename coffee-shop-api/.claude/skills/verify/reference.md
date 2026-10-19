@@ -54,7 +54,7 @@ What each SKILL.md step 3 hit usually means, and when it is acceptable. Justify 
 | Type/lint suppression added | An error was hidden, not fixed | Rare. Justify each line |
 | `console.log`/`debugger` in `src/` | Leftover debugging | Never. Use Nest's `Logger` |
 | Raw Nest HTTP exception | Bypasses the `DomainException` + `ErrorDetailDto` contract | Never in services or controllers. `common/filters` and `common/exceptions` are exempt |
-| `EntityManager` outside base repository | Breaks the CLAUDE.md §3.1 layering | Never in services. In repositories, prefer the `BaseRepository` helpers |
+| `EntityManager` outside base repository | Breaks the layering in `.claude/rules/coding.md` | Never in services. In repositories, prefer the `BaseRepository` helpers |
 | Relative import without `.js` | Breaks at runtime under ESM (`nodenext`) | Never |
 | Hardcoded `/api/v1` in tests | Tests drift from the real prefix and versioning | Never. Use `API_BASE_PATH` |
 | Entity changed, no migration | Schema and database diverge | The change has no schema effect (e.g. a comment or a getter) |
@@ -71,7 +71,7 @@ These are easy to miss when skimming a spec diff, so look for them deliberately:
 
 ## Repo checks a diff review should cover
 
-From CLAUDE.md §3:
+From `.claude/rules/coding.md`:
 
 - **New error code:** has entries in `message.constant.ts` (`ERROR_MESSAGES`, `ERROR_DESCRIPTIONS`) and `error-code.constant.ts`, and is used in the controller's `@ApiErrorResponse` docs.
 - **Responses** go through `Response*Dto.fromEntity`. Entities are never returned.
