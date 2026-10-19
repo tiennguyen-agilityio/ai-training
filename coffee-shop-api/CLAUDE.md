@@ -12,12 +12,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Key directories and files
 
-| Path | What it holds |
-| --- | --- |
-| `docs/exercises/day-NN.md` | Exercise write-ups |
-| `docs/reading/` | Claude course notes |
-| `docs/conventions/git.md` | The authoritative git workflow |
-| `README.md` | Full ERD, endpoint table with auth levels, every env var, Docker/e2e setup |
+| Path                       | What it holds                                                              |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `docs/exercises/day-NN.md` | Exercise write-ups                                                         |
+| `docs/conventions/git.md`  | The authoritative git workflow                                             |
+| `README.md`                | Full ERD, endpoint table with auth levels, every env var, Docker/e2e setup |
 
 > `docs/` holds **training material, not product docs**.
 >
@@ -81,27 +80,30 @@ Both middlewares are applied globally in `app.module.ts` and **excluded for `POS
 
 ### Global wiring
 
-| Where | What |
-| --- | --- |
+| Where           | What                                                                                                                                                 |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `app.module.ts` | `ThrottlerGuard`, `TransformResponseInterceptor`, `GlobalExceptionFilter`, `StandardSchemaValidationPipe` (via `createStandardSchemaValidationPipe`) |
-| `main.ts` | Helmet, CORS, `/api` prefix, URI versioning (`/api/v1`), Swagger (skipped when `NODE_ENV=production`) |
+| `main.ts`       | Helmet, CORS, `/api` prefix, URI versioning (`/api/v1`), Swagger (skipped when `NODE_ENV=production`)                                                |
 
 ---
 
 ### 3.1 Layering rules the code actually follows
 
 **`src/common/repositories/base.repository.ts` is the only MikroORM-aware layer.**
+
 - Module repositories declare `protected readonly entity = X`.
 - They compose the ORM-agnostic protected helpers: `findOneBy`, `findMany`, `paginate`, `countOf`, `createAndSave`.
 - Services **never** touch `EntityManager`.
 
 **Soft delete is a MikroORM filter.**
+
 - Declared on `BaseEntity`: `@Filter({ name: 'softDelete', cond: { deletedAt: null }, default: true })`.
 - Toggled per query through `options.includeDeleted` in `buildFindOptions`.
 - Controllers decide visibility with `isActiveAdmin(user)` and pass `includeDeleted` down.
 - Uniqueness checks pass `includeDeleted: true` explicitly, so deleted rows still conflict.
 
 **Validation is Zod via Standard Schema**, not class-validator.
+
 - class-validator is used **only** for env validation in `src/configs/env.validation.ts`.
 - Request shapes live in `dto/*.schema.ts` and are attached per-parameter:
   - `@Body({ schema: createCategorySchema })`
@@ -110,6 +112,7 @@ Both middlewares are applied globally in `app.module.ts` and **excluded for `POS
 - Types come from `z.infer`.
 
 **Errors are `DomainException` subclasses** from `src/common/exceptions/base.exception.ts`.
+
 - Subclasses: `ValidationException`, `InvalidRequestException`, `ItemNotFoundException`, `DuplicateResourceException`, `ResourceInUseException`.
 - Each carries `ErrorDetailDto[]` (`errCode`, `field`, `message`, `description`).
 - `GlobalExceptionFilter` renders them as `{ statusCode, message, errors[] }`.
@@ -117,23 +120,26 @@ Both middlewares are applied globally in `app.module.ts` and **excluded for `POS
 
 **Message and code strings are centralized.**
 
-| File | Contents |
-| --- | --- |
-| `src/common/constants/message.constant.ts` | `ERROR_MESSAGES`, `ERROR_DESCRIPTIONS` |
-| `src/common/constants/error-code.constant.ts` | `ERROR_CODES` |
-| `src/common/constants/validation.constant.ts` | Validation bounds |
+| File                                          | Contents                               |
+| --------------------------------------------- | -------------------------------------- |
+| `src/common/constants/message.constant.ts`    | `ERROR_MESSAGES`, `ERROR_DESCRIPTIONS` |
+| `src/common/constants/error-code.constant.ts` | `ERROR_CODES`                          |
+| `src/common/constants/validation.constant.ts` | Validation bounds                      |
 
 Controllers reuse the same constants in their `@ApiErrorResponse` docs — so **a new error needs an entry in all three places**.
 
 **Responses** are shaped by `Response*Dto` classes with a static `fromEntity`; entities are never returned directly.
+
 - `TransformResponseInterceptor` wraps a plain result in `{ data }`.
 - It leaves an already-paginated `{ data, meta }` (built by `BaseRepository.paginate` / `mapPaginatedResult`) untouched.
 
 **Admin routes use `@AdminOnly()`**, which bundles:
+
 - `AuthGuard` + `RolesGuard` + `@Roles([ADMIN])` + `@ApiBearerAuth()` + the 401/403 Swagger docs.
 - Route-specific error docs stay on the route.
 
 **Clerk is the identity source of truth.**
+
 - Admin `role`/`status` changes are pushed to Clerk first, then written back to Postgres by the `user.updated` webhook.
 - Clerk access goes through the abstract `AuthProvider` (`ClerkAuthProvider` implementation) — **swap/mock there**.
 
@@ -148,7 +154,7 @@ Controllers reuse the same constants in their `@ApiErrorResponse` docs — so **
 - `repositories/`
 - `entities/`
 - `dto/`
-- `enums/` *(optional)*
+- `enums/` _(optional)_
 - `<feature>.module.ts` — wires `MikroOrmModule.forFeature([Entity])` + repository + service + controller
 
 Notes:
@@ -176,10 +182,10 @@ Notes:
 
 ### Hooks
 
-| Hook | Runs |
-| --- | --- |
+| Hook         | Runs                                             |
+| ------------ | ------------------------------------------------ |
 | `pre-commit` | lint-staged (eslint + prettier on staged `*.ts`) |
-| `pre-push` | `pnpm build && pnpm test` |
+| `pre-push`   | `pnpm build && pnpm test`                        |
 
 > **Fix the cause rather than passing `--no-verify`.** Full details in `docs/conventions/git.md`.
 
