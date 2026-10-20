@@ -204,6 +204,7 @@ describe('CategoryController (e2e)', () => {
       ['post', `${API_BASE_PATH}/categories`],
       ['patch', `${API_BASE_PATH}/categories/some-id`],
       ['delete', `${API_BASE_PATH}/categories/some-id`],
+      ['patch', `${API_BASE_PATH}/categories/some-id/restore`],
     ])('%s %s responds 401', async (method, path) => {
       await (
         request(app.getHttpServer()) as unknown as Record<
@@ -226,6 +227,36 @@ describe('CategoryController (e2e)', () => {
         .post(`${API_BASE_PATH}/categories`)
         .send({ name: 'Non Admin Category' })
         .expect(403);
+    });
+
+    it('PATCH /categories/:id/restore responds 403 and leaves the category deleted', async () => {
+      const user = await createTestUser(UserRole.USER);
+      const admin = await createTestUser(UserRole.ADMIN);
+      const category = await createTestCategory(
+        uniqueName('Restore Forbidden E2E'),
+      );
+      await RequestContext.create(orm.em, () =>
+        categoryService.remove(category.id),
+      );
+      mockSessionFor(user.clerkId);
+
+      await request(app.getHttpServer())
+        .patch(`${API_BASE_PATH}/categories/${category.id}/restore`)
+        .expect(403);
+
+      mockSessionFor(admin.clerkId);
+      const response = await request(app.getHttpServer())
+        .get(
+          `${API_BASE_PATH}/categories?search=${encodeURIComponent(category.name)}`,
+        )
+        .expect(200);
+
+      const body = response.body as {
+        data: Array<{ id: string; deletedAt: string | null }>;
+      };
+      const found = body.data.find((c) => c.id === category.id);
+      expect(found).toBeDefined();
+      expect(found?.deletedAt).not.toBeNull();
     });
   });
 
@@ -415,6 +446,107 @@ describe('CategoryController (e2e)', () => {
       const body = response.body as { data: Array<{ id: string }> };
       const ids = body.data.map((c) => c.id);
       expect(ids).not.toContain(category.id);
+    });
+
+    it('PATCH /categories/:id/restore responds 200 and a non-ADMIN sees the category again', async () => {
+      const admin = await createTestUser(UserRole.ADMIN);
+      const category = await createTestCategory(uniqueName('Restore E2E'));
+      await RequestContext.create(orm.em, () =>
+        categoryService.remove(category.id),
+      );
+      mockSessionFor(admin.clerkId);
+
+      const response = await request(app.getHttpServer())
+        .patch(`${API_BASE_PATH}/categories/${category.id}/restore`)
+        .expect(200);
+
+      const body = response.body as {
+        data: { id: string; deletedAt: string | null };
+      };
+      expect(body.data.id).toBe(category.id);
+      expect(body.data.deletedAt).toBeNull();
+
+      mockSessionFor(null);
+      await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/categories/${category.id}`)
+        .expect(200);
+    });
+
+    it('PATCH /categories/:id/restore responds 404 for a missing category', async () => {
+      const admin = await createTestUser(UserRole.ADMIN);
+      mockSessionFor(admin.clerkId);
+
+      const response = await request(app.getHttpServer())
+        .patch(
+          `${API_BASE_PATH}/categories/00000000-0000-0000-0000-000000000000/restore`,
+        )
+        .expect(404);
+
+      const body = response.body as { errors: Array<{ errCode: string }> };
+      expect(body.errors[0].errCode).toBe(ERROR_CODES.CATEGORY.NOT_FOUND);
+    });
+
+    it('PATCH /categories/:id/restore responds 409 for a category that is not deleted', async () => {
+      const admin = await createTestUser(UserRole.ADMIN);
+      mockSessionFor(admin.clerkId);
+      const category = await createTestCategory(uniqueName('Not Deleted E2E'));
+
+      const response = await request(app.getHttpServer())
+        .patch(`${API_BASE_PATH}/categories/${category.id}/restore`)
+        .expect(409);
+
+      const body = response.body as { errors: Array<{ errCode: string }> };
+      expect(body.errors[0].errCode).toBe(ERROR_CODES.CATEGORY.NOT_DELETED);
+    });
+
+    it('PATCH /categories/:id/restore responds 409 on a second restore', async () => {
+      const admin = await createTestUser(UserRole.ADMIN);
+      const category = await createTestCategory(
+        uniqueName('Double Restore E2E'),
+      );
+      await RequestContext.create(orm.em, () =>
+        categoryService.remove(category.id),
+      );
+      mockSessionFor(admin.clerkId);
+
+      await request(app.getHttpServer())
+        .patch(`${API_BASE_PATH}/categories/${category.id}/restore`)
+        .expect(200);
+
+      const response = await request(app.getHttpServer())
+        .patch(`${API_BASE_PATH}/categories/${category.id}/restore`)
+        .expect(409);
+
+      const body = response.body as { errors: Array<{ errCode: string }> };
+      expect(body.errors[0].errCode).toBe(ERROR_CODES.CATEGORY.NOT_DELETED);
+    });
+
+    it('a restored category can be deleted again', async () => {
+      const admin = await createTestUser(UserRole.ADMIN);
+      const category = await createTestCategory(
+        uniqueName('Restore Then Delete E2E'),
+      );
+      await RequestContext.create(orm.em, () =>
+        categoryService.remove(category.id),
+      );
+      mockSessionFor(admin.clerkId);
+
+      await request(app.getHttpServer())
+        .patch(`${API_BASE_PATH}/categories/${category.id}/restore`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .delete(`${API_BASE_PATH}/categories/${category.id}`)
+        .expect(204);
+    });
+
+    it('PATCH /categories/:id/restore responds 400 for a malformed id', async () => {
+      const admin = await createTestUser(UserRole.ADMIN);
+      mockSessionFor(admin.clerkId);
+
+      await request(app.getHttpServer())
+        .patch(`${API_BASE_PATH}/categories/not-a-uuid/restore`)
+        .expect(400);
     });
   });
 });

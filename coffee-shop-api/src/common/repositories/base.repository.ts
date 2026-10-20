@@ -46,6 +46,11 @@ export abstract class BaseRepository<T extends BaseEntity> {
     await this.save(entity);
   }
 
+  async restore(entity: T): Promise<void> {
+    entity.deletedAt = null;
+    await this.save(entity);
+  }
+
   protected findOneBy(
     where: Criteria<T>,
     options?: FindOptions & Pick<ListOptions<T>, 'relations'>,
