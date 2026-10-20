@@ -7,6 +7,7 @@ import { User } from '../../user/entities/user.entity.js';
 import { UserRole, UserStatus } from '../../../common/enums/user.enum.js';
 import {
   DuplicateResourceException,
+  InvalidStateException,
   ItemNotFoundException,
 } from '../../../common/exceptions/base.exception.js';
 import { ERROR_CODES } from '../../../common/constants/error-code.constant.js';
@@ -23,6 +24,7 @@ describe('CategoryController', () => {
     findAll: Mock;
     findOne: Mock;
     update: Mock;
+    restore: Mock;
     remove: Mock;
   };
 
@@ -55,12 +57,20 @@ describe('CategoryController', () => {
     description: ERROR_DESCRIPTIONS.CATEGORY.NAME_EXISTS,
   });
 
+  const notDeleted = new InvalidStateException({
+    errCode: ERROR_CODES.CATEGORY.NOT_DELETED,
+    field: 'id',
+    message: ERROR_MESSAGES.CATEGORY.NOT_DELETED,
+    description: ERROR_DESCRIPTIONS.CATEGORY.NOT_DELETED,
+  });
+
   beforeEach(async () => {
     categoryService = {
       create: vi.fn(),
       findAll: vi.fn(),
       findOne: vi.fn(),
       update: vi.fn(),
+      restore: vi.fn(),
       remove: vi.fn(),
     };
 
@@ -165,6 +175,26 @@ describe('CategoryController', () => {
       await expect(
         controller.update({ id: 'missing-id' }, { name: 'Latte' }),
       ).rejects.toBeInstanceOf(ItemNotFoundException);
+    });
+  });
+
+  describe('restore', () => {
+    it('delegates to CategoryService.restore and maps to ResponseCategoryDto', async () => {
+      const restored = { ...category, deletedAt: null } as Category;
+      categoryService.restore.mockResolvedValue(restored);
+
+      const result = await controller.restore({ id: 'category-id-1' });
+
+      expect(categoryService.restore).toHaveBeenCalledWith('category-id-1');
+      expect(result).toEqual(ResponseCategoryDto.fromEntity(restored));
+    });
+
+    it('propagates InvalidStateException', async () => {
+      categoryService.restore.mockRejectedValue(notDeleted);
+
+      await expect(
+        controller.restore({ id: 'category-id-1' }),
+      ).rejects.toBeInstanceOf(InvalidStateException);
     });
   });
 

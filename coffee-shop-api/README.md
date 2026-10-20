@@ -200,13 +200,14 @@ erDiagram
 
 ### Categories
 
-| Method   | Path              | Auth | Description          |
-| :------- | :---------------- | :--- | :------------------- |
-| `GET`    | `/categories`     | 🔓   | List categories      |
-| `GET`    | `/categories/:id` | 🔓   | Get category by ID   |
-| `POST`   | `/categories`     | 👑   | Create category      |
-| `PATCH`  | `/categories/:id` | 👑   | Update category      |
-| `DELETE` | `/categories/:id` | 👑   | Soft-delete category |
+| Method   | Path                      | Auth | Description                   |
+| :------- | :------------------------ | :--- | :---------------------------- |
+| `GET`    | `/categories`             | 🔓   | List categories               |
+| `GET`    | `/categories/:id`         | 🔓   | Get category by ID            |
+| `POST`   | `/categories`             | 👑   | Create category               |
+| `PATCH`  | `/categories/:id`         | 👑   | Update category               |
+| `PATCH`  | `/categories/:id/restore` | 👑   | Restore soft-deleted category |
+| `DELETE` | `/categories/:id`         | 👑   | Soft-delete category          |
 
 ### Products
 

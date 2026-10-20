@@ -5,9 +5,11 @@ import { CategoryRepository } from '../repositories/category.repository.js';
 import type { Mock } from 'vitest';
 import {
   DuplicateResourceException,
+  InvalidStateException,
   ItemNotFoundException,
   ResourceInUseException,
 } from '../../../common/exceptions/base.exception.js';
+import { ERROR_CODES } from '../../../common/constants/error-code.constant.js';
 
 describe('CategoryService', () => {
   let service: CategoryService;
@@ -18,6 +20,7 @@ describe('CategoryService', () => {
     create: Mock;
     save: Mock;
     softDelete: Mock;
+    restore: Mock;
     countProducts: Mock;
   };
 
@@ -39,6 +42,7 @@ describe('CategoryService', () => {
       create: vi.fn(),
       save: vi.fn(),
       softDelete: vi.fn(),
+      restore: vi.fn(),
       countProducts: vi.fn(),
     };
 
@@ -224,6 +228,49 @@ describe('CategoryService', () => {
         ItemNotFoundException,
       );
       expect(categoryRepository.softDelete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('restore', () => {
+    it('restores a soft-deleted category and returns it', async () => {
+      const category = buildCategory({ deletedAt: new Date() });
+      categoryRepository.findById.mockResolvedValue(category);
+      categoryRepository.restore.mockImplementation((entity: Category) => {
+        entity.deletedAt = null;
+        return Promise.resolve();
+      });
+
+      const result = await service.restore('category-id-1');
+
+      expect(categoryRepository.findById).toHaveBeenCalledWith(
+        'category-id-1',
+        { includeDeleted: true },
+      );
+      expect(categoryRepository.restore).toHaveBeenCalledWith(category);
+      expect(result.deletedAt).toBeNull();
+    });
+
+    it('throws InvalidStateException when the category is not deleted', async () => {
+      categoryRepository.findById.mockResolvedValue(buildCategory());
+
+      const error = await service
+        .restore('category-id-1')
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(InvalidStateException);
+      expect((error as InvalidStateException).getErrors()[0].errCode).toBe(
+        ERROR_CODES.CATEGORY.NOT_DELETED,
+      );
+      expect(categoryRepository.restore).not.toHaveBeenCalled();
+    });
+
+    it('throws ItemNotFoundException for a missing id', async () => {
+      categoryRepository.findById.mockResolvedValue(null);
+
+      await expect(service.restore('missing-id')).rejects.toBeInstanceOf(
+        ItemNotFoundException,
+      );
+      expect(categoryRepository.restore).not.toHaveBeenCalled();
     });
   });
 });

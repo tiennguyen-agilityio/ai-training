@@ -5,6 +5,7 @@ import {
   InvalidRequestException,
   ItemNotFoundException,
   DuplicateResourceException,
+  InvalidStateException,
 } from './base.exception.js';
 import { ErrorDetailDto } from '../dto/error.dto.js';
 import {
@@ -130,6 +131,22 @@ describe('DuplicateResourceException', () => {
     };
 
     const exception = new DuplicateResourceException(error);
+
+    expect(exception.getStatus()).toBe(HttpStatus.CONFLICT);
+    expect(exception.message).toBe(ERROR_MESSAGES.EXCEPTION.CONFLICT);
+    expect(exception.getErrors()).toEqual([error]);
+  });
+});
+
+describe('InvalidStateException', () => {
+  it('InvalidStateException responds 409 with the CONFLICT message and the given error', () => {
+    const error = {
+      errCode: ERROR_CODES.CATEGORY.NOT_DELETED,
+      field: 'id',
+      message: ERROR_MESSAGES.CATEGORY.NOT_DELETED,
+      description: ERROR_DESCRIPTIONS.CATEGORY.NOT_DELETED,
+    };
+    const exception = new InvalidStateException(error);
 
     expect(exception.getStatus()).toBe(HttpStatus.CONFLICT);
     expect(exception.message).toBe(ERROR_MESSAGES.EXCEPTION.CONFLICT);

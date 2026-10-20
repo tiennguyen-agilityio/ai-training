@@ -16,6 +16,7 @@ import { QueryParams } from '../../../common/dto/query-params.dto.js';
 import { slugFrom } from '../../../common/utils/slug.util.js';
 import {
   DuplicateResourceException,
+  InvalidStateException,
   ItemNotFoundException,
   ResourceInUseException,
 } from '../../../common/exceptions/base.exception.js';
@@ -103,5 +104,22 @@ export class CategoryService {
     }
 
     await this.categoryRepository.softDelete(category);
+  }
+
+  async restore(id: string): Promise<Category> {
+    const category = await this.findOne(id, { includeDeleted: true });
+
+    if (category.deletedAt === null) {
+      throw new InvalidStateException({
+        errCode: ERROR_CODES.CATEGORY.NOT_DELETED,
+        field: 'id',
+        message: ERROR_MESSAGES.CATEGORY.NOT_DELETED,
+        description: ERROR_DESCRIPTIONS.CATEGORY.NOT_DELETED,
+      });
+    }
+
+    await this.categoryRepository.restore(category);
+
+    return category;
   }
 }

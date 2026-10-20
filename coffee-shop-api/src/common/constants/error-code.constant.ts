@@ -10,6 +10,7 @@ export const ERROR_CODES = {
     NAME_EXISTS: 'categoryNameExists',
     NOT_FOUND: 'categoryNotFound',
     HAS_PRODUCTS: 'categoryHasProducts',
+    NOT_DELETED: 'categoryNotDeleted',
   },
   USER: {
     EMAIL_EXISTS: 'userEmailExists',

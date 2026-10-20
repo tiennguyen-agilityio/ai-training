@@ -62,6 +62,12 @@ const CATEGORY_HAS_PRODUCTS_ERROR = {
   description: ERROR_DESCRIPTIONS.CATEGORY.HAS_PRODUCTS,
 };
 
+const CATEGORY_NOT_DELETED_ERROR = {
+  errCode: ERROR_CODES.CATEGORY.NOT_DELETED,
+  field: 'id',
+  description: ERROR_DESCRIPTIONS.CATEGORY.NOT_DELETED,
+};
+
 @ApiTags('categories')
 @Controller('categories')
 export class CategoryController {
@@ -149,6 +155,27 @@ export class CategoryController {
     @Body({ schema: updateCategorySchema }) dto: UpdateCategoryInput,
   ): Promise<ResponseCategoryDto> {
     const category = await this.categoryService.update(id, dto);
+    return ResponseCategoryDto.fromEntity(category);
+  }
+
+  @Patch(':id/restore')
+  @AdminOnly()
+  @ApiOperation({ summary: 'Restore a deleted category (admin only)' })
+  @ApiDataResponse(HttpStatus.OK, ResponseCategoryDto)
+  @ApiErrorResponse(
+    HttpStatus.NOT_FOUND,
+    ERROR_MESSAGES.CATEGORY.NOT_FOUND,
+    CATEGORY_NOT_FOUND_ERROR,
+  )
+  @ApiErrorResponse(
+    HttpStatus.CONFLICT,
+    ERROR_MESSAGES.CATEGORY.NOT_DELETED,
+    CATEGORY_NOT_DELETED_ERROR,
+  )
+  async restore(
+    @Param({ schema: idParamSchema }) { id }: IdParam,
+  ): Promise<ResponseCategoryDto> {
+    const category = await this.categoryService.restore(id);
     return ResponseCategoryDto.fromEntity(category);
   }
 

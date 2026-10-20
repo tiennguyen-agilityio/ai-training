@@ -62,3 +62,9 @@ export class ResourceInUseException extends SingleErrorDomainException {
     super(HttpStatus.CONFLICT, ERROR_MESSAGES.EXCEPTION.CONFLICT, error);
   }
 }
+
+export class InvalidStateException extends SingleErrorDomainException {
+  constructor(error: ErrorDetailDto) {
+    super(HttpStatus.CONFLICT, ERROR_MESSAGES.EXCEPTION.CONFLICT, error);
+  }
+}
