@@ -1,2 +1,7 @@
-cd coffee-shop-api
-pnpm build && pnpm test
+BASE="${TURBO_SCM_BASE:-origin/feat/claude-example}"
+if git rev-parse --verify --quiet "$BASE^{commit}" >/dev/null; then
+  TURBO_SCM_BASE="$BASE" pnpm exec turbo run build test --affected
+else
+  echo "pre-push: base ref '$BASE' not found locally; running build and test for every package" >&2
+  pnpm exec turbo run build test
+fi

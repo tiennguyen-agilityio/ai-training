@@ -1,3 +1,4 @@
+name: coffee-shop-api
 services:
   postgres:
     image: postgres:18
@@ -17,8 +18,8 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: apps/api/Dockerfile
       target: production
     restart: unless-stopped
     env_file:

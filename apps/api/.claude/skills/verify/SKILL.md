@@ -1,15 +1,15 @@
 ---
 name: verify
-description: Use when a code change in coffee-shop-api is finished or about to be called done, fixed, or passing; before committing, pushing, or opening a GitLab MR; or when the user asks to verify, check, or prove the work.
+description: Use when a code change in apps/api (the API) is finished or about to be called done, fixed, or passing; before committing, pushing, or opening a GitLab MR; or when the user asks to verify, check, or prove the work.
 ---
 
-# Verify coffee-shop-api changes
+# Verify API changes
 
 **Done is the gates run and observed, with the results stated explicitly.** A green test run alone is not done: a weakened test passes by design, so the diff must be read too.
 
 ## Procedure
 
-Run from `coffee-shop-api/`.
+Run from `apps/api/`.
 
 1. **Gates.** Run all three, even if one fails, and read each output.
 
@@ -19,7 +19,7 @@ Run from `coffee-shop-api/`.
    pnpm run test
    ```
 
-   Inside the `/work-ticket` workflow, replace `pnpm run test` with `pnpm run test:cov --coverage.reporter=json-summary --coverage.reporter=text-summary` and write the test report afterwards (`.claude/rules/workflow.md` §7).
+   Inside the `/work-ticket` workflow, replace `pnpm run test` with `pnpm run test:cov --coverage.reporter=json-summary --coverage.reporter=text-summary` and write the test report afterwards (`../../.claude/rules/workflow.md` §7).
 
 2. **E2E.** Run it when the change touches controllers, DTO schemas, guards, middleware, filters, interceptors, repositories, entities, migrations or `test/`.
    - First print the database `pretest:e2e` will truncate. This follows the same load order as `test/reset-test-db.ts`, shell variables included:

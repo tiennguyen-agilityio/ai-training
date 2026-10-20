@@ -6,11 +6,11 @@ How we clone, branch, commit and push in this repo. The hooks enforce most of th
 
 ```bash
 git clone git@gitlab.asoft-python.com:tien.nguyen/ai-training.git
-cd ai-training/coffee-shop-api
-pnpm install          # also installs the git hooks (husky, via the `prepare` script)
+cd ai-training
+pnpm install          # whole workspace + git hooks (husky, via the root `prepare`)
 ```
 
-The git root is `ai-training/`, but the app and its tooling live in `coffee-shop-api/`. The hooks `cd` into it before they run.
+The git root is the pnpm workspace root; the hooks run from there.
 
 ## Branches
 
@@ -47,9 +47,9 @@ Commit messages follow [Conventional Commits](https://www.conventionalcommits.or
 
 | Hook | Runs | Effect |
 |---|---|---|
-| `pre-commit` | `lint-staged` | `eslint --fix` + `prettier --write` on staged `*.ts` files |
+| `pre-commit` | `lint-staged` | Closest config per staged file: API `*.ts` → `eslint --fix` + `prettier --write`; `packages/` and root files → `prettier --write` |
 | `commit-msg` | `commitlint` | Rejects messages that are not Conventional Commits |
-| `pre-push` | `pnpm build && pnpm test` | Blocks the push if the build or unit tests fail |
+| `pre-push` | `turbo run build test --affected` | Builds and tests only the packages changed against `origin/feat/claude-example` (override with `TURBO_SCM_BASE`); blocks the push on failure |
 
 Fix the cause instead of skipping hooks with `--no-verify`.
 

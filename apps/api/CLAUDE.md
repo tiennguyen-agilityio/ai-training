@@ -6,28 +6,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 1. Repository layout
 
-- **This directory, `coffee-shop-api/`**, is a NestJS 12 / TypeScript 6 / ESM backend and the only code in the repo.
-- **The repo** (`ai-training`) is a training repo hosted on **GitLab, not GitHub**; its git root is one level up.
-- **All tooling is rooted here** (pnpm, husky hooks, tsconfig, CLAUDE.md), and the husky hooks `cd` into this directory themselves. **Run every command below from here.**
+- **This directory, `apps/api/`**, is the NestJS 12 / TypeScript 6 / ESM backend, package `api` in the root pnpm workspace. Monorepo-wide guidance (layout, root commands, git, hooks, CI) is in the root `CLAUDE.md`.
+- `README.md` is detailed and current — **read it before asking the user about behaviour**.
+- Commands below run from here. From the root, use `pnpm api <script>` or the `:api` shortcuts.
 
 ### Key directories and files
 
-| Path                       | What it holds                                                              |
-| -------------------------- | -------------------------------------------------------------------------- |
-| `docs/exercises/day-NN.md` | Exercise write-ups                                                         |
-| `docs/conventions/git.md`  | The authoritative git workflow                                             |
-| `README.md`                | Full ERD, endpoint table with auth levels, every env var, Docker/e2e setup |
-
-> `docs/` holds **training material, not product docs**.
->
-> `README.md` is detailed and current — **read it before asking the user about behaviour**.
+| Path                             | What it holds                                                              |
+| -------------------------------- | -------------------------------------------------------------------------- |
+| `../../docs/exercises/day-NN.md` | Exercise write-ups                                                         |
+| `../../docs/conventions/git.md`  | The authoritative git workflow                                             |
+| `README.md`                      | Full ERD, endpoint table with auth levels, every env var, Docker/e2e setup |
 
 ---
 
 ## 2. Commands
 
 ```bash
-pnpm install                 # also installs husky hooks via `prepare`
+pnpm install                 # git hooks are installed by the root `pnpm install`
 pnpm run start:dev           # watch mode
 pnpm run build
 pnpm run lint                # eslint --fix over src, test
@@ -87,13 +83,13 @@ Both middlewares are applied globally in `app.module.ts` and **excluded for `POS
 
 ### 3.1 Code, module and test rules
 
-They live in `.claude/rules/`, loaded when Claude works with matching files:
+The coding and testing rules live in `apps/api/.claude/rules/` and the workflow rule in the root `.claude/rules/`, loaded when Claude works with matching files:
 
-| File | Loaded for | Covers |
-| --- | --- | --- |
-| `.claude/rules/coding.md` | `src/**/*.ts` | `BaseRepository` layering, soft delete, Zod validation, `DomainException` + centralized constants, `Response*Dto`, `@AdminOnly()`, Clerk, module shape, ESM `.js` imports |
-| `.claude/rules/testing.md` | specs and `test/**` | Vitest, unit/e2e layout, `API_BASE_PATH`, expected Clerk failures |
-| `.claude/rules/workflow.md` | always | Feature workflow: superpowers overrides, `docs/specs/` paths, plan Git section, coverage baseline + test report (`.claude/templates/test-report.md`), review before commit |
+| File                              | Loaded for          | Covers                                                                                                                                                                           |
+| --------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.claude/rules/coding.md`         | `src/**/*.ts`       | `BaseRepository` layering, soft delete, Zod validation, `DomainException` + centralized constants, `Response*Dto`, `@AdminOnly()`, Clerk, module shape, ESM `.js` imports        |
+| `.claude/rules/testing.md`        | specs and `test/**` | Vitest, unit/e2e layout, `API_BASE_PATH`, expected Clerk failures                                                                                                                |
+| `../../.claude/rules/workflow.md` | always              | Feature workflow: superpowers overrides, `docs/specs/` paths, plan Git section, coverage baseline + test report (`../../.claude/templates/test-report.md`), review before commit |
 
 When planning or reviewing, read `coding.md` and `testing.md` even if no matching file is open.
 
@@ -101,26 +97,4 @@ When planning or reviewing, read `coding.md` and `testing.md` even if no matchin
 
 ## 4. Git workflow
 
-- **Commits:** Conventional Commits, enforced by commitlint in `commit-msg`.
-- **Branches:** `<type>/<short-kebab-description>`, cut from the integration branch `feat/coffee-shop-api`.
-- **MRs:** feature MRs target `feat/coffee-shop-api` on GitLab and merge with a merge commit.
-
-### Hooks
-
-| Hook         | Runs                                             |
-| ------------ | ------------------------------------------------ |
-| `pre-commit` | lint-staged (eslint + prettier on staged `*.ts`) |
-| `pre-push`   | `pnpm build && pnpm test`                        |
-
-> **Fix the cause rather than passing `--no-verify`.** Full details in `docs/conventions/git.md`.
-
-### CI
-
-`../.github/workflows/ci.yml` is **GitHub Actions** even though development happens on GitLab:
-
-1. lint → unit test → build
-2. Docker build + Trivy scan
-3. Push to GHCR
-4. Render deploy
-
-Triggers only on `coffee-shop-api/**` changes against `feat/coffee-shop-api` or `main`.
+See the root CLAUDE.md (Git, Hooks, CI).

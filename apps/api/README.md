@@ -232,7 +232,7 @@ Not under `/api/v1` and excluded from Swagger.
 ### Prerequisites
 
 - Node.js v24
-- pnpm (version pinned via `corepack`, see `Dockerfile`)
+- pnpm (version pinned by the root `package.json` `packageManager`, pnpm 10.34.5)
 - Docker + Docker Compose (for running PostgreSQL, or the whole stack, in containers)
 - A [Clerk](https://clerk.com) application (publishable key, secret key, webhook signing secret)
 
@@ -240,9 +240,8 @@ Not under `/api/v1` and excluded from Swagger.
 
 ```bash
 git clone -b feat/claude-example git@gitlab.asoft-python.com:tien.nguyen/ai-training.git
-cd ai-training/coffee-shop-api
-
-pnpm install
+cd ai-training && pnpm install   # at the repo root
+cd apps/api
 
 cp .env.example .env   # then fill in real values
 
@@ -291,6 +290,8 @@ pnpm run start:prod     # run compiled dist/main.js
 `docker-compose.yml` is the production-ready default (app + PostgreSQL, `restart: unless-stopped`,
 healthchecks); `docker-compose.dev.yml` layers dev-only overrides on top (hot-reload volume mount,
 Postgres port exposed to the host, no auto-restart).
+
+The image builds from the repo root (`docker build -f apps/api/Dockerfile .`); compose sets `context: ../..`. The dev container mounts only `src/`, so rebuild it after a dependency change.
 
 ```bash
 pnpm run docker:dev        # dev: docker compose --env-file .env.docker -f docker-compose.yml -f docker-compose.dev.yml up --build

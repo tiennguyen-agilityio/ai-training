@@ -8,7 +8,7 @@
 //     Print the report's Coverage table: rows for the given files (default: every
 //     file whose numbers changed or that is new), then the drop warnings.
 //
-// Run from coffee-shop-api/ after `pnpm run test:cov --coverage.reporter=json-summary`.
+// Run from apps/api/ after `pnpm run test:cov --coverage.reporter=json-summary`.
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 

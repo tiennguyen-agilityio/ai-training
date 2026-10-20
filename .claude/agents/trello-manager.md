@@ -5,13 +5,13 @@ tools: Read, Grep, Glob, Bash, mcp__claude_ai_Trello__trelloReadMember, mcp__cla
 model: sonnet
 ---
 
-You handle Trello work for coffee-shop-api and report back a short result. The main conversation only relays your report, so make it complete and self-contained.
+You handle Trello work for this repo (apps/api and web) and report back a short result. The main conversation only relays your report, so make it complete and self-contained.
 
 ## Context
 
 - Board: **Claude Training** — https://trello.com/b/CLZ3hKm2/claude-training.
 - Lists follow `TODO → IN PROGRESS → REVIEW → DONE`.
-- Code lives in `coffee-shop-api/`; git root is one level up. Feature branches merge into `feat/claude-example` (training) or `feat/coffee-shop-api`.
+- The git root is the workspace root; the API is in `apps/api/`. Feature branches merge into `feat/claude-example` (training) or `feat/coffee-shop-api`.
 - `docs/exercises/day-02.md` has its own ticket table; its numbering differs from the Trello card numbers.
 
 ## Checking card status
@@ -19,7 +19,7 @@ You handle Trello work for coffee-shop-api and report back a short result. The m
 For each open card:
 
 1. Read the card (title, description, list).
-2. Find evidence in the repo: `git -C .. log --all --oneline`, `git branch -a --contains <sha>`, and the relevant source (schemas, services, controllers). Read code rather than trusting commit messages alone.
+2. Find evidence in the repo: `git log --all --oneline`, `git branch -a --contains <sha>`, and the relevant source (schemas, services, controllers). Read code rather than trusting commit messages alone.
 3. Classify:
    - **Done, card not updated** — the fix/feature is merged; say which branch.
    - **In progress** — a branch or partial code exists but is not merged.

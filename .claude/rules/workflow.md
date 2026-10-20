@@ -9,6 +9,7 @@ For a feature or bug task, use the superpowers skills: `brainstorming` → `writ
 - Report (end of review): `docs/specs/YYYY-MM-DD/<feature-name>/report.md`
 - Test report (every verify run): `docs/specs/YYYY-MM-DD/<feature-name>/test-report.md`
 - Coverage baseline (before any code change): `docs/specs/YYYY-MM-DD/<feature-name>/coverage-baseline.json`
+- Paths are relative to the repo root.
 - `<feature-name>` is a kebab-case slug, identical to the part after `<type>/` in the branch name. All three files are committed.
 
 ## 2. Discussion table in the design
@@ -52,7 +53,7 @@ Add right after `**Spec:**`, filled from real git output, never guessed:
 
 ## 5. Global Constraints
 
-The plan's Global Constraints come from `.claude/rules/coding.md` and `.claude/rules/testing.md`. Read both while planning, even if no `src/` file has been opened yet, and cite the rules that apply.
+The plan's Global Constraints come from `apps/api/.claude/rules/coding.md` and `apps/api/.claude/rules/testing.md`. Read both while planning, even if no `src/` file has been opened yet, and cite the rules that apply.
 
 ## 6. No commit steps in tasks
 
@@ -62,12 +63,12 @@ Tasks end at "run the tests, expect PASS". Commits happen only after the user ap
 
 Use the `verify` skill (lint without `--fix`, build, unit, e2e with the database guard). Never `pnpm run lint` as a check — it autofixes.
 
-- **Coverage baseline.** Right after creating the feature branch and before changing any code, run `pnpm run test:cov --coverage.reporter=json-summary --coverage.reporter=text-summary`, then `node .claude/skills/verify/coverage-diff.mjs snapshot <spec dir>/coverage-baseline.json`. If code already changed (e.g. on resume), take the baseline on a clean checkout of the base commit, or note "no clean baseline" in the report.
+- **Coverage baseline.** Right after creating the feature branch and before changing any code, from `apps/api/`, run `pnpm run test:cov --coverage.reporter=json-summary --coverage.reporter=text-summary`, then `node .claude/skills/verify/coverage-diff.mjs snapshot ../../<spec dir>/coverage-baseline.json`. If code already changed (e.g. on resume), take the baseline on a clean checkout of the base commit, or note "no clean baseline" in the report.
 - **Unit gate runs with coverage.** In this workflow the unit gate is the same `test:cov` command, not `pnpm run test`, so tests run once.
 - **Test report after every verify run**, pass or fail, overwritten each time. Fill `.claude/templates/test-report.md` into `<spec dir>/test-report.md`:
   - Overview numbers come from the vitest output of this run (passed / failed / skipped / duration / file count).
   - One Bugs block per failing test, with the location, a rerun command, whether it fails in isolation (rerun that test alone), and the cause. Request/Response only for e2e; never include tokens or cookies.
-  - The Coverage table is the output of `coverage-diff.mjs diff <spec dir>/coverage-baseline.json <changed src files>`, pasted unchanged. Drops are warnings, not failures.
+  - The Coverage table is the output of `node .claude/skills/verify/coverage-diff.mjs diff ../../<spec dir>/coverage-baseline.json <changed src files>`, run from `apps/api/`, pasted unchanged. Drops are warnings, not failures.
   - A skipped e2e run is a row with `—` and "Skipped: <reason>".
 - The last verify run before commit produces the report that gets committed; it must match the code being committed.
 
@@ -77,7 +78,7 @@ Use `superpowers:requesting-code-review`, adjusted for uncommitted work:
 
 - `{BASE_SHA}` is the base commit from the plan's Git section; `{HEAD_SHA}` is `WORKTREE (uncommitted)`.
 - Tell the reviewer to run `git diff <base commit>` (staged and unstaged) and `git status --short -uall`, and to read untracked files in full. `git diff BASE..HEAD` would miss uncommitted code.
-- `{PLAN_OR_REQUIREMENTS}` is the plan path. The reviewer also checks against `.claude/rules/coding.md` and `.claude/rules/testing.md`.
+- `{PLAN_OR_REQUIREMENTS}` is the plan path. The reviewer also checks against `apps/api/.claude/rules/coding.md` and `apps/api/.claude/rules/testing.md`.
 - Handle feedback with `superpowers:receiving-code-review`: fix Critical and Important, then rerun `verify` and the review; record Minor in the report; push back with reasoning when the reviewer is wrong.
 - With subagent-driven execution each task was already reviewed; this whole-change review still runs.
 
