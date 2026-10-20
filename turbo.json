@@ -1,0 +1,19 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["NEXT_PUBLIC_*"]
+    },
+    "lint": { "dependsOn": ["^build"], "cache": false },
+    "test": { "dependsOn": ["^build"] },
+    "test:cov": { "dependsOn": ["^build"], "outputs": ["coverage/**"] },
+    "format": { "cache": false },
+    "format:check": {},
+    "dev": { "cache": false, "persistent": true },
+    "start": { "cache": false, "persistent": true }
+  }
+}

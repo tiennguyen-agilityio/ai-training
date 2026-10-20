@@ -1,0 +1,37 @@
+{
+  "name": "coffee-shop",
+  "private": true,
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "format:check": "turbo run format:check",
+    "test": "turbo run test",
+    "test:cov": "turbo run test:cov",
+    "dev:api": "turbo run dev --filter=api",
+    "build:api": "turbo run build --filter=api",
+    "lint:api": "turbo run lint --filter=api",
+    "test:api": "turbo run test --filter=api",
+    "start:api": "turbo run start --filter=api",
+    "api": "pnpm --filter api"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.4.2",
+    "turbo": "^2.11.9"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "all"
+  }
+}

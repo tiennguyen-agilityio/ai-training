@@ -1,3 +1,0 @@
-MSG_FILE=$(realpath "$1")
-cd coffee-shop-api
-pnpm exec commitlint --edit "$MSG_FILE"

@@ -1,0 +1,10 @@
+node_modules
+.turbo
+coverage
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+/docs/reading/
+**/.claude/settings.local.json
