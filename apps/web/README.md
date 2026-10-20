@@ -44,15 +44,15 @@ web/
 
 ## GETTING STARTED
 
-| Command                             | Description               |
-| ----------------------------------- | ------------------------- |
-| `pnpm dev`                          | Dev server (Turbopack)    |
-| `pnpm build`                        | Production build          |
-| `pnpm start`                        | Run production build      |
-| `pnpm lint` / `pnpm lint:fix`       | ESLint                    |
-| `pnpm format` / `pnpm format:check` | Prettier                  |
-| `pnpm test`                         | Jest once (CI)            |
-| `pnpm test:watch`                   | Jest watch mode           |
-| `pnpm test:coverage`                | Jest with coverage        |
+| Command                             | Description            |
+| ----------------------------------- | ---------------------- |
+| `pnpm dev`                          | Dev server (Turbopack) |
+| `pnpm build`                        | Production build       |
+| `pnpm start`                        | Run production build   |
+| `pnpm lint` / `pnpm lint:fix`       | ESLint                 |
+| `pnpm format` / `pnpm format:check` | Prettier               |
+| `pnpm test`                         | Jest once (CI)         |
+| `pnpm test:watch`                   | Jest watch mode        |
+| `pnpm test:coverage`                | Jest with coverage     |
 
 For Clerk and other secrets, use `.env` (see `.env.example`). For environment variable details, email **tien.nguyen@asnet.com.vn**.
