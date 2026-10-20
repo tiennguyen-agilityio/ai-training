@@ -207,7 +207,7 @@ The `--filter` in the production stage matters: a plain `pnpm install --prod` on
 
 **CI** (`.github/workflows/ci.yml`):
 
-- **Triggers:** add `apps/**`, `packages/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json` and the workflow file. The branch triggers stay (`feat/coffee-shop-api`, `main`).
+- **Triggers:** add `apps/**`, `packages/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json` and the workflow file. The develop branch is `develop` (it replaced `feat/coffee-shop-api` in every trigger and condition; Discussion rows 20–21); `main` stays the production branch.
 - **`quality` job** (replaces `test`, keeps its `if:` guard that skips PRs closed without merging):
   - `fetch-depth: 0`, pnpm from `packageManager`, Node 24, pnpm cache keyed on the root lockfile;
   - `pnpm install --frozen-lockfile`, then `turbo run test build --affected`. There is no lint step: today's `Lint` step is removed (user decision; see Section 3, "Where lint runs");
@@ -300,6 +300,8 @@ Each phase is its own branch and MR into `feat/claude-example`, and leaves the r
 | 17 | Package names: is the `@coffee-shop` scope right? | Use the Turborepo convention | Shared packages are `@repo/eslint-config`, `@repo/typescript-config`, `@repo/prettier-config`; apps are unscoped `api` and `web` (e.g. `--filter=api`). The root package stays `coffee-shop` |
 | 18 | API `lint` runs `--fix`, web does not: which way to unify? | Both apps: one `lint` script with `--fix`, no `lint:fix`; remove the lint step from CI | Web `lint` gains `--fix` and drops `lint:fix`; turbo `lint` is not cached; CI `quality` runs `test build` only; lint runs in pre-commit and by hand. Not caught: `--no-verify` commits and `@repo/eslint-config` rule changes on untouched files |
 | 19 | `next build` lints web by default; keep it, or set `eslint.ignoreDuringBuilds`? | Keep it | CI still lints web through `next build` (no `--fix`, errors fail the build); the API is not linted in CI |
+| 20 | (User request, after phase 1) CI does not run for PRs into `feat/claude-example`; replace `feat/coffee-shop-api` with `feat/claude-example`? | Replace everywhere in `ci.yml` | Push/PR triggers, `push-develop` and `deploy-develop` all key on `feat/claude-example`: a PR into it runs quality, build-and-scan and push-develop (GHCR `:develop`); a push or merge into it also deploys Render develop (needs `RENDER_SERVICE_ID` / `RENDER_API_KEY` on the GitHub repo) |
+| 21 | (User request) Use `develop` instead of `feat/claude-example` as the CI develop branch, and open PRs into `develop` | Yes | `ci.yml` keys push/PR triggers, `push-develop` and `deploy-develop` on `develop` (on GitHub, at the same commit as `feat/claude-example`, 5cb2eae5); PR #1 retargeted to `develop` |
 
 Answered by the code (not asked):
 

@@ -32,7 +32,7 @@ pnpm build --affected # only packages changed against TURBO_SCM_BASE
 
 ## CI
 
-`.github/workflows/ci.yml` is GitHub Actions (development happens on GitLab). It runs only for `feat/coffee-shop-api` and `main`:
+`.github/workflows/ci.yml` is GitHub Actions (development happens on GitLab). It runs for `develop` (GHCR `:develop` + Render develop deploy) and `main` (production):
 
 1. `quality`: `turbo run test build --affected`; there is no lint step.
 2. Docker build of `apps/api/Dockerfile` (context `.`) + Trivy, only when the API is affected.

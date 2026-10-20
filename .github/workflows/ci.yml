@@ -2,7 +2,7 @@ name: Docker CI/CD
 
 on:
   push:
-    branches: [feat/coffee-shop-api]
+    branches: [develop]
     paths:
       - 'apps/**'
       - 'packages/**'
@@ -13,7 +13,7 @@ on:
       - '.dockerignore'
       - '.github/workflows/**'
   pull_request:
-    branches: [main, feat/coffee-shop-api]
+    branches: [main, develop]
     types: [opened, synchronize, reopened, closed]
     paths:
       - 'apps/**'
@@ -134,7 +134,7 @@ jobs:
 
   push-develop:
     needs: [quality, build-and-scan]
-    if: needs.quality.outputs.api_affected == 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/feat/coffee-shop-api') || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.base.ref == 'feat/coffee-shop-api'))
+    if: needs.quality.outputs.api_affected == 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/develop') || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.base.ref == 'develop'))
     runs-on: ubuntu-latest
     environment: develop-publish
     permissions:
@@ -215,7 +215,7 @@ jobs:
 
   deploy-develop:
     needs: push-develop
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/coffee-shop-api'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     environment: develop-deploy
     steps:

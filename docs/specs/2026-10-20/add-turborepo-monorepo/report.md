@@ -90,7 +90,7 @@ None. Phase 1 changes no `src/` or `test/` file. Coverage is identical to the ba
 - **Swagger title is `api`:** `swagger.config.ts` reads the package name. Follow-up: set an explicit title (a `src/` change, so it is out of scope for phase 1).
 
 - **Rebase merges into `main`:** with a rebase merge, `merge_commit_sha^1` covers only the last rebased commit. Keep rebase-merge disabled on the GitHub `main` (merge commits and squash merges are fine).
-- **The real GitHub CI run** happens only when this reaches `feat/coffee-shop-api` or `main`. Before that, the MR !4 re-baseline SQL must run on production.
+- **GitHub CI:** after this report, `ci.yml` was switched from `feat/coffee-shop-api` to `develop` (design Discussion rows 20–21), so PRs into `develop` run CI and merges into it deploy Render develop. First GitHub run on PR #1: quality, build-and-scan (Trivy) and push-develop all succeeded. GitHub Actions must be enabled on the repo, and `RENDER_SERVICE_ID` / `RENDER_API_KEY` must be set for the deploy job. Before that, the MR !4 re-baseline SQL must run on production.
 - **Local env (untracked `apps/api/.env.docker`):**
   - a value contains a literal `$`, which Compose interpolates (the warning about an unset `tTszB`); escape it as `$$`;
   - `CLERK_PUBLISHABLE_KEY` is rejected as invalid.
