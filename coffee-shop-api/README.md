@@ -315,6 +315,31 @@ pnpm run seeder:create      # scaffold a seeder in src/seeders
 pnpm run seeder:run         # run seeders
 ```
 
+All databases share one snapshot, `src/migrations/.snapshot-coffee_shop.json` (`snapshotName` in
+the config). Without it, MikroORM keeps a snapshot per `DB_NAME`, so `migration:create` diffs against
+a different baseline depending on which `.env` is loaded.
+
+The migration history was squashed into a single baseline, `Migration20261020093328`. A new or empty
+database just runs `pnpm run migration:up`. A database built by the earlier chain
+(`Migration20260824081651`, `Migration20260825181322`, `Migration20260825200222`) already has the
+tables, so bring its columns in line and record the baseline as executed instead of running it:
+
+```sql
+begin;
+alter table "products" alter column "description" type text, alter column "description" set not null,
+  alter column "roast_level" set not null, alter column "tasting_notes" type text,
+  alter column "origin" type text, alter column "origin" set not null,
+  alter column "processing_method" type text, alter column "processing_method" set not null;
+alter table "product_variants" alter column "weight" type numeric(10,2);
+alter table "product_images" alter column "url" type text;
+delete from mikro_orm_migrations;
+insert into mikro_orm_migrations (name, executed_at) values ('Migration20261020093328', now());
+commit;
+```
+
+Then `pnpm run migration:check` and `pnpm exec mikro-orm schema:update --dump` should both report no
+changes. The `set not null` steps fail if a product still has nulls in those columns; fill them first.
+
 ## Testing
 
 ```bash

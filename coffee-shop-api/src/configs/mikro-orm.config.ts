@@ -28,6 +28,10 @@ export default defineConfig({
   migrations: {
     path: 'dist/migrations',
     pathTs: 'src/migrations',
+    // Default name is `.snapshot-${dbName}`, which gives every database its own
+    // snapshot and makes `migration:create` diff against a different baseline
+    // depending on which .env is loaded. Keep one snapshot for all databases.
+    snapshotName: '.snapshot-coffee_shop',
   },
 
   seeder: {

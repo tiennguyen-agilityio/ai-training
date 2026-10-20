@@ -9,7 +9,7 @@ export class ProductImage extends BaseEntity {
   @ManyToOne(() => Product, { updateRule: 'cascade' })
   product!: Rel<Product>;
 
-  @Property({ type: 'string' })
+  @Property({ type: 'text' })
   url!: string;
 
   @Property({ type: 'boolean', fieldName: 'is_primary' })
