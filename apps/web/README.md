@@ -2,14 +2,14 @@
 
 ## OVERVIEW
 
-The web app lives in **`web/`**: **Next.js 15** (App Router), **React 19**, **TypeScript**, **Tailwind CSS v4**, **shadcn/ui** (tokens in `web/src/app/globals.css`, components in `web/src/components/ui/`). Tooling: ESLint, Prettier, Jest + React Testing Library. Git hooks are not set up for `web/` yet; they move to the repo root with the Turborepo setup.
+The web app lives in **`apps/web/`** (package `web` in the root pnpm workspace): **Next.js 15** (App Router), **React 19**, **TypeScript**, **Tailwind CSS v4**, **shadcn/ui** (tokens in `src/app/globals.css`, components in `src/components/ui/`). Tooling: ESLint, Prettier, Jest + React Testing Library. Git hooks live at the repo root (`.husky/`); run `pnpm install` at the root to enable them.
 
 ---
 
 ## STRUCTURE FOLDER
 
 ```text
-web/
+apps/web/
 ├── src/
 │   ├── app/                    # App Router
 │   │   ├── layout.tsx
@@ -44,15 +44,15 @@ web/
 
 ## GETTING STARTED
 
-| Command                             | Description               |
-| ----------------------------------- | ------------------------- |
-| `pnpm dev`                          | Dev server (Turbopack)    |
-| `pnpm build`                        | Production build          |
-| `pnpm start`                        | Run production build      |
-| `pnpm lint` / `pnpm lint:fix`       | ESLint                    |
-| `pnpm format` / `pnpm format:check` | Prettier                  |
-| `pnpm test`                         | Jest once (CI)            |
-| `pnpm test:watch`                   | Jest watch mode           |
-| `pnpm test:coverage`                | Jest with coverage        |
+| Command                             | Description            |
+| ----------------------------------- | ---------------------- |
+| `pnpm dev`                          | Dev server (Turbopack) |
+| `pnpm build`                        | Production build       |
+| `pnpm start`                        | Run production build   |
+| `pnpm lint`                         | ESLint (`--fix`)       |
+| `pnpm format` / `pnpm format:check` | Prettier               |
+| `pnpm test`                         | Jest once (CI)         |
+| `pnpm test:watch`                   | Jest watch mode        |
+| `pnpm test:cov`                     | Jest with coverage     |
 
 For Clerk and other secrets, use `.env` (see `.env.example`). For environment variable details, email **tien.nguyen@asnet.com.vn**.

@@ -11,7 +11,7 @@ You handle Trello work for this repo (apps/api and web) and report back a short 
 
 - Board: **Claude Training** — https://trello.com/b/CLZ3hKm2/claude-training.
 - Lists follow `TODO → IN PROGRESS → REVIEW → DONE`.
-- The git root is the workspace root; the API is in `apps/api/`. Feature branches merge into `feat/claude-example` (training) or `feat/coffee-shop-api`.
+- The git root is the workspace root; the API is in `apps/api/`. Feature branches merge into `develop`.
 - `docs/exercises/day-02.md` has its own ticket table; its numbering differs from the Trello card numbers.
 
 ## Checking card status

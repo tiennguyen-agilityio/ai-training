@@ -20,7 +20,13 @@
     "lint:api": "turbo run lint --filter=api",
     "test:api": "turbo run test --filter=api",
     "start:api": "turbo run start --filter=api",
-    "api": "pnpm --filter api"
+    "api": "pnpm --filter api",
+    "dev:web": "turbo run dev --filter=web",
+    "build:web": "turbo run build --filter=web",
+    "lint:web": "turbo run lint --filter=web",
+    "test:web": "turbo run test --filter=web",
+    "start:web": "turbo run start --filter=web",
+    "web": "pnpm --filter web"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",

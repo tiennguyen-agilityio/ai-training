@@ -41,13 +41,13 @@ Add right after `**Spec:**`, filled from real git output, never guessed:
 
 | | |
 | --- | --- |
-| Base branch | `feat/claude-example` |
+| Base branch | `develop` |
 | Base commit | `<short sha>` — <subject> (<YYYY-MM-DD>) |
 | Feature branch | `<type>/<feature-name>` |
-| MR target | `feat/claude-example` |
+| MR target | `develop` |
 ```
 
-- Base branch defaults to `feat/claude-example` for training tickets (the user's choice; `docs/conventions/git.md` names `feat/coffee-shop-api` for product work). MR target defaults to the base branch.
+- Base branch defaults to `develop` (`docs/conventions/git.md`). MR target defaults to the base branch.
 - Base commit: `git fetch origin <base>`, then `git log -1 --format='%h — %s (%ad)' --date=short origin/<base>`.
 - `<type>` is `fix`, `feat` or `refactor`. If the branch already exists (`git branch -a --list`), ask the user for another name.
 

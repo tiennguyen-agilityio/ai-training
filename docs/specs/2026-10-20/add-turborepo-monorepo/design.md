@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-20
 **Status:** Approved by the user on 2026-10-20 (builder check: 2 rounds, nothing left for the user)
-**Branches:** `refactor/turborepo-api`, `refactor/turborepo-web`, `refactor/turborepo-shared-config` (one per phase, each cut from `feat/claude-example`)
+**Branches:** `refactor/turborepo-api`, `refactor/turborepo-web`, `refactor/turborepo-shared-config` (one per phase, each merged into `develop`)
 
 ## Goal
 
@@ -179,7 +179,7 @@ One `.husky/` at the root. `husky`, `lint-staged` and `@commitlint/cli` + `@comm
 | `pnpm-lock.yaml` | packages whose resolved dependencies changed (to be confirmed by a test in the plan) |
 | only `docs/**`, `.claude/**`, root `README.md` | nothing |
 
-- **Base ref:** the hook sets `TURBO_SCM_BASE=origin/feat/claude-example` unless it is already set, so `TURBO_SCM_BASE=origin/main git push` compares against another branch. Turbo looks at everything changed on the branch, not just the commits being pushed; work that already ran comes from the cache.
+- **Base ref:** the hook sets `TURBO_SCM_BASE=origin/develop` unless it is already set, so `TURBO_SCM_BASE=origin/main git push` compares against another branch. Turbo looks at everything changed on the branch, not just the commits being pushed; work that already ran comes from the cache.
 - **Missing base ref:** turbo does not fall back on its own. With an unknown base it exits 1 ("Unable to query SCM"), which would block the push. The hook therefore checks `git rev-parse --verify --quiet "$TURBO_SCM_BASE^{commit}"` first; if that fails, it prints a warning and runs `turbo run build test` without `--affected`. The hook does not fetch.
 - **`.turbo/` must be ignored:** turbo writes `<package>/.turbo/turbo-<task>.log`, and an untracked file inside a package marks it affected. The root `.gitignore` lists `.turbo`; otherwise every push would count the API as affected.
 - **No lint or e2e in pre-push:** lint already ran on staged files in pre-commit, and e2e needs a database.
@@ -249,7 +249,7 @@ Phase 2 adds a short `apps/web/CLAUDE.md` (commands, structure, env vars).
 
 ## Phases
 
-Each phase is its own branch and MR into `feat/claude-example`, and leaves the repo green.
+Each phase is its own branch and MR/PR into `develop`, and leaves the repo green.
 
 | # | Branch | Scope | Can start when |
 | --- | --- | --- | --- |
@@ -302,6 +302,7 @@ Each phase is its own branch and MR into `feat/claude-example`, and leaves the r
 | 19 | `next build` lints web by default; keep it, or set `eslint.ignoreDuringBuilds`? | Keep it | CI still lints web through `next build` (no `--fix`, errors fail the build); the API is not linted in CI |
 | 20 | (User request, after phase 1) CI does not run for PRs into `feat/claude-example`; replace `feat/coffee-shop-api` with `feat/claude-example`? | Replace everywhere in `ci.yml` | Push/PR triggers, `push-develop` and `deploy-develop` all key on `feat/claude-example`: a PR into it runs quality, build-and-scan and push-develop (GHCR `:develop`); a push or merge into it also deploys Render develop (needs `RENDER_SERVICE_ID` / `RENDER_API_KEY` on the GitHub repo) |
 | 21 | (User request) Use `develop` instead of `feat/claude-example` as the CI develop branch, and open PRs into `develop` | Yes | `ci.yml` keys push/PR triggers, `push-develop` and `deploy-develop` on `develop` (on GitHub, at the same commit as `feat/claude-example`, 5cb2eae5); PR #1 retargeted to `develop` |
+| 22 | (User request, during phase 2) Drop `feat/claude-example` from the docs: MRs and PRs go into `develop` from now on | Yes | `develop` is the base and target for phases 2–3, `workflow.md`, `/work-ticket`, `git.md`, `CLAUDE.md`; `pre-push` defaults to `origin/develop`. Phase 1 facts (its base commit and executed steps) are kept as history |
 
 Answered by the code (not asked):
 

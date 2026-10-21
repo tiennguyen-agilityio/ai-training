@@ -2,18 +2,16 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.34.5",
   "scripts": {
     "dev": "next dev --turbopack -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "jest --watchAll=false --passWithNoTests",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage --passWithNoTests"
+    "test:cov": "jest --coverage --passWithNoTests"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -64,7 +62,6 @@
     "eslint-config-prettier": "^10.1.8",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
-    "lint-staged": "^16.4.0",
     "prettier": "^3.8.2",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",

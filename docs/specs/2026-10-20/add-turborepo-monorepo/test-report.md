@@ -1,53 +1,60 @@
-# Test Report: add-turborepo-monorepo (phase 1)
+# Test Report: add-turborepo-monorepo (phase 2)
 
-- Time: 2026-10-20 20:45:28 (GMT+7)
-- Branch: refactor/turborepo-api · Commit: f10a011d + uncommitted changes
+- Time: 2026-10-21 00:17:41 (GMT+7)
+- Branch: refactor/turborepo-web · Commit: 283331a6 + uncommitted changes
 - Result: PASS (0 bugs)
 
 ## Overview
 
 | Suite | Passed | Failed | Skipped | Duration | Scope |
 | --- | --- | --- | --- | --- | --- |
-| Unit test | 257 | 0 | 0 | 1.63s | 24 files |
-| E2E test | 101 | 0 | 0 | 19.56s | 5 files (DB localhost:5432/coffee_shop_test) |
+| Unit test (api, Vitest) | 257 | 0 | 0 | 1.58s | 24 files |
+| E2E test (api) | 101 | 0 | 0 | 17.41s | 5 files (DB localhost:5432/coffee_shop_test) |
+| Unit test (web, Jest) | 364 | 0 | 0 | 10.3s | 74 suites |
 
 ## Bugs (0)
 
-None.
+None in this run. An earlier run in this session failed once on `test/e2e/product.e2e-spec.ts` (`afterAll` hook timed out after 10000ms; all 101 tests passed). The file passed alone (40/40) and in two later full runs, so it is recorded as flaky, not a bug.
 
 ## Coverage
 
-Compared with the baseline from 2026-10-20, commit 5cb2eae5 (no `src/` file changed in phase 1, so only the total row is shown).
+API, compared with the baseline from 2026-10-20, commit 5cb2eae5 (no `src/` file changed):
 
 | File | Statements | Branches | Functions | Lines |
 | --- | --- | --- | --- | --- |
 | **Total** | 96.96% → 96.96% (0) | 92.13% → 92.13% (0) | 97.36% → 97.36% (0) | 96.88% → 96.88% (0) |
 
+Web, compared with `coverage-baseline-web.json` (2026-10-20, commit ee8ad41c, taken in `web/` before the move):
+
+| File | Statements | Branches | Functions | Lines |
+| --- | --- | --- | --- | --- |
+| **Total** | 84.14% → 84.14% (0) | 74.35% → 74.35% (0) | 65.79% → 65.79% (0) | 84.14% → 84.14% (0) |
+
 Coverage drops (warning only, not a failure):
 - none
 
+> One earlier web run in this session showed branches 74.35% → 74.33% (`src/hooks/useDebouncedUrlSearch.ts` counted 15 branches instead of 16). The final run matches the baseline.
+
 ## Scope
 
-- Changed files:
-  - Phase 1 is a restructure: `coffee-shop-api/` moved to `apps/api/` (pure renames, 0 content changes in `src/` and `test/`), shared files to the repo root, plus config/docs edits (Dockerfile, compose, package.json, CI, husky, `.dockerignore`, CLAUDE.md, README, verify skill).
-- Unit tests run: all (24 files)
+- Changed files: web moved to `apps/web` (290 pure renames + README.md formatted by the pre-commit hook), plus config/docs: root and web `package.json`, `pnpm-lock.yaml` (web lockfile removed), `turbo.json`, `.gitignore`, `ci.yml`, `CLAUDE.md`, READMEs, `docs/conventions/git.md`, `apps/web/CLAUDE.md`. No `src/` or test file changed.
+- Unit tests run: all (api 24 files, web 74 suites)
 - E2E tests run: all (5 files)
 - Scope notes:
-  - Re-run after the final fix wave (`ci.yml`, `.dockerignore`, docs).
-  - `.dockerignore` has no Prettier parser, so it is excluded from the Prettier check.
+  - Web tests also passed with `apps/web/.env` moved aside (74/364), as CI runs them.
 
 ## Verification
+
 | Gate | Result | Evidence |
 | --- | --- | --- |
-| Lint | PASS | `eslint "{src,apps,libs,test}/**/*.ts"` (no --fix): `✖ 95 problems (0 errors, 95 warnings)`, unchanged |
-| Build | PASS | `nest build` exit 0 |
-| Unit tests | PASS | `test:cov`: 24 files, 257 tests passed, 1.63s |
-| E2E tests | PASS | guard printed `localhost:5432/coffee_shop_test`; 5 files, 101 tests, 19.56s |
-| Coverage | PASS | totals unchanged (96.96 / 92.13 / 97.36 / 96.88); drops: none |
-| format:check | PASS | root `pnpm format:check`: `api:format:check` "All matched files use Prettier code style!" |
-| actionlint | PASS | `actionlint .github/workflows/ci.yml` exit 0, no output |
-| Prettier (root files) | PASS | `ci.yml .lintstagedrc.json package.json turbo.json` pass; `.dockerignore` skipped (no parser) |
-| Diff review | PASS | `git diff 5cb2eae5 --stat`: 163 files; renames + config/docs edits; 0 changes under `apps/api/src` and `apps/api/test` |
-| Test integrity | PASS | numstat 0 changed lines in src/test/vitest files; no added `.skip/.only/.todo`, `eslint-disable`, `@ts-ignore`, `console.log`, `debugger` (tracked diff and untracked files); no removed `expect(` |
+| Lint (api) | PASS | `eslint` without `--fix`: 0 errors, 95 warnings (unchanged) |
+| Lint (web) | PASS | `eslint .` without `--fix`: 0 errors, 9 warnings (unchanged) |
+| Build (api) | PASS | `nest build` exit 0 |
+| Build (web) | PASS | `pnpm build:web` exit 0; also exit 0 without `.env` given only `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` |
+| Unit tests | PASS | api 24 files / 257; web 74 suites / 364 |
+| E2E tests | PASS | guard printed `localhost:5432/coffee_shop_test`; 5 files / 101 |
+| format:check | PASS | `pnpm format:check` (api + web) |
+| actionlint | PASS | no output |
+| Diff review | PASS | no `src/` or test changes; no skips, suppressions or removed assertions |
 
-**Verdict: PASS** - all gates green on the final code, coverage unchanged, no src/test content changes.
+**Verdict: PASS**

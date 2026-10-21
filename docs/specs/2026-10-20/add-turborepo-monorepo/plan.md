@@ -4,7 +4,7 @@
 
 **Goal:** Turn the repo into a pnpm workspace driven by Turborepo: `apps/api`, `apps/web` and shared `@repo/*` config packages, one set of root git hooks, and the API's Docker/CI/Render pipeline still working.
 
-**Architecture:** The plan has three phases, each with its own branch and MR into `feat/claude-example`, and each leaves the repo green:
+**Architecture:** The plan has three phases, each with its own branch and MR/PR into `develop`, and each leaves the repo green:
 
 1. the root workspace plus the API, with hooks, Docker and CI;
 2. web joins the workspace;
@@ -20,12 +20,13 @@ Directory moves are `git mv` commits with no content edits, so history follows t
 
 | | Phase 1 | Phase 2 | Phase 3 |
 | --- | --- | --- | --- |
-| Base branch | `feat/claude-example` | `feat/claude-example` | `feat/claude-example` |
-| Base commit | `5cb2eae5` — Merge branch 'feat/add-web-nextjs-frontend' into 'feat/claude-example' (2026-10-20) | `feat/claude-example` after phase 1 is merged (fill in at phase start) | `feat/claude-example` after phase 2 is merged (fill in at phase start) |
+| Base branch | `feat/claude-example` (history) | `develop` | `develop` |
+| Base commit | `5cb2eae5` — Merge branch 'feat/add-web-nextjs-frontend' into 'feat/claude-example' (2026-10-20) | `ee8ad41c` — Merge pull request #1 from tiennguyen-agilityio/refactor/turborepo-api (2026-10-20) | `develop` after phase 2 is merged (fill in at phase start) |
 | Feature branch | `refactor/turborepo-api` | `refactor/turborepo-web` | `refactor/turborepo-shared-config` |
-| MR target | `feat/claude-example` | `feat/claude-example` | `feat/claude-example` |
+| MR target | `develop` (GitHub PR #1) | `develop` | `develop` |
 
-- The base commit is from the local `origin/feat/claude-example` ref. `git fetch origin feat/claude-example` failed in the planning session ("Please make sure you have the correct access rights"). Fetch again before creating the branch; if `origin` has moved, ask whether to rebase and update this table.
+- From phase 2 on, every phase branches from and targets `develop` (design Discussion 22). Phase 1 was merged into `develop` as GitHub PR #1; its base column is kept as history.
+- Fetch `develop` from the remote that hosts the PR before creating a branch (currently `github`; GitLab `origin` was unreachable during phase 2).
 - `git branch -a --list '*turborepo*'` returned nothing, so all three names are free.
 
 ## Global Constraints
@@ -916,9 +917,9 @@ Add one line to the phase report: sessions started in `apps/api` use a new memor
 - [ ] **Step 1:**
 
 ```bash
-git fetch origin feat/claude-example
-git log -1 --format='%h — %s (%ad)' --date=short origin/feat/claude-example   # put into the Git table
-git checkout -b refactor/turborepo-web origin/feat/claude-example
+git fetch github develop
+git log -1 --format='%h — %s (%ad)' --date=short github/develop   # put into the Git table
+git checkout -b refactor/turborepo-web github/develop
 cd web && pnpm install --ignore-workspace
 ```
 
@@ -1092,7 +1093,7 @@ Copy `.env.example` to `.env`. `NEXT_PUBLIC_API_URL` points at the API (`pnpm de
 **Interfaces:**
 - Produces: catalog entries `@eslint/eslintrc`, `@types/node`, `eslint`, `eslint-config-prettier`, `prettier`, `typescript`, `typescript-eslint` (Tasks 3.2–3.4 use `catalog:`).
 
-- [ ] **Step 1: Branch + coverage baselines.** Create the branch from the newest `origin/feat/claude-example` as in Task 2.1 Step 1. Take both coverage baselines (`coverage-baseline.json` for the API from `apps/api`, `coverage-baseline-web.json` for web) into `docs/specs/2026-10-20/add-turborepo-monorepo/`.
+- [ ] **Step 1: Branch + coverage baselines.** Create the branch from the newest `develop` as in Task 2.1 Step 1. Take both coverage baselines (`coverage-baseline.json` for the API from `apps/api`, `coverage-baseline-web.json` for web) into `docs/specs/2026-10-20/add-turborepo-monorepo/`.
 
 - [ ] **Step 2: Capture the proofs "before"**
 
@@ -1542,6 +1543,6 @@ Expected: no "Next.js plugin was not detected" warning, and the build succeeds.
 - [ ] **Step 1:** Run the API `verify` skill from `apps/api/`, with the unit gate on `test:cov` and e2e behind the `_test` guard. Expected: lint 0 errors / 95 warnings, build OK, 257 unit tests, 101 e2e tests, no coverage drop.
 - [ ] **Step 2:** Web: `pnpm lint:web && pnpm test:web && pnpm build:web`, then the coverage diff against `coverage-baseline-web.json`. Expected: lint 0 errors, 364 tests, build OK.
 - [ ] **Step 3:** `pnpm format:check` and `pnpm lint` for both apps (Discussion 18: a change to `@repo/eslint-config` must lint both apps).
-- [ ] **Step 4:** `pre-push` scope: `TURBO_SCM_BASE=origin/feat/claude-example pnpm exec turbo ls --affected`. Expected: `api` and `web`, because both depend on the changed packages.
+- [ ] **Step 4:** `pre-push` scope: `TURBO_SCM_BASE=github/develop pnpm exec turbo ls --affected`. Expected: `api` and `web`, because both depend on the changed packages.
 - [ ] **Step 5:** `docker build -f apps/api/Dockerfile --target production -t coffee-shop-api:local .`, then repeat the Task 1.5 Step 5 contents check. Expected: no `@repo/*`, `typescript`, `eslint` or `typescript-eslint` in the image (the `--filter` prod install).
 - [ ] **Step 6:** Test report, review, `report.md` (with the web lint delta and the print-config results), then 🛑 Gate: commit, push, MR.
