@@ -6,6 +6,7 @@ pnpm + Turborepo monorepo.
 | --- | --- |
 | `apps/api` | NestJS API — see [apps/api/README.md](apps/api/README.md) |
 | `apps/web` | Next.js frontend — see [apps/web/README.md](apps/web/README.md) |
+| `packages` | Shared config: `@repo/typescript-config`, `@repo/eslint-config`, `@repo/prettier-config` |
 | `docs` | Training exercises, conventions, specs |
 
 ```bash

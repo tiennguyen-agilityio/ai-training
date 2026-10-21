@@ -1,3 +1,12 @@
 packages:
   - apps/*
   - packages/*
+
+catalog:
+  '@eslint/eslintrc': ^3.2.0
+  '@types/node': ^24.0.0
+  eslint: ^9.18.0
+  eslint-config-prettier: ^10.0.1
+  prettier: ^3.4.2
+  typescript: ~6.0.3
+  typescript-eslint: ^8.70.1
