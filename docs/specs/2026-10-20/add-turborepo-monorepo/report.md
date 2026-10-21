@@ -1,3 +1,88 @@
+# Report: add-turborepo-monorepo — phase 3 (`refactor/turborepo-shared-config`)
+
+- Design: [design.md](design.md) · Plan: [plan.md](plan.md) (Phase 3, Tasks 3.1–3.5) · Test report: [test-report.md](test-report.md)
+- Base: `1edcdbff` (`develop`, phase 2 merged as PR #2). One commit at the gate.
+- Execution: inline by the controller. Then an independent whole-change review (opus) and one fix wave, then a second review using `superpowers:requesting-code-review` (template `code-reviewer.md`, worktree diff per workflow rule 8), and a re-run of every gate after each fix wave.
+
+## Verify
+
+Last run: 2026-10-21 10:14 (GMT+7), on the final working tree. Details in [test-report.md](test-report.md).
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| Lint | PASS | api 0 / 95, web 0 / 9 (both unchanged) |
+| Build | PASS | api, web (web on TypeScript 6) |
+| Unit tests | PASS | api 24 files / 257; web 74 suites / 364 |
+| E2E tests | PASS | `coffee_shop_test`; 5 files / 101 |
+| Coverage | PASS | both totals equal to their baselines |
+| format:check, actionlint | PASS | — |
+| Docker | PASS | `apps/api/node_modules` has no dev deps and no `@repo/*` (see the Docker row below) |
+
+**Verdict: PASS**
+
+## Phase 3 checks
+
+| Check | Result |
+| --- | --- |
+| Catalog drift (Task 3.1) | api and root: **NO DRIFT**. web: `@types/node` 20.19.43 → 24.13.3, `typescript` 5.9.3 → 6.0.3, `typescript-eslint` 8.66.0 → 8.70.1 (planned: shared devDependencies use the API's versions) |
+| TypeScript 6 (Task 3.1) | Before the fixes: TS2882 at `src/app/layout.tsx:12` and `src/app/global-error.tsx:9`, and TS2322 at `RoastDetailPageContent.test.tsx:40`, as the plan predicted. After `css.d.ts` and the `scrollMargin` mock field: `tsc` exit 0 |
+| tsconfig (Task 3.2) | `tsc --showConfig` is semantically identical (options, files, other keys) for both apps |
+| Prettier (Task 3.3) | `--list-different` is empty before and after for both apps. Resolved config: api and root use the base; web uses the base plus `semi: false` |
+| ESLint rules (Task 3.4) | `--print-config` rules are identical for 3 api files and 3 web files. That covers web too, even though `typescript-eslint` moved to 8.70.1 |
+| Web lint delta | 0 errors / 9 warnings, the same as before (see ruling 2) |
+| `next build` (Task 3.4) | lints with the Next preset; no "plugin was not detected"; `tsconfig.json` is not rewritten |
+| Affected (Task 3.5) | against `develop`: the 3 `@repo/*` packages, `api` and `web` |
+| Docker (Task 3.5) | Production image is 423 MB (phase 1: 414 MB). It has `dist/main.js` and the prod deps, and `apps/api/node_modules` has no dev deps and no `@repo/*`. The prod dependency set did not change in this phase. The image runs Node v24.21.0; the size change was not investigated further. `/app/node_modules/.pnpm` still holds `typescript@6.0.3` as a peer of `@nestjs/swagger` (`autoInstallPeers`). This was already in the base lockfile, so Review Focus 3 ("no `typescript` in `node_modules`") has only held for the API's own `node_modules` since phase 1 |
+
+## Plan review
+
+No gaps in Tasks 3.1–3.5. Deviations are listed under the rulings below.
+
+## Code review
+
+The whole-change review (opus) found no Critical items.
+
+- **Important, fixed:** `format:check` did not depend on the shared Prettier config. A change to `@repo/prettier-config` would have replayed a cached "pass".
+  - **Fix:** `turbo.json` `format:check` now has `"dependsOn": ["^format:check"]`.
+  - **Check:** appending a line to `packages/prettier-config/index.mjs` changes the hash of both `api#format:check` and `web#format:check`, and reverting the line restores the old hashes.
+- **Minor, fixed:** `apps/web/CLAUDE.md` now notes that `eslint-config-next` must be bumped together with `next`.
+- **Minor, reverted:** the first review suggested making `typescript` a peer dependency of `@repo/eslint-config`. The second review pointed out that design §2 records `typescript` as a regular dependency (a user decision), so the package keeps the plan's layout. The lockfile has one TypeScript, 6.0.3.
+- **Minor, left as known costs:**
+  - the API Docker `deps` and `development` stages install the Next lint stack, because `turbo prune api` keeps `@repo/eslint-config` (the production image is unaffected);
+  - `packages/**` has no `format:check` of its own (root lint-staged formats it on commit).
+- **Second review** (`requesting-code-review`): 0 Critical, 0 Important, ready to merge. Minor items:
+  - the `typescript` peer dependency (reverted, see above);
+  - Docker wording that claimed more than the check proves (fixed above: the virtual store keeps swagger's `typescript` peer);
+  - the image size change (now explained in the Docker row);
+  - web's `prettier` floor drops from `^3.8.2` to the catalog's `^3.4.2`. The lockfile still pins 3.9.6, and the API's version wins by design.
+- **Also confirmed by the reviewer:** this pnpm setup has no public hoisting. FlatCompat resolves `eslint-config-next` as a direct dependency of `@repo/eslint-config`, so lint also works on a fresh CI install and after `turbo prune`.
+
+## Tests added
+
+None. One test-file change: the `scrollMargin` field added to the IntersectionObserver mock, which TypeScript 6's DOM types require. No assertion changed.
+
+## Decisions
+
+**Controller rulings:**
+1. **Base:** `develop` @ `1edcdbff`, and the PR targets `develop` (design Discussion 22).
+2. **`apps/web/prettier.config.mjs`:** it exports a named `const config`. The plan's anonymous `export default { ... }` added an `import/no-anonymous-default-export` warning (9 → 10).
+3. **Web tsconfig proof:** the web "before" was re-captured on TS 6 with the old `tsconfig.json`. The TS 5.9 capture prints derived options differently, so diffing against it would show printing changes, not config changes.
+4. **Docs beyond the plan:**
+   - root `CLAUDE.md` Layout: `packages/` and the catalog;
+   - root README: a table row for `packages`;
+   - web README: a tree line for `prettier.config.mjs`;
+   - `apps/web/CLAUDE.md`: a "Shared config" section.
+5. **Web coverage:** the web coverage baseline was re-taken at the phase start. The branch count changes between 1122 and 1123 from run to run, with no source change.
+
+## Known limitations and follow-ups
+
+- The API Docker build stages carry the Next lint stack (see Code review). If image build time matters, split the Next preset into its own package.
+- The production image keeps `typescript` in its virtual store as a peer of `@nestjs/swagger`. To prove the image has no dev deps, the Review Focus 3 check should also list `node_modules/.pnpm`. Removing the peer is separate work.
+- Swagger title `api` (from phase 1) is still open.
+- GitLab `origin/develop` (`ee8ad41c`) is behind GitHub `develop`. Push `develop` to `origin` so that `pre-push`'s default base is current.
+
+---
+
 # Report: add-turborepo-monorepo — phase 2 (`refactor/turborepo-web`)
 
 - Design: [design.md](design.md) · Plan: [plan.md](plan.md) (Phase 2, Tasks 2.1–2.6) · Test report: [test-report.md](test-report.md)

@@ -47,25 +47,24 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/prettier-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/jest": "^30.0.0",
-    "@types/node": "^20",
+    "@types/node": "catalog:",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.15",
-    "eslint-config-prettier": "^10.1.8",
+    "eslint": "catalog:",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
-    "prettier": "^3.8.2",
+    "prettier": "catalog:",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^5",
-    "typescript-eslint": "^8.58.1"
+    "typescript": "catalog:"
   }
 }

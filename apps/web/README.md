@@ -37,6 +37,7 @@ apps/web/
 ├── next.config.ts
 ├── package.json
 ├── postcss.config.mjs
+├── prettier.config.mjs     # extends @repo/prettier-config (no semicolons)
 └── tsconfig.json
 ```
 

@@ -7,6 +7,8 @@ Guidance for Claude Code in this repo. App-specific guidance lives next to each 
 - pnpm workspace driven by Turborepo. Git root and workspace root are the same directory; run commands from here unless noted.
 - `apps/api/`: NestJS 12 / TypeScript 6 / ESM backend (package `api`).
 - `apps/web/`: Next.js frontend (package `web`); see `apps/web/CLAUDE.md`.
+- `packages/`: shared config that both apps extend: `@repo/typescript-config` (`nestjs.json`, `nextjs.json`), `@repo/eslint-config` (`nest`, `next`), `@repo/prettier-config` (web adds `semi: false`). Change a rule there, not in an app, then lint both apps.
+- Shared devDependency versions (`eslint`, `prettier`, `typescript`, `typescript-eslint`, `@types/node`, …) live in the `catalog:` of `pnpm-workspace.yaml`; apps reference them as `"catalog:"`.
 - `docs/`: training material (exercises, conventions, specs), not product docs. `docs/conventions/git.md` is the authoritative git workflow.
 - `.claude/`: shared workflow, agents and the `work-ticket` skill. API rules and the `verify` skill are in `apps/api/.claude/`.
 

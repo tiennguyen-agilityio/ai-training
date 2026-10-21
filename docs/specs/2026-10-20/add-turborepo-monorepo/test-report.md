@@ -1,60 +1,67 @@
-# Test Report: add-turborepo-monorepo (phase 2)
+# Test Report: add-turborepo-monorepo (phase 3)
 
-- Time: 2026-10-21 00:17:41 (GMT+7)
-- Branch: refactor/turborepo-web · Commit: 283331a6 + uncommitted changes
+- Time: 2026-10-21 10:14:12 (GMT+7)
+- Branch: refactor/turborepo-shared-config · Commit: 1edcdbff + uncommitted changes
 - Result: PASS (0 bugs)
 
 ## Overview
 
 | Suite | Passed | Failed | Skipped | Duration | Scope |
 | --- | --- | --- | --- | --- | --- |
-| Unit test (api, Vitest) | 257 | 0 | 0 | 1.58s | 24 files |
-| E2E test (api) | 101 | 0 | 0 | 17.41s | 5 files (DB localhost:5432/coffee_shop_test) |
-| Unit test (web, Jest) | 364 | 0 | 0 | 10.3s | 74 suites |
+| Unit test (api, Vitest) | 257 | 0 | 0 | 1.57s | 24 files |
+| E2E test (api) | 101 | 0 | 0 | 17.00s | 5 files (DB localhost:5432/coffee_shop_test) |
+| Unit test (web, Jest) | 364 | 0 | 0 | 8.5s | 74 suites |
 
 ## Bugs (0)
 
-None in this run. An earlier run in this session failed once on `test/e2e/product.e2e-spec.ts` (`afterAll` hook timed out after 10000ms; all 101 tests passed). The file passed alone (40/40) and in two later full runs, so it is recorded as flaky, not a bug.
+None.
 
 ## Coverage
 
-API, compared with the baseline from 2026-10-20, commit 5cb2eae5 (no `src/` file changed):
+API, compared with the baseline from 2026-10-21, commit 1edcdbff:
 
 | File | Statements | Branches | Functions | Lines |
 | --- | --- | --- | --- | --- |
 | **Total** | 96.96% → 96.96% (0) | 92.13% → 92.13% (0) | 97.36% → 97.36% (0) | 96.88% → 96.88% (0) |
 
-Web, compared with `coverage-baseline-web.json` (2026-10-20, commit ee8ad41c, taken in `web/` before the move):
+Web, compared with the baseline from 2026-10-21, commit 1edcdbff:
 
 | File | Statements | Branches | Functions | Lines |
 | --- | --- | --- | --- | --- |
-| **Total** | 84.14% → 84.14% (0) | 74.35% → 74.35% (0) | 65.79% → 65.79% (0) | 84.14% → 84.14% (0) |
+| **Total** | 84.14% → 84.14% (0) | 74.33% → 74.33% (0) | 65.79% → 65.79% (0) | 84.14% → 84.14% (0) |
 
 Coverage drops (warning only, not a failure):
 - none
 
-> One earlier web run in this session showed branches 74.35% → 74.33% (`src/hooks/useDebouncedUrlSearch.ts` counted 15 branches instead of 16). The final run matches the baseline.
+> The web branch total changes between 1122 and 1123 from run to run: `src/hooks/useDebouncedUrlSearch.ts` is counted with 15 or 16 branches, with no source change. One run in this phase showed +0.02. This happened in phase 2 too, so it is not caused by this change.
 
 ## Scope
 
-- Changed files: web moved to `apps/web` (290 pure renames + README.md formatted by the pre-commit hook), plus config/docs: root and web `package.json`, `pnpm-lock.yaml` (web lockfile removed), `turbo.json`, `.gitignore`, `ci.yml`, `CLAUDE.md`, READMEs, `docs/conventions/git.md`, `apps/web/CLAUDE.md`. No `src/` or test file changed.
+- Changed files:
+  - pnpm catalog (`pnpm-workspace.yaml`, devDependencies set to `catalog:`);
+  - new `packages/typescript-config`, `packages/prettier-config` and `packages/eslint-config`;
+  - both apps' `tsconfig.json` and `eslint.config.mjs`, plus `apps/web/prettier.config.mjs` (the two `.prettierrc` files were removed);
+  - web TypeScript 6 fixes: `src/types/css.d.ts`, and one `scrollMargin` field in the `RoastDetailPageContent.test.tsx` mock;
+  - `turbo.json` (`format:check` dependsOn) and docs.
 - Unit tests run: all (api 24 files, web 74 suites)
 - E2E tests run: all (5 files)
 - Scope notes:
-  - Web tests also passed with `apps/web/.env` moved aside (74/364), as CI runs them.
+  - Web type check: `tsc --noEmit` exit 0 on TypeScript 6.0.3.
 
 ## Verification
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
-| Lint (api) | PASS | `eslint` without `--fix`: 0 errors, 95 warnings (unchanged) |
-| Lint (web) | PASS | `eslint .` without `--fix`: 0 errors, 9 warnings (unchanged) |
+| Lint (api) | PASS | 0 errors, 95 warnings (unchanged); `--print-config` rules identical for 3 files |
+| Lint (web) | PASS | 0 errors, 9 warnings (unchanged); `--print-config` rules identical for 3 files |
 | Build (api) | PASS | `nest build` exit 0 |
-| Build (web) | PASS | `pnpm build:web` exit 0; also exit 0 without `.env` given only `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` |
+| Build (web) | PASS | `pnpm build:web` exit 0. `next build` still lints; no "plugin was not detected" |
+| tsconfig | PASS | `tsc --showConfig` is semantically identical to the old configs for both apps |
+| Prettier | PASS | `--list-different` is empty for both apps, before and after; `pnpm format:check` passes |
 | Unit tests | PASS | api 24 files / 257; web 74 suites / 364 |
 | E2E tests | PASS | guard printed `localhost:5432/coffee_shop_test`; 5 files / 101 |
-| format:check | PASS | `pnpm format:check` (api + web) |
+| Docker | PASS | production image (built before the final `@repo/eslint-config` dependency revert, which does not reach the prod install): `dist/main.js`, prod deps OK; `apps/api/node_modules` has no `typescript` / `eslint` / `turbo` / `vitest` / `@nestjs/cli` / `@repo/*`. The virtual store still holds `typescript@6.0.3` as `@nestjs/swagger`'s peer, as it did before this phase |
 | actionlint | PASS | no output |
-| Diff review | PASS | no `src/` or test changes; no skips, suppressions or removed assertions |
+| Diff review | PASS | only planned `src` changes (the two TS 6 fixes); no skips, suppressions or removed assertions |
 
 **Verdict: PASS**

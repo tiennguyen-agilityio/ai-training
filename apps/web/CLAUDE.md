@@ -16,6 +16,10 @@ pnpm test:cov
 
 `src/app` (routes: `(shop)`, `dashboard`, `sign-in`, `sign-up`), `src/sections` (page sections), `src/layouts`, `src/components`, `src/services` (API client), `src/hooks`, `src/store`, `src/providers`, `src/schemas`, `src/constants`, `src/theme`, `src/types`, `src/utils`.
 
+## Shared config
+
+`tsconfig.json`, `eslint.config.mjs` and `prettier.config.mjs` extend `@repo/typescript-config`, `@repo/eslint-config/next` and `@repo/prettier-config` in `packages/`. When upgrading `next`, bump `eslint-config-next` in `packages/eslint-config/package.json` to the same version.
+
 ## Environment
 
 Copy `.env.example` to `.env`. `NEXT_PUBLIC_API_URL` points at the API (`pnpm dev:api` serves `http://localhost:3000`). `pnpm build` needs `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`; CI reads it from the GitHub Actions variable of the same name.

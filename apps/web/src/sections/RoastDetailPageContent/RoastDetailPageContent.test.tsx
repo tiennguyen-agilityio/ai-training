@@ -40,6 +40,7 @@ beforeAll(() => {
   globalThis.IntersectionObserver = class {
     readonly root = null
     readonly rootMargin = ''
+    readonly scrollMargin = ''
     readonly thresholds = []
     observe = jest.fn()
     unobserve = jest.fn()
