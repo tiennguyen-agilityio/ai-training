@@ -239,7 +239,7 @@ Not under `/api/v1` and excluded from Swagger.
 ### Installation
 
 ```bash
-git clone -b feat/claude-example git@gitlab.asoft-python.com:tien.nguyen/ai-training.git
+git clone -b develop git@gitlab.asoft-python.com:tien.nguyen/ai-training.git
 cd ai-training && pnpm install   # at the repo root
 cd apps/api
 

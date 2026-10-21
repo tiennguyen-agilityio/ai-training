@@ -1,4 +1,4 @@
-BASE="${TURBO_SCM_BASE:-origin/feat/claude-example}"
+BASE="${TURBO_SCM_BASE:-origin/develop}"
 if git rev-parse --verify --quiet "$BASE^{commit}" >/dev/null; then
   TURBO_SCM_BASE="$BASE" pnpm exec turbo run build test --affected
 else

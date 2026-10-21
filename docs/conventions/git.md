@@ -16,7 +16,7 @@ The git root is the pnpm workspace root; the hooks run from there.
 
 | Branch | Purpose |
 |---|---|
-| `feat/coffee-shop-api` | Integration branch for the API. Feature MRs target this branch. |
+| `develop` | Integration branch. Feature MRs and PRs target this branch. |
 | `<type>/<short-kebab-description>` | One branch per task, created from the integration branch. |
 
 Use the same `<type>` as the commit (see below). Examples from history:
@@ -26,7 +26,7 @@ Use the same `<type>` as the commit (see below). Examples from history:
 - `refactor/dedup-common-logic`
 
 ```bash
-git checkout feat/coffee-shop-api
+git checkout develop
 git pull
 git checkout -b fix/empty-page-query-param
 ```
@@ -47,9 +47,9 @@ Commit messages follow [Conventional Commits](https://www.conventionalcommits.or
 
 | Hook | Runs | Effect |
 |---|---|---|
-| `pre-commit` | `lint-staged` | Closest config per staged file: API `*.ts` → `eslint --fix` + `prettier --write`; `packages/` and root files → `prettier --write` |
+| `pre-commit` | `lint-staged` | Closest config per staged file: API `*.ts` → `eslint --fix` + `prettier --write`; web js/ts → `eslint --fix` + `prettier --write`, css/md/json → `prettier --write`; `packages/` and root files → `prettier --write` |
 | `commit-msg` | `commitlint` | Rejects messages that are not Conventional Commits |
-| `pre-push` | `turbo run build test --affected` | Builds and tests only the packages changed against `origin/feat/claude-example` (override with `TURBO_SCM_BASE`); blocks the push on failure |
+| `pre-push` | `turbo run build test --affected` | Builds and tests only the packages changed against `origin/develop` (override with `TURBO_SCM_BASE`); blocks the push on failure |
 
 Fix the cause instead of skipping hooks with `--no-verify`.
 
@@ -59,4 +59,4 @@ Fix the cause instead of skipping hooks with `--no-verify`.
 git push -u origin <branch>
 ```
 
-Then open a GitLab MR into `feat/coffee-shop-api`. MRs are merged with a merge commit (`Merge branch '<branch>' into 'feat/coffee-shop-api'`). For the MR description, see the template used in [day 01, section 3](../exercises/day-01.md#3-drafting-task).
+Then open a GitLab MR (or a GitHub PR) into `develop`. They are merged with a merge commit (`Merge branch '<branch>' into 'develop'`). For the MR description, see the template used in [day 01, section 3](../exercises/day-01.md#3-drafting-task).

@@ -1,3 +1,81 @@
+# Report: add-turborepo-monorepo — phase 2 (`refactor/turborepo-web`)
+
+- Design: [design.md](design.md) · Plan: [plan.md](plan.md) (Phase 2, Tasks 2.1–2.6) · Test report: [test-report.md](test-report.md)
+- Base: `ee8ad41c` (GitHub `develop`, phase 1 merged as PR #1). Commits: `283331a6` (move, approved at the Task 2.2 checkpoint), then the rest at the gate.
+- Execution: Tasks 2.1–2.6 inline by the controller (small, fully specified, and Task 2.4 handles `.env`), then one independent whole-change review (opus).
+
+## Verify
+
+Last run: 2026-10-21 00:17 (GMT+7), on the final working tree. Details in [test-report.md](test-report.md).
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| Lint | PASS | api 0 errors / 95 warnings; web 0 errors / 9 warnings (both unchanged, no `--fix`) |
+| Build | PASS | api `nest build`; web `pnpm build:web` |
+| Unit tests | PASS | api 24 files / 257; web 74 suites / 364 |
+| E2E tests | PASS | `coffee_shop_test`; 5 files / 101 |
+| Coverage | PASS | api and web totals equal to their baselines |
+| format:check | PASS | api + web |
+| actionlint | PASS | no output |
+
+**Verdict: PASS**
+
+## Phase 2 checks
+
+| Check | Result |
+| --- | --- |
+| Move (Task 2.2) | 291 files: 290 R100, `README.md` R070 (the pre-commit hook ran Prettier on it, which Task 2.3 Step 3 does anyway) |
+| Drift (Task 2.3) | Web direct dependencies: **NO DRIFT**. API direct dependencies: **NO DRIFT** (api importer differs only in peer suffixes, e.g. `jiti` 2.6.1 → 2.7.0). Web transitive: the `lint-staged@16` tree is gone, and `content-type`, `fast-uri`, `negotiator`, `proxy-addr`, `qs`, `@jridgewell/sourcemap-codec` now share the API's patch versions |
+| Env for `next build` (Task 2.4) | Only `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` (build exit 0 with `.env` moved aside) |
+| Affected (Task 2.4) | A web change affects `web` only, an API change affects `api` only (probed in a temporary worktree, because turbo adds uncommitted changes to `base...HEAD`) |
+| `pnpm dev` (Task 2.6) | Dry run schedules `api#dev` and `web#dev` (both persistent). Ports 3000/3001 were taken by the user's running stack, so `PORT=3100 pnpm dev:api` was started instead: `POST /webhooks/clerk` → 400 |
+| Pre-commit (Task 2.6) | lint-staged on staged files: web `.ts` got no semicolons, API `.ts` got semicolons |
+| Web tests without `.env` | 74 suites / 364 tests pass |
+
+## Plan review
+
+The plan's phase 2 Git table was still unfilled; it now records `develop` @ `ee8ad41c`.
+
+## Code review
+
+The whole-change review (opus) found no Critical items and two Important ones:
+
+1. A stray untracked `web/.next/` (written by a `next dev` still running from `web/` during the move) was not ignored at the root. **Fixed:** `.next` added to the root `.gitignore`. The leftover folder itself still needs deleting locally.
+2. If the GitHub variable `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is missing, `next build` fails in `quality` and the API deploy jobs are skipped. **Open (user action):** create the variable before pushing. No fail-fast step was added, because it would also block API-only changes.
+
+Minor items:
+- web tests without `.env`: run, pass (fixed);
+- the plan Git table: filled in (fixed);
+- `pre-push` defaulted to an outdated GitLab branch (from before phase 1), so it ran every package. **Fixed** by user request (design Discussion 22): it now defaults to `origin/develop`. When pushing to GitHub, use `TURBO_SCM_BASE=github/develop git push`. A missing ref still runs every package.
+
+## Tests added
+
+None. No `src/` or test file changed.
+
+## Decisions
+
+**User decisions:**
+- Approved the move commit `283331a6`.
+
+**Controller rulings:**
+1. Base is GitHub `develop` (`ee8ad41c`), and the PR targets `develop`, because phase 1 landed there and GitLab was unreachable.
+2. **Lockfile:** a plain `pnpm install` re-resolved 20 web direct dependencies upward (e.g. react 19.2.8 → 19.3.1). Instead, the old web lockfile's importer, packages and snapshots were grafted into the root lockfile, then `pnpm install --fix-lockfile` was run. A reviewer confirmed it with a frozen-lockfile check, and `turbo prune api --docker` stays frozen-clean.
+3. **`turbo.json`:** `dev` and `start` get `"passThroughEnv": ["*"]`. Strict env mode dropped shell variables: `PORT=3100 pnpm dev:api` still bound 3000 and hit EADDRINUSE. Both tasks are uncached, so this has no cache cost. This resolves the phase 1 deferred item "turbo strict env mode".
+4. **README:** `apps/web/README.md` was updated (paths, hooks line, removed `lint:fix` / `test:coverage`). The root README got an upgrade note for the web move.
+5. **`pre-push` default base:** changed to `origin/develop` at the user's request, together with every doc that named the old training branch (design Discussion 22).
+6. **Flaky test:** one e2e `afterAll` timeout in `product.e2e-spec.ts` was recorded as flaky (it passed alone and in two later full runs).
+7. **Coverage:** one web coverage run showed a 1-branch drop in `useDebouncedUrlSearch.ts`. The final run matches the baseline, so no cause was assigned.
+
+## Known limitations and follow-ups
+
+- Create the GitHub Actions variable `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` before the PR's CI runs.
+- **Local cleanup:**
+  - delete `web/` (only `.next` remains);
+  - restart `next dev` from `apps/web`. The running one returned 500 after `pnpm build:web` rewrote `apps/web/.next` under it.
+- Swagger title `api` (from phase 1) is still open.
+
+---
+
 # Report: add-turborepo-monorepo — phase 1 (`refactor/turborepo-api`)
 
 - Design: [design.md](design.md) · Plan: [plan.md](plan.md) (Phase 1, Tasks 1.1–1.8) · Test report: [test-report.md](test-report.md)

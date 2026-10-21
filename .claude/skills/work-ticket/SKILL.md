@@ -1,13 +1,13 @@
 ---
 name: work-ticket
 description: End-to-end workflow for one Trello card on the Claude Training board — discuss, plan, branch, implement, verify, review, commit, open a GitLab MR, update the card. Run only when the user invokes /work-ticket.
-argument-hint: <trello card URL> [base branch, default feat/claude-example] | <card URL> done
+argument-hint: <trello card URL> [base branch, default develop] | <card URL> done
 disable-model-invocation: true
 ---
 
 # Work a Trello ticket end to end
 
-Arguments: `$ARGUMENTS` — a card URL, optionally a base branch (default `feat/claude-example`), or `<card URL> done`.
+Arguments: `$ARGUMENTS` — a card URL, optionally a base branch (default `develop`), or `<card URL> done`.
 
 Follow `.claude/rules/workflow.md` for every superpowers step; it overrides their save paths, plan header, commit steps, review diff and finishing options. Run commands from the repo root; API-only commands (verify, coverage) from `apps/api/`.
 
