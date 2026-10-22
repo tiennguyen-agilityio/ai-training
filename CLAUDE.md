@@ -37,7 +37,7 @@ pnpm build --affected # only packages changed against TURBO_SCM_BASE
 
 ## CI
 
-`.github/workflows/ci.yml` is GitHub Actions. It runs for `develop` (GHCR `:develop` + Render develop deploy) and `main` (production):
+`.github/workflows/ci.yml` is GitHub Actions. It runs on PRs into `develop`/`main` (open, sync, reopen), on push to `develop` (GHCR `:develop` + Render develop deploy) and on push to `main` (production: GHCR `:<sha>` + `:latest`, Render production deploy):
 
 1. `quality`: `turbo run test build --affected`; there is no lint step.
 2. Docker build of `apps/api/Dockerfile` (context `.`) + Trivy, only when the API is affected.
