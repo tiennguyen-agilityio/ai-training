@@ -43,3 +43,5 @@ pnpm build --affected # only packages changed against TURBO_SCM_BASE
 2. Docker build of `apps/api/Dockerfile` (context `.`) + Trivy, only when the API is affected.
 3. GHCR push.
 4. Render deploy.
+
+`.github/workflows/trello.yml` (no path filter): when a PR into `develop` is merged, moves the card on its `**Ticket:**` line to DONE.

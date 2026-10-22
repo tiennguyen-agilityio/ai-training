@@ -23,7 +23,7 @@ Follow `.claude/rules/workflow.md` for every superpowers step; it overrides thei
   - D is the tool's "Other" field, for the user's own input.
   - Wait for the answer.
 - A 🛑 **Gate** is a question whose options name exactly what will happen. Without approval, stop.
-- Nothing outward-facing happens outside a gate: no Trello write, commit, push or PR.
+- Nothing outward-facing happens outside a gate: no Trello write, commit, push or PR. Two exceptions: step 12 moves the card to **REVIEW** (approved with the PR at Gate 3), and `.github/workflows/trello.yml` moves it to **DONE** when the PR is merged.
 - At every gate, and whenever a step fails and you stop, call `PushNotification` first with one line saying what is needed: `work-ticket #<card no>: <step>: <what you need>` (under 200 chars). On completion, send one with the PR and card result. No notifications for other questions or routine progress.
 - All Trello work goes through the `trello-manager` subagent. Pass write approvals to it explicitly: card + target list.
 
@@ -57,9 +57,9 @@ Follow `.claude/rules/workflow.md` for every superpowers step; it overrides thei
    - Then tick each `R<n>` in the design's `## Requirements from card`.
    - Then write `report.md` (rule 9).
 10. 🛑 **Gate 2: commit.** Run `git add -A`, then show `git diff --cached --stat`, the R coverage, a short verify / plan-review / code-review summary, and one commit message per workflow rule 11. Nothing is ticked on Trello. After approval, commit. If the user declines, run `git reset` to unstage (the changes stay in the working tree) and stop. If a hook fails, fix the cause; never use `--no-verify`.
-11. 🛑 **Gate 3: finish the branch.** Run `superpowers:finishing-a-development-branch` following workflow rule 10: the `pr-description` skill drafts `pr-description.md`, you show it, and the option menu that follows is this gate. Nothing is pushed before the user approves A. If the user picks B (keep the branch), report the branch name and stop: skip Gate 4 and step 13.
-12. 🛑 **Gate 4.** Move the card to **REVIEW** via `trello-manager`.
-13. **Report.** Send the completion notification, then a short summary with the PR link, the card link, and the local paths of `report.md`, `test-report.md`, `pr-description.md`, `design.md` and `plan.md`. The details live in `report.md`; do not repeat them.
+11. 🛑 **Gate 3: finish the branch.** Run `superpowers:finishing-a-development-branch` following workflow rule 10: the `pr-description` skill drafts `pr-description.md`, you show it, and the option menu that follows is this gate. Nothing is pushed before the user approves A. If the user picks B (keep the branch), report the branch name and stop: skip steps 12 and 13.
+12. **Card → REVIEW.** No gate: right after `gh pr create` succeeds, dispatch `trello-manager` with the card URL and the target list `REVIEW`, stating that the user approved the move with the PR at Gate 3. If the move fails, stop and notify.
+13. **Report.** Send the completion notification, then a short summary with the PR link, the card link (in REVIEW; `.github/workflows/trello.yml` moves it to DONE when the PR is merged, and if that run fails, `/work-ticket <card URL> done` is the fallback), and the local paths of `report.md`, `test-report.md`, `pr-description.md`, `design.md` and `plan.md`. The details live in `report.md`; do not repeat them.
 
 ## Resume
 
@@ -94,8 +94,8 @@ Before continuing, act on git:
 
 1. Run the card lookup. No match → report and stop. Take the branch and the base from the plan's Git section; with no `plan.md`, take the branch from the design's `**Branch:**` line and the base from the arguments.
 2. `gh pr view <branch> --json state,url`. Not merged → report the state and stop.
-3. Merged → 🛑 one gate: move the card to **DONE** and delete the local branch.
-4. After approval, dispatch `trello-manager` to move the card. Then:
+3. Merged → `trello-manager` (read-only) reads the card's list. Then 🛑 one gate: move the card to **DONE** and delete the local branch. If the card is already in DONE (normally moved by `.github/workflows/trello.yml`), the gate only offers deleting the local branch.
+4. After approval, dispatch `trello-manager` to move the card, unless it is already in DONE. Then:
    - On the merged branch with a dirty tree: stop and report.
    - On the merged branch with a clean tree: `git checkout <base> && git pull && git branch -d <branch>`.
    - On any other branch: `git fetch origin && git branch -d <branch>`, without leaving the current branch.

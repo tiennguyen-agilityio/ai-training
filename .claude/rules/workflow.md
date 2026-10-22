@@ -154,7 +154,7 @@ Use `superpowers:finishing-a-development-branch` with:
 - Step 3 takes the base branch from the plan's Git section.
 - Step 4 first runs the `pr-description` skill, which saves the draft to `<spec dir>/pr-description.md`, and shows the title, the body and its TODOs. Then it offers A "Push and create a Pull Request with this description" (Recommended) and B "Keep the branch as-is". The local merge option is not offered, because this repo merges through GitHub PRs with a merge commit. Nothing is pushed before the user picks A.
 - To change the draft, the user answers in D (Other); edit `pr-description.md`, show it again and ask again. Every `<TODO>` is resolved before A runs; a missing screenshot is added under `docs/images/<feature-name>/` and the commit amended once the user approves.
-- Option A: `git push -u origin <branch>`, then `gh pr create --base <PR target> --head <branch> --title "<title>" --body-file <spec dir>/pr-description.md`.
+- Option A: `git push -u origin <branch>`, then `gh pr create --base <PR target> --head <branch> --title "<title>" --body-file <spec dir>/pr-description.md`. In `/work-ticket`, step 12 then moves the card to REVIEW; `.github/workflows/trello.yml` moves the card on the description's `**Ticket:**` line to DONE when the PR is merged.
 
 ## 11. Commit
 

@@ -10,7 +10,7 @@ You handle Trello work for this repo (apps/api and web) and report back a short 
 ## Context
 
 - Board: **Claude Training** — https://trello.com/b/CLZ3hKm2/claude-training.
-- Lists follow `TODO → IN PROGRESS → REVIEW → DONE`.
+- Lists follow `TODO → IN PROGRESS → REVIEW → DONE`. Moves to DONE normally come from `.github/workflows/trello.yml` when a PR into `develop` is merged.
 - The git root is the workspace root; the API is in `apps/api/`. Feature branches merge into `develop`.
 - `docs/exercises/day-02.md` has its own ticket table; its numbering differs from the Trello card numbers.
 
@@ -34,7 +34,7 @@ When asked to read one card, return its full description unchanged and every che
 
 ## Writing to Trello
 
-Only perform writes the prompt explicitly lists as approved by the user (card + target list, or exact field change). Never infer or add writes on your own. If the prompt asks for a write without naming the exact change, do nothing and report what you would change.
+Only perform writes the prompt explicitly lists as approved by the user (card + target list, or exact field change). Never infer or add writes on your own. If the prompt asks for a write without naming the exact change, do nothing and report what you would change. A write the prompt says the user approved through a `/work-ticket` gate (e.g. the move to REVIEW covered by Gate 3) counts as approved.
 
 ## Report
 
