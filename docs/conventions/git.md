@@ -5,7 +5,7 @@ How we clone, branch, commit and push in this repo. The hooks enforce most of th
 ## Clone and set up
 
 ```bash
-git clone git@gitlab.asoft-python.com:tien.nguyen/ai-training.git
+git clone git@github.com:tiennguyen-agilityio/ai-training.git
 cd ai-training
 pnpm install          # whole workspace + git hooks (husky, via the root `prepare`)
 ```
@@ -16,7 +16,7 @@ The git root is the pnpm workspace root; the hooks run from there.
 
 | Branch | Purpose |
 |---|---|
-| `develop` | Integration branch. Feature MRs and PRs target this branch. |
+| `develop` | Integration branch. Feature PRs target this branch. |
 | `<type>/<short-kebab-description>` | One branch per task, created from the integration branch. |
 
 Use the same `<type>` as the commit (see below). Examples from history:
@@ -53,10 +53,10 @@ Commit messages follow [Conventional Commits](https://www.conventionalcommits.or
 
 Fix the cause instead of skipping hooks with `--no-verify`.
 
-## Push and merge request
+## Push and pull request
 
 ```bash
 git push -u origin <branch>
 ```
 
-Then open a GitLab MR (or a GitHub PR) into `develop`. They are merged with a merge commit (`Merge branch '<branch>' into 'develop'`). For the MR description, see the template used in [day 01, section 3](../exercises/day-01.md#3-drafting-task).
+Then open a GitHub PR into `develop` (`gh pr create --base develop`). PRs are merged with a merge commit (`Merge pull request #<n> from <owner>/<branch>`). For the PR description, see the template used in [day 01, section 3](../exercises/day-01.md#3-drafting-task).

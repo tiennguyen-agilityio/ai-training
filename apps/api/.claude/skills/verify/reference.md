@@ -7,12 +7,14 @@ Read only when SKILL.md is not enough: a gate fails, a checklist item is unclear
 | Gate | Command | Also enforced by |
 | --- | --- | --- |
 | Lint | `pnpm exec eslint "{src,apps,libs,test}/**/*.ts"` (no `--fix`) | pre-commit (lint-staged), CI |
+| Format | `pnpm run format:check` (no `--write`) | pre-commit (lint-staged) |
 | Build | `pnpm run build` (`nest build`, `tsconfig.build.json`) | pre-push, CI |
 | Unit tests | `pnpm run test` (`src/**/*.spec.ts`) | pre-push, CI |
 | E2E tests | `pnpm run test:e2e` (`test/**/*.e2e-spec.ts`) | nothing: only this skill runs it |
 
 - **Lint warnings don't fail the gate** (`no-floating-promises`, `no-unsafe-argument` are `warn`). Baseline: 84 in Oct 2026, mostly `no-unsafe-argument` in `test/e2e/**`. If the count rose, check whether your change added them. Add none.
 - **Fixing lint:** `pnpm run lint` autofixes prettier-style issues. It changes the diff, so rerun the gates.
+- **Fixing format:** `pnpm run format` rewrites the files. It changes the diff, so rerun the gates. Without the Format gate, pre-commit lint-staged would rewrite the files after verify.
 - **While fixing:** loop on `pnpm vitest run <file>` or `-t '<name>'` (CLAUDE.md §2), then finish with a full run of every gate.
 - **`.only`:** vitest allows it locally and silently skips every other test, while CI (`CI=true`) fails on it. A local green run with `.only` proves nothing.
 

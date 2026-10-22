@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Use when a code change in apps/api (the API) is finished or about to be called done, fixed, or passing; before committing, pushing, or opening a GitLab MR; or when the user asks to verify, check, or prove the work.
+description: Use when a code change in apps/api (the API) is finished or about to be called done, fixed, or passing; before committing, pushing, or opening a GitHub PR; or when the user asks to verify, check, or prove the work.
 ---
 
 # Verify API changes
@@ -11,10 +11,11 @@ description: Use when a code change in apps/api (the API) is finished or about t
 
 Run from `apps/api/`.
 
-1. **Gates.** Run all three, even if one fails, and read each output.
+1. **Gates.** Run every gate, even if one fails, and read each output.
 
    ```bash
    pnpm exec eslint "{src,apps,libs,test}/**/*.ts"   # no --fix: observe, don't rewrite
+   pnpm run format:check                            # no --write: observe, don't rewrite
    pnpm run build
    pnpm run test
    ```
@@ -64,6 +65,7 @@ Run from `apps/api/`.
    | Gate | Result | Evidence |
    | --- | --- | --- |
    | Lint | PASS | 0 errors, 84 warnings (unchanged) |
+   | Format | PASS | prettier --check: all files formatted |
    | Build | PASS | nest build exit 0 |
    | Unit tests | PASS | 24 files, 251 tests passed |
    | E2E tests | SKIPPED | service-only change, no DB layer touched |

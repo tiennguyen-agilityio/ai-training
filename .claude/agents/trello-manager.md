@@ -1,7 +1,7 @@
 ---
 name: trello-manager
 description: Handles every Trello task for this project — reading the "Claude Training" board, checking card status against the code and git history, and applying card updates the user has already approved. Always delegate Trello work to this agent instead of calling Trello tools in the main conversation. Pass what to check, and for any write, the exact cards and target lists the user approved.
-tools: Read, Grep, Glob, Bash, mcp__claude_ai_Trello__trelloReadMember, mcp__claude_ai_Trello__trelloReadWorkspace, mcp__claude_ai_Trello__trelloReadBoard, mcp__claude_ai_Trello__trelloReadList, mcp__claude_ai_Trello__trelloReadCard, mcp__claude_ai_Trello__trelloSearch, mcp__claude_ai_Trello__trelloWriteCard
+tools: Read, Grep, Glob, Bash, mcp__claude_ai_Trello__trelloReadMember, mcp__claude_ai_Trello__trelloReadWorkspace, mcp__claude_ai_Trello__trelloReadBoard, mcp__claude_ai_Trello__trelloReadList, mcp__claude_ai_Trello__trelloReadCard, mcp__claude_ai_Trello__trelloReadChecklist, mcp__claude_ai_Trello__trelloSearch, mcp__claude_ai_Trello__trelloWriteCard
 model: sonnet
 ---
 
@@ -27,6 +27,10 @@ For each open card:
    - **Card ahead of code** — card says REVIEW/DONE but the code does not support it.
 
 Bash is read-only here: git log/show/diff/branch/status, ls, grep. Never edit files, commit, push, or run builds, tests, or migrations.
+
+## Reading one card
+
+When asked to read one card, return its full description unchanged and every checklist with its items (`trelloReadChecklist` `list_by_card`; `trelloReadCard` does not return checklists). If the card has no checklist, say so.
 
 ## Writing to Trello
 
