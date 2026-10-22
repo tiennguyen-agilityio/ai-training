@@ -2,7 +2,7 @@ name: Docker CI/CD
 
 on:
   push:
-    branches: [develop]
+    branches: [develop, main]
     paths:
       - 'apps/**'
       - 'packages/**'
@@ -14,7 +14,7 @@ on:
       - '.github/workflows/**'
   pull_request:
     branches: [main, develop]
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
     paths:
       - 'apps/**'
       - 'packages/**'
@@ -30,7 +30,6 @@ env:
 
 jobs:
   quality:
-    if: github.event_name != 'pull_request' || github.event.action != 'closed' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
@@ -39,7 +38,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.merged == true && github.event.pull_request.merge_commit_sha || '' }}
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
@@ -57,12 +55,7 @@ jobs:
         id: base
         run: |
           case "${{ github.event_name }}" in
-            pull_request)
-              if [ "${{ github.event.pull_request.merged }}" = "true" ]; then
-                BASE="${{ github.event.pull_request.merge_commit_sha }}^1"
-              else
-                BASE="${{ github.event.pull_request.base.sha }}"
-              fi ;;
+            pull_request) BASE="${{ github.event.pull_request.base.sha }}" ;;
             push) BASE="${{ github.event.before }}" ;;
           esac
           if [ -n "$BASE" ] && git rev-parse --verify --quiet "$BASE^{commit}" >/dev/null; then
@@ -101,12 +94,10 @@ jobs:
 
   build-and-scan:
     needs: quality
-    if: needs.quality.outputs.api_affected == 'true' && (github.event_name != 'pull_request' || github.event.action != 'closed' || github.event.pull_request.merged == true)
+    if: needs.quality.outputs.api_affected == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.merged == true && github.event.pull_request.merge_commit_sha || '' }}
 
       - name: Set image name (lowercase)
         run: echo "IMAGE_NAME=$(echo ghcr.io/${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
@@ -136,7 +127,7 @@ jobs:
 
   push-develop:
     needs: [quality, build-and-scan]
-    if: needs.quality.outputs.api_affected == 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/develop') || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.base.ref == 'develop'))
+    if: needs.quality.outputs.api_affected == 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/develop') || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'develop'))
     runs-on: ubuntu-latest
     environment: develop-publish
     permissions:
@@ -173,7 +164,7 @@ jobs:
 
   push-production:
     needs: [quality, build-and-scan]
-    if: needs.quality.outputs.api_affected == 'true' && (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main')
+    if: needs.quality.outputs.api_affected == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production-publish
     permissions:
@@ -181,8 +172,6 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
 
       - name: Set image name (lowercase)
         run: echo "IMAGE_NAME=$(echo ghcr.io/${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
@@ -200,7 +189,7 @@ jobs:
       - name: Determine tags
         id: meta
         run: |
-          SHA="${{ github.event.pull_request.merge_commit_sha }}"
+          SHA="${{ github.sha }}"
           TAGS="${{ env.IMAGE_NAME }}:$SHA,${{ env.IMAGE_NAME }}:latest"
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
 
@@ -228,7 +217,7 @@ jobs:
 
   deploy-production:
     needs: push-production
-    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: ${{ vars.AUTO_DEPLOY == 'true' && 'render-auto' || 'render-manual' }}
     steps:
