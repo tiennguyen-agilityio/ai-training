@@ -9,3 +9,5 @@ coverage
 !.env.example
 /docs/reading/
 **/.claude/settings.local.json
+/docs/specs/
+/.superpowers/

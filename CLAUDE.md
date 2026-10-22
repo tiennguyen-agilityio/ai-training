@@ -9,7 +9,7 @@ Guidance for Claude Code in this repo. App-specific guidance lives next to each 
 - `apps/web/`: Next.js frontend (package `web`); see `apps/web/CLAUDE.md`.
 - `packages/`: shared config that both apps extend: `@repo/typescript-config` (`nestjs.json`, `nextjs.json`), `@repo/eslint-config` (`nest`, `next`), `@repo/prettier-config` (web adds `semi: false`). Change a rule there, not in an app, then lint both apps.
 - Shared devDependency versions (`eslint`, `prettier`, `typescript`, `typescript-eslint`, `@types/node`, …) live in the `catalog:` of `pnpm-workspace.yaml`; apps reference them as `"catalog:"`.
-- `docs/`: training material (exercises, conventions, specs), not product docs. `docs/conventions/git.md` is the authoritative git workflow.
+- `docs/`: training material (exercises, conventions), not product docs. `docs/specs/` holds the workflow's design and plan files; it is gitignored, so they are local-only. `docs/conventions/git.md` is the authoritative git workflow.
 - `.claude/`: shared workflow, agents and the `work-ticket` skill. API rules and the `verify` skill are in `apps/api/.claude/`.
 
 ## Commands
@@ -28,15 +28,15 @@ pnpm build --affected # only packages changed against TURBO_SCM_BASE
 
 ## Git
 
-- Conventional Commits (commitlint in `commit-msg`). Branches `<type>/<short-kebab-description>`; work branches from and targets `develop`. MRs (GitLab) and PRs (GitHub) go into `develop` and merge with a merge commit.
+- Conventional Commits (commitlint in `commit-msg`). Branches `<type>/<short-kebab-description>`; work branches from and targets `develop`. PRs go into `develop` on GitHub and merge with a merge commit.
 - Hooks (root `.husky/`):
   - `pre-commit` runs lint-staged with the closest config per staged file: the app's `package.json`, or the root `.lintstagedrc.json` (Prettier) for `packages/` and root files.
-  - `pre-push` runs `turbo run build test --affected` against `origin/develop`. Override with `TURBO_SCM_BASE=<ref> git push` (e.g. `github/develop` when pushing to GitHub). A missing ref runs every package.
+  - `pre-push` runs `turbo run build test --affected` against `origin/develop`. Override with `TURBO_SCM_BASE=<ref> git push`. A missing ref runs every package.
 - Fix the cause rather than passing `--no-verify`.
 
 ## CI
 
-`.github/workflows/ci.yml` is GitHub Actions (development happens on GitLab). It runs for `develop` (GHCR `:develop` + Render develop deploy) and `main` (production):
+`.github/workflows/ci.yml` is GitHub Actions. It runs for `develop` (GHCR `:develop` + Render develop deploy) and `main` (production):
 
 1. `quality`: `turbo run test build --affected`; there is no lint step.
 2. Docker build of `apps/api/Dockerfile` (context `.`) + Trivy, only when the API is affected.
