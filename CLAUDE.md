@@ -10,7 +10,7 @@ Guidance for Claude Code in this repo. App-specific guidance lives next to each 
 - `packages/`: shared config that both apps extend: `@repo/typescript-config` (`nestjs.json`, `nextjs.json`), `@repo/eslint-config` (`nest`, `next`), `@repo/prettier-config` (web adds `semi: false`). Change a rule there, not in an app, then lint both apps.
 - Shared devDependency versions (`eslint`, `prettier`, `typescript`, `typescript-eslint`, `@types/node`, …) live in the `catalog:` of `pnpm-workspace.yaml`; apps reference them as `"catalog:"`.
 - `docs/`: training material (exercises, conventions), not product docs. `docs/specs/` holds the workflow's design and plan files; it is gitignored, so they are local-only. `docs/conventions/git.md` is the authoritative git workflow.
-- `.claude/`: shared workflow, agents and the `work-ticket` skill. API rules and the `verify` skill are in `apps/api/.claude/`.
+- `.claude/`: shared workflow, agents, and the `work-ticket` and `pr-description` skills. API rules and the `verify` skill are in `apps/api/.claude/`.
 
 ## Commands
 
@@ -33,6 +33,7 @@ pnpm build --affected # only packages changed against TURBO_SCM_BASE
   - `pre-commit` runs lint-staged with the closest config per staged file: the app's `package.json`, or the root `.lintstagedrc.json` (Prettier) for `packages/` and root files.
   - `pre-push` runs `turbo run build test --affected` against `origin/develop`. Override with `TURBO_SCM_BASE=<ref> git push`. A missing ref runs every package.
 - Fix the cause rather than passing `--no-verify`.
+- PR descriptions follow `.claude/templates/pr-description.md`; the `pr-description` skill drafts one.
 
 ## CI
 

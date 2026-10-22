@@ -9,6 +9,8 @@ For a feature or bug task, use the superpowers skills: `brainstorming` → `writ
 - Report (end of review): `docs/specs/YYYY-MM-DD/<feature-name>/report.md`
 - Test report (every verify run): `docs/specs/YYYY-MM-DD/<feature-name>/test-report.md`
 - Coverage baseline (before any code change): `docs/specs/YYYY-MM-DD/<feature-name>/coverage-baseline.json`
+- PR description (Gate 3): `docs/specs/YYYY-MM-DD/<feature-name>/pr-description.md`
+- Screenshots (web UI changes only): `docs/images/<feature-name>/<screen>-before.png` and `<screen>-after.png`. Unlike `docs/specs/`, they are committed with the code and embedded in the PR description.
 - Paths are relative to the repo root.
 - `<feature-name>` is a kebab-case slug, identical to the part after `<type>/` in the branch name.
 - The spec dir is created with the design, under that day's date; every later file goes in the same dir.
@@ -150,12 +152,13 @@ Use `superpowers:finishing-a-development-branch` with:
 
 - Step 1 runs the `verify` skill instead of a generic test command.
 - Step 3 takes the base branch from the plan's Git section.
-- Step 4 offers A "Push and create a Pull Request" (Recommended) and B "Keep the branch as-is". The local merge option is not offered, because this repo merges through GitHub PRs with a merge commit.
-- Option A: `git push -u origin <branch>`, then `gh pr create --base <PR target> --head <branch>`. The description follows `docs/exercises/day-01.md` §3 — Title / Summary / Changes / How to test, a before/after table, under 200 words, only facts from the diff and the verify run; the verify result goes in How to test. Show the user the draft before creating the PR.
+- Step 4 first runs the `pr-description` skill, which saves the draft to `<spec dir>/pr-description.md`, and shows the title, the body and its TODOs. Then it offers A "Push and create a Pull Request with this description" (Recommended) and B "Keep the branch as-is". The local merge option is not offered, because this repo merges through GitHub PRs with a merge commit. Nothing is pushed before the user picks A.
+- To change the draft, the user answers in D (Other); edit `pr-description.md`, show it again and ask again. Every `<TODO>` is resolved before A runs; a missing screenshot is added under `docs/images/<feature-name>/` and the commit amended once the user approves.
+- Option A: `git push -u origin <branch>`, then `gh pr create --base <PR target> --head <branch> --title "<title>" --body-file <spec dir>/pr-description.md`.
 
 ## 11. Commit
 
-- One commit for the code and tests.
+- One commit for the code, the tests and any screenshots in `docs/images/`.
 - The message is one Conventional Commits subject (`feat`, `fix` or `refactor`): no body, no `Co-Authored-By` or other trailer.
 - The commit uses the user's git identity.
 - `docs/specs/` is not part of it.

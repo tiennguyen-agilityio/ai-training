@@ -59,4 +59,4 @@ Fix the cause instead of skipping hooks with `--no-verify`.
 git push -u origin <branch>
 ```
 
-Then open a GitHub PR into `develop` (`gh pr create --base develop`). PRs are merged with a merge commit (`Merge pull request #<n> from <owner>/<branch>`). For the PR description, see the template used in [day 01, section 3](../exercises/day-01.md#3-drafting-task).
+Then open a GitHub PR into `develop` (`gh pr create --base develop`). PRs are merged with a merge commit (`Merge pull request #<n> from <owner>/<branch>`). For the PR description, use [the PR description template](../../.claude/templates/pr-description.md); the `pr-description` skill drafts it from the diff and the verify result.

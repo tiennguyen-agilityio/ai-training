@@ -47,8 +47,9 @@ Follow `.claude/rules/workflow.md` for every superpowers step; it overrides thei
    - `git checkout --no-track -b <feature branch> origin/<base>`
    - Update the Git section's Base commit from `HEAD` (rule 4).
    - Before touching code, capture `coverage-baseline.json` (workflow rule 7).
+   - If the plan changes the web UI (`apps/web`), save a before screenshot of each affected screen to `docs/images/<feature-name>/<screen>-before.png` (Playwright on localhost, or the user adds it).
 6. **Implement.** Invoke `superpowers:subagent-driven-development` or `superpowers:executing-plans`, as chosen at Gate 1, with the rule 6 overrides. Use TDD and tick the plan's checkboxes as tasks finish. The step ends when the last task passes.
-7. **Verify + test report.** From `apps/api/`, list the changed files with `git diff --name-only --relative --diff-filter=d <base commit> -- '*.ts'` plus `git ls-files --others --exclude-standard -- '*.ts'`; if the list is not empty, run `pnpm exec eslint --fix` and `pnpm exec prettier --write` on it (workflow rule 7). Then run the `verify` skill with the unit gate on `test:cov`, then write `test-report.md` from `.claude/templates/test-report.md`. Every gate must PASS or be SKIPPED with a reason. On a failure, the notification names `test-report.md`.
+7. **Verify + test report.** From `apps/api/`, list the changed files with `git diff --name-only --relative --diff-filter=d <base commit> -- '*.ts'` plus `git ls-files --others --exclude-standard -- '*.ts'`; if the list is not empty, run `pnpm exec eslint --fix` and `pnpm exec prettier --write` on it (workflow rule 7). Then run the `verify` skill with the unit gate on `test:cov`, then write `test-report.md` from `.claude/templates/test-report.md`. Every gate must PASS or be SKIPPED with a reason. On a failure, the notification names `test-report.md`. When it passes and the plan changes the web UI, save the after screenshots to `docs/images/<feature-name>/<screen>-after.png`.
 8. **Requirements review.** Dispatch the `plan-reviewer` subagent with the plan path and the base commit; tell it to check the `## Card requirements` table too. Fix any gap, then go back to step 7.
 9. **Code review.** Run `superpowers:requesting-code-review` following workflow rule 8: uncommitted diff against the base commit, plus `apps/api/.claude/rules/`. Handle findings with `superpowers:receiving-code-review`.
    - If you fixed anything, rerun step 7, then step 8, then step 9.
@@ -56,13 +57,13 @@ Follow `.claude/rules/workflow.md` for every superpowers step; it overrides thei
    - Then tick each `R<n>` in the design's `## Requirements from card`.
    - Then write `report.md` (rule 9).
 10. 🛑 **Gate 2: commit.** Run `git add -A`, then show `git diff --cached --stat`, the R coverage, a short verify / plan-review / code-review summary, and one commit message per workflow rule 11. Nothing is ticked on Trello. After approval, commit. If the user declines, run `git reset` to unstage (the changes stay in the working tree) and stop. If a hook fails, fix the cause; never use `--no-verify`.
-11. 🛑 **Gate 3: finish the branch.** Run `superpowers:finishing-a-development-branch` following workflow rule 10. Its option menu is this gate. For a PR, the user approves the description draft before `gh pr create`. If the user picks B (keep the branch), report the branch name and stop: skip Gate 4 and step 13.
+11. 🛑 **Gate 3: finish the branch.** Run `superpowers:finishing-a-development-branch` following workflow rule 10: the `pr-description` skill drafts `pr-description.md`, you show it, and the option menu that follows is this gate. Nothing is pushed before the user approves A. If the user picks B (keep the branch), report the branch name and stop: skip Gate 4 and step 13.
 12. 🛑 **Gate 4.** Move the card to **REVIEW** via `trello-manager`.
-13. **Report.** Send the completion notification, then a short summary with the PR link, the card link, and the local paths of `report.md`, `test-report.md`, `design.md` and `plan.md`. The details live in `report.md`; do not repeat them.
+13. **Report.** Send the completion notification, then a short summary with the PR link, the card link, and the local paths of `report.md`, `test-report.md`, `pr-description.md`, `design.md` and `plan.md`. The details live in `report.md`; do not repeat them.
 
 ## Resume
 
-The spec dir is the directory of the matched `design.md`; every later file is read from and written to it. Re-read the spec files in it: `design.md`, `plan.md`, `report.md` and `test-report.md`. Do not redo finished steps.
+The spec dir is the directory of the matched `design.md`; every later file is read from and written to it. Re-read the spec files in it: `design.md`, `plan.md`, `report.md`, `test-report.md` and `pr-description.md`. Do not redo finished steps.
 
 The feature branch is the design's `**Branch:**` line; an older design without `**Branch:**` uses the plan's Feature branch row.
 
