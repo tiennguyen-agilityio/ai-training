@@ -12,6 +12,7 @@ export interface FetchUsersOptions {
   limit?: number
   search?: string
   role?: string
+  status?: string
 }
 
 function readString(value: unknown): string | null {
@@ -188,7 +189,7 @@ export async function fetchUsers(
   | { ok: true; users: User[]; meta?: ResponseMeta }
   | { ok: false; error: string; status?: number }
 > {
-  const { getToken, page, limit, search, role } = options
+  const { getToken, page, limit, search, role, status } = options
   const result = await apiClient.get<Response<User[]>>(API_ROUTES.USERS, {
     getToken,
     query: {
@@ -196,6 +197,7 @@ export async function fetchUsers(
       limit,
       search: search?.trim(),
       role: role?.trim(),
+      status: status?.trim(),
     },
     fallbackError: API_FALLBACK_ERRORS.USERS_LOAD,
   })

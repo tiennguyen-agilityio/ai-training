@@ -91,6 +91,22 @@ describe('UserController', () => {
       });
     });
 
+    it('passes status into the filters', async () => {
+      const meta = { limit: 10, currentPage: 1, pageCount: 1, totalCount: 1 };
+      userService.findAll.mockResolvedValue({ data: [user], meta });
+
+      await controller.findAll(
+        { page: 1, limit: 10, status: UserStatus.INACTIVE },
+        user,
+      );
+
+      expect(userService.findAll).toHaveBeenCalledWith(
+        { page: 1, limit: 10, search: undefined },
+        { status: UserStatus.INACTIVE },
+        { includeDeleted: true, excludeId: user.id },
+      );
+    });
+
     it('propagates BadRequestException', async () => {
       userService.findAll.mockRejectedValue(new BadRequestException());
 

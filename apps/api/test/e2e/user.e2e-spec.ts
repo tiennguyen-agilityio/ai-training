@@ -219,6 +219,93 @@ describe('UserController auth (e2e)', () => {
       expect(body.data.every((u) => u.role === 'ADMIN')).toBe(true);
     });
 
+    it('GET /users?status=INACTIVE returns only inactive users, including soft-deleted ones', async () => {
+      const admin = await createTestUser({ role: UserRole.ADMIN });
+      const activeUser = await createTestUser({ role: UserRole.USER });
+      const inactiveUser = await createTestUser({
+        role: UserRole.USER,
+        status: UserStatus.INACTIVE,
+      });
+      const deletedUser = await createTestUser({ role: UserRole.USER });
+      await RequestContext.create(orm.em, () =>
+        userService.remove(deletedUser.id),
+      );
+      mockSessionFor(admin.clerkId);
+
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/users?status=INACTIVE&limit=100`)
+        .expect(200);
+
+      const body = response.body as {
+        data: Array<{ id: string; status: string }>;
+      };
+      const ids = body.data.map((u) => u.id);
+      expect(ids).toContain(inactiveUser.id);
+      expect(ids).toContain(deletedUser.id);
+      expect(ids).not.toContain(activeUser.id);
+      expect(body.data.every((u) => u.status === 'INACTIVE')).toBe(true);
+    });
+
+    it('GET /users?status=ACTIVE excludes inactive and soft-deleted users', async () => {
+      const admin = await createTestUser({ role: UserRole.ADMIN });
+      const activeUser = await createTestUser({ role: UserRole.USER });
+      const inactiveUser = await createTestUser({
+        role: UserRole.USER,
+        status: UserStatus.INACTIVE,
+      });
+      const deletedUser = await createTestUser({ role: UserRole.USER });
+      await RequestContext.create(orm.em, () =>
+        userService.remove(deletedUser.id),
+      );
+      mockSessionFor(admin.clerkId);
+
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/users?status=ACTIVE&limit=100`)
+        .expect(200);
+
+      const body = response.body as {
+        data: Array<{ id: string; status: string }>;
+      };
+      const ids = body.data.map((u) => u.id);
+      expect(ids).toContain(activeUser.id);
+      expect(ids).not.toContain(inactiveUser.id);
+      expect(ids).not.toContain(deletedUser.id);
+      expect(body.data.every((u) => u.status === 'ACTIVE')).toBe(true);
+    });
+
+    it('GET /users?role=&status= applies both filters', async () => {
+      const admin = await createTestUser({ role: UserRole.ADMIN });
+      const inactiveAdmin = await createTestUser({
+        role: UserRole.ADMIN,
+        status: UserStatus.INACTIVE,
+      });
+      const activeAdmin = await createTestUser({ role: UserRole.ADMIN });
+      const inactiveUser = await createTestUser({
+        role: UserRole.USER,
+        status: UserStatus.INACTIVE,
+      });
+      mockSessionFor(admin.clerkId);
+
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/users?role=ADMIN&status=INACTIVE&limit=100`)
+        .expect(200);
+
+      const body = response.body as { data: Array<{ id: string }> };
+      const ids = body.data.map((u) => u.id);
+      expect(ids).toContain(inactiveAdmin.id);
+      expect(ids).not.toContain(activeAdmin.id);
+      expect(ids).not.toContain(inactiveUser.id);
+    });
+
+    it('GET /users?status= responds 400 for an unknown status', async () => {
+      const admin = await createTestUser({ role: UserRole.ADMIN });
+      mockSessionFor(admin.clerkId);
+
+      await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/users?status=DISABLED`)
+        .expect(400);
+    });
+
     it('GET /users?role= responds 400 for an unknown role', async () => {
       const admin = await createTestUser({ role: UserRole.ADMIN });
       mockSessionFor(admin.clerkId);

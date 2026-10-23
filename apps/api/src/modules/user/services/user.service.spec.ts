@@ -168,6 +168,26 @@ describe('UserService', () => {
       expect(result).toBe(paginatedUsers);
     });
 
+    it('passes a client-provided status through to the repository', async () => {
+      const paginatedUsers = {
+        data: [buildUser()],
+        meta: { limit: 10, currentPage: 1, pageCount: 1, totalCount: 1 },
+      };
+      userRepository.findAll.mockResolvedValue(paginatedUsers);
+
+      await service.findAll(
+        { page: 1, limit: 10 },
+        { role: UserRole.ADMIN, status: UserStatus.ACTIVE },
+        { includeDeleted: true },
+      );
+
+      expect(userRepository.findAll).toHaveBeenCalledWith(
+        { page: 1, limit: 10 },
+        { role: UserRole.ADMIN, status: UserStatus.ACTIVE },
+        { includeDeleted: true },
+      );
+    });
+
     it('throws InvalidRequestException when the requested page exceeds pageCount', async () => {
       userRepository.findAll.mockResolvedValue({
         data: [],

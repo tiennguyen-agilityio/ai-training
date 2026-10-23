@@ -49,15 +49,21 @@ jest.mock('@/components/Select', () => ({
     selected,
     onValueChange,
     options,
+    placeholder,
   }: {
     selected?: string
     onValueChange?: (value: string) => void
     options: { value: string; label: string }[]
+    placeholder?: string
   }) => (
     <label>
-      <span className="sr-only">Role filter</span>
+      <span className="sr-only">
+        {placeholder === 'All statuses' ? 'Status filter' : 'Role filter'}
+      </span>
       <select
-        aria-label="Role filter"
+        aria-label={
+          placeholder === 'All statuses' ? 'Status filter' : 'Role filter'
+        }
         value={selected ?? ''}
         onChange={(event) => onValueChange?.(event.target.value)}
       >
@@ -114,6 +120,10 @@ function mockUsersByApiParams(params: UseUsersParams = {}) {
 
   if (roleFilter) {
     list = list.filter((u) => u.role === roleFilter)
+  }
+
+  if (params.status) {
+    list = list.filter((u) => u.status === params.status)
   }
 
   const pageSize = MOCK_USERS_PAGE_SIZE
@@ -303,6 +313,64 @@ describe('Dashboard users page', () => {
       screen.queryByText('m.thorne@sensorybrew.com'),
     ).not.toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('Showing 3 of 3 users')
+  })
+
+  it('renders a status filter with All statuses selected by default', () => {
+    renderUsersPage()
+    const select = screen.getByLabelText<HTMLSelectElement>('Status filter')
+    expect(select).toHaveValue('all-status')
+    expect(
+      Array.from(select.options).map((option) => option.textContent),
+    ).toEqual(['All statuses', 'Active', 'Inactive'])
+    expect(mockUseUsers).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: undefined }),
+    )
+  })
+
+  it('filters users by status via API params', async () => {
+    navQueryString = 'page=2'
+    const view = renderUsersPage()
+    fireEvent.change(screen.getByLabelText('Status filter'), {
+      target: { value: 'INACTIVE' },
+    })
+    view.rerender(<PageContent />)
+
+    await waitFor(() => {
+      expect(mockUseUsers).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          status: USER_STATUS.INACTIVE,
+          page: 1,
+          limit: PAGE_SIZE,
+        }),
+      )
+    })
+    expect(screen.getByText('m.thorne@sensorybrew.com')).toBeInTheDocument()
+    expect(screen.getByText('n.grimes@sensorybrew.com')).toBeInTheDocument()
+    expect(
+      screen.queryByText('julian.v@sensorybrew.com'),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Showing 2 of 2 users')
+
+    fireEvent.change(screen.getByLabelText('Status filter'), {
+      target: { value: 'all-status' },
+    })
+    view.rerender(<PageContent />)
+
+    await waitFor(() => {
+      expect(mockUseUsers).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: undefined }),
+      )
+    })
+    expect(navQueryString).not.toContain('status')
+  })
+
+  it('ignores an unknown status in the URL', () => {
+    navQueryString = 'status=BOGUS'
+    renderUsersPage()
+    expect(mockUseUsers).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: undefined }),
+    )
+    expect(screen.getByLabelText('Status filter')).toHaveValue('all-status')
   })
 
   it('moves to next page', async () => {
