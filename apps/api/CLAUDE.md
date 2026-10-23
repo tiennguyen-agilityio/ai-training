@@ -35,6 +35,8 @@ pnpm run migration:up
 pnpm run docker:dev          # app + Postgres with hot reload
 ```
 
+Never run `migration:down`/`fresh` or `schema:drop`/`fresh`/`update --run` without approval: they drop data. Add a forward migration instead.
+
 ### Running a single test
 
 ```bash
