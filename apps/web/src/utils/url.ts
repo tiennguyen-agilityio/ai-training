@@ -40,6 +40,7 @@ export const urlSchema = {
 export const userUrlSchema = {
   ...urlSchema,
   role: parseOptionalQueryParam,
+  status: parseOptionalQueryParam,
 } as const
 
 export const productUrlSchema = {

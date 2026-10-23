@@ -10,7 +10,13 @@ import type { USER_ROLES, User } from '@/types/user'
 // Constants
 import { ROUTES } from '@/constants/routes'
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
-import { ROLE_FILTER_OPTIONS, USERS_TABLE_COLUMNS } from '@/constants/user'
+import {
+  ALL_STATUSES_VALUE,
+  ROLE_FILTER_OPTIONS,
+  STATUS_FILTER_OPTIONS,
+  STATUS_OPTIONS,
+  USERS_TABLE_COLUMNS,
+} from '@/constants/user'
 
 // Hooks
 import { useDeleteUser, useUpdateUserRole, useUsers } from '@/hooks/useUser'
@@ -34,7 +40,7 @@ import Loading from '@/components/Loading'
 
 export const PageContent = () => {
   const { state, update: updateUrl } = useUrlState(userUrlSchema)
-  const { page, search, role, limit } = state
+  const { page, search, role, status, limit } = state
   const { searchInput, setSearchInput, searchInputRef } = useDebouncedUrlSearch(
     search,
     updateUrl,
@@ -47,12 +53,18 @@ export const PageContent = () => {
       ? role
       : null
 
+  const normalizedStatus =
+    status && STATUS_OPTIONS.some((option) => option.value === status)
+      ? status
+      : null
+
   const { users, meta, isLoading, isFetching, isError, errorMessage, refetch } =
     useUsers({
       page,
       limit,
       search: search.trim(),
       role: normalizedRole ?? undefined,
+      status: normalizedStatus ?? undefined,
     })
 
   const totalPages = Math.max(1, meta?.pageCount ?? 1)
@@ -99,6 +111,14 @@ export const PageContent = () => {
     if (typeof value !== 'string') return
     updateUrl({
       role: value === ROLE_FILTER_OPTIONS[0] ? null : value,
+      page: 1,
+    })
+  }
+
+  const handleStatusChange = (value: unknown) => {
+    if (typeof value !== 'string') return
+    updateUrl({
+      status: value === ALL_STATUSES_VALUE ? null : value,
       page: 1,
     })
   }
@@ -272,6 +292,15 @@ export const PageContent = () => {
                     .replace(/\b\w/g, (char) => char.toUpperCase()),
                 }))}
                 placeholder="All Roles"
+              />
+            </div>
+            <div className="min-w-40">
+              <Select
+                classNameTrigger="rounded-full"
+                selected={normalizedStatus ?? ALL_STATUSES_VALUE}
+                onValueChange={handleStatusChange}
+                options={[...STATUS_FILTER_OPTIONS]}
+                placeholder="All statuses"
               />
             </div>
             <Button
