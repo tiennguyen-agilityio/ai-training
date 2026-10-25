@@ -57,3 +57,20 @@ apps/web/
 | `pnpm test:cov`                     | Jest with coverage     |
 
 For Clerk and other secrets, use `.env` (see `.env.example`). For environment variable details, email **tien.nguyen@asnet.com.vn**.
+
+---
+
+## DEPLOY
+
+Web is deployed to Vercel (project `ai-training`) by GitHub Actions (`.github/workflows/ci.yml` calls the reusable `.github/workflows/deploy-web.yml`), only after the `quality` job (test + build) passes and only when `web` is affected. The Vercel project is not connected to Git (`vercel.json` sets `git.deploymentEnabled: false`), so nothing else deploys it.
+
+| Environment | Trigger                 | URL                                                                | Vercel env |
+| ----------- | ----------------------- | ------------------------------------------------------------------ | ---------- |
+| Preview     | PR into `develop`       | new URL per push that changes web; one PR comment shows the latest | Preview    |
+| Development | merge into `develop`    | https://ai-training-develop.vercel.app (alias to the latest build) | Preview    |
+| Production  | `main` (not configured) | —                                                                  | Production |
+
+- `vercel.json` sets only the build command and turns off Git deploys, so these Vercel project settings must stay: Framework Preset Next.js, Root Directory `apps/web`, Node.js 24.x, Install Command not overridden (default `pnpm install` installs the whole workspace).
+- App env vars live in the Vercel project: Preview, shared by preview and development. Production is reserved for `main`.
+- GitHub holds only the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` and the variable `VERCEL_DEVELOP_ALIAS`.
+- Both environments call the develop API (`NEXT_PUBLIC_API_URL`) from the browser. The development alias is listed in the API's `CORS_ORIGIN`; preview URLs change on every deploy and need the wildcard entry from card #16 — until then their API calls are blocked by CORS.

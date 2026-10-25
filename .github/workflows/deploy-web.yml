@@ -1,0 +1,138 @@
+name: Deploy web (Vercel)
+
+# Reusable: called from ci.yml after `quality` passes. Builds apps/web on the runner with
+# the Vercel CLI and deploys the prebuilt output to the Vercel project (not connected to Git).
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: >-
+          preview = pull_request into develop (one URL per deploy, shown in the PR comment);
+          develop = push to develop (moves VERCEL_DEVELOP_ALIAS to the build)
+        type: string
+        required: true
+      api_url:
+        description: 'Overrides NEXT_PUBLIC_API_URL for this build; empty uses the Vercel Preview env'
+        type: string
+        required: false
+        default: ''
+    secrets:
+      VERCEL_TOKEN:
+        required: true
+      VERCEL_ORG_ID:
+        required: true
+      VERCEL_PROJECT_ID:
+        required: true
+    outputs:
+      url:
+        description: 'Deployment URL'
+        value: ${{ jobs.deploy.outputs.url }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      TARGET: ${{ inputs.target }}
+      API_URL: ${{ inputs.api_url }}
+      DEVELOP_ALIAS: ${{ vars.VERCEL_DEVELOP_ALIAS }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Check inputs
+        run: |
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "$name is empty: add it under Settings > Secrets and variables > Actions > Repository secrets" >&2; exit 1
+            fi
+          done
+          case "$TARGET" in
+            preview)
+              if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+                echo "target preview needs a pull_request event, got $GITHUB_EVENT_NAME" >&2; exit 1
+              fi ;;
+            develop)
+              if [ "$GITHUB_EVENT_NAME" != push ] || [ "$GITHUB_REF" != refs/heads/develop ]; then
+                echo "target develop needs a push to develop, got $GITHUB_EVENT_NAME $GITHUB_REF" >&2; exit 1
+              fi
+              if [ -z "$DEVELOP_ALIAS" ]; then
+                echo "The repository variable VERCEL_DEVELOP_ALIAS is empty" >&2; exit 1
+              fi ;;
+            *) echo "Unknown target '$TARGET' (expected preview or develop)" >&2; exit 1 ;;
+          esac
+          if [ -n "$API_URL" ] && ! [[ "$API_URL" =~ ^https://[^[:space:]\"]+$ ]]; then
+            echo "api_url must be an https URL" >&2; exit 1
+          fi
+          if [ -n "$API_URL" ] && [ "$TARGET" = develop ]; then
+            echo "api_url is for previews only; develop always uses the Preview env API" >&2; exit 1
+          fi
+
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@63.1.2
+
+      - name: Pull Vercel settings (Preview env)
+        run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+
+      - name: Point the build at another API
+        if: inputs.api_url != ''
+        run: |
+          env_file=.vercel/.env.preview.local
+          sed -i '/^NEXT_PUBLIC_API_URL=/d' "$env_file"
+          printf 'NEXT_PUBLIC_API_URL="%s"\n' "$API_URL" >> "$env_file"
+
+      - name: Build
+        run: vercel build --token="$VERCEL_TOKEN"
+
+      - name: Deploy
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")
+          if ! [[ "$url" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "vercel deploy did not print a deployment URL" >&2; exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Web $TARGET: $url" >> "$GITHUB_STEP_SUMMARY"
+
+      # Runs for older pushes too (quality jobs finish in any order), so only move the alias
+      # when no newer develop commit changes what the web build depends on. Trade-off: if that
+      # newer commit's run never deploys web (its quality fails, or turbo finds web unaffected by
+      # a lockfile-only change), the alias stays on the previous build until the next web deploy.
+      - name: Point the develop alias at this deployment
+        if: inputs.target == 'develop'
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          git fetch --quiet --depth=1 origin develop
+          head=$(git rev-parse FETCH_HEAD)
+          if [ "$head" != "$GITHUB_SHA" ]; then
+            rc=0
+            git diff --quiet "$GITHUB_SHA" "$head" -- \
+              apps/web packages package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json || rc=$?
+            if [ "$rc" -eq 1 ]; then
+              echo "develop moved to $head with web changes; its own run sets the alias" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            elif [ "$rc" -ne 0 ]; then
+              echo "git diff $GITHUB_SHA..$head failed with exit $rc" >&2; exit "$rc"
+            fi
+          fi
+          vercel alias set "$URL" "$DEVELOP_ALIAS" --token="$VERCEL_TOKEN"
+          echo "Web development: https://$DEVELOP_ALIAS" >> "$GITHUB_STEP_SUMMARY"

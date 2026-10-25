@@ -37,11 +37,12 @@ pnpm build --affected # only packages changed against TURBO_SCM_BASE
 
 ## CI
 
-`.github/workflows/ci.yml` is GitHub Actions. It runs on PRs into `develop`/`main` (open, sync, reopen), on push to `develop` (GHCR `:develop` + Render develop deploy) and on push to `main` (production: GHCR `:<sha>` + `:latest`, Render production deploy):
+`.github/workflows/ci.yml` is GitHub Actions. It runs on PRs into `develop`/`main` (open, sync, reopen; a PR into `develop` also gets a Vercel web preview), on push to `develop` (GHCR `:develop` + Render develop deploy + Vercel web develop deploy) and on push to `main` (production: GHCR `:<sha>` + `:latest`, Render production deploy):
 
 1. `quality`: `turbo run test build --affected`; there is no lint step.
 2. Docker build of `apps/api/Dockerfile` (context `.`) + Trivy, only when the API is affected.
 3. GHCR push.
 4. Render deploy.
+5. Vercel deploy of `apps/web` through the reusable `.github/workflows/deploy-web.yml` (input `target`: `preview` | `develop`; output `url`), after `quality` and only when web is affected (`web_affected`): job `web-preview` on a PR into `develop`, then `preview-comment` keeps one PR comment with the URL; job `web-develop` on a push to `develop` points the alias `vars.VERCEL_DEVELOP_ALIAS` at the build. Vercel Production is reserved for `main` (not configured). Secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
 
 `.github/workflows/trello.yml` (no path filter): when a PR into `develop` is merged, moves the card on its `**Ticket:**` line to DONE.
