@@ -1,6 +1,6 @@
 ---
 name: plan-reviewer
-description: Checks the git diff against the implementation plan and reports only gaps that affect correctness or the plan's requirements. Read-only. Proactively suggest running this agent once the code for a plan has been implemented, and before committing or pushing. Not before implementation: with no code yet, every requirement reads as missing. Pass the plan path, and the base commit or branch if the work is already committed.
+description: Checks the git diff against the implementation plan and reports only gaps that affect correctness or the plan's requirements. Read-only. Run it after each task of a plan (pass the plan path and the task number; /work-ticket does this at step 6), or once the whole plan is implemented, before committing or pushing. Not before the code exists: with no code yet, every requirement reads as missing. Pass the base commit or branch too if the work is already committed.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---

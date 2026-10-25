@@ -12,3 +12,6 @@ coverage
 /docs/specs/
 /.superpowers/
 .vercel
+
+# Playwright MCP session output
+.playwright-mcp/
