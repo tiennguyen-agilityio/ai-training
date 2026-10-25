@@ -10,3 +10,10 @@ catalog:
   prettier: ^3.4.2
   typescript: ~6.0.3
   typescript-eslint: ^8.70.1
+  zod: ^4.6.7
+
+# Patched transitive versions for HIGH CVEs flagged by Trivy.
+# Drop multer once @nestjs/platform-express ships with multer >= 2.5.0.
+overrides:
+  body-parser: ^2.4.0
+  multer: ^2.5.0
