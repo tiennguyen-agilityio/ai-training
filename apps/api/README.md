@@ -39,8 +39,8 @@ PostgreSQL via MikroORM.
 
 ### Catalog Management
 
-- **User management** — CRUD with search by email/first name/last name, role filter, and
-  pagination; the list excludes the requesting admin.
+- **User management** — CRUD with search by email/first name/last name, role and status
+  filters, and pagination; the list excludes the requesting admin.
 - **Category management** — CRUD, unique name with auto-generated slug, search by name/slug.
 - **Product management** — CRUD with up to 6 images per product, at most 1 primary (client
   uploads to ImgBB, backend only stores/validates the resulting URL), managed on update via
@@ -189,14 +189,14 @@ erDiagram
 
 ### Users
 
-| Method   | Path         | Auth | Description                                  |
-| :------- | :----------- | :--- | :------------------------------------------- |
-| `GET`    | `/users/me`  | 🔒   | Get authenticated user profile               |
-| `GET`    | `/users`     | 👑   | List users (search, role filter, pagination) |
-| `GET`    | `/users/:id` | 👑   | Get user by ID                               |
-| `POST`   | `/users`     | 👑   | Create user                                  |
-| `PATCH`  | `/users/:id` | 👑   | Update user                                  |
-| `DELETE` | `/users/:id` | 👑   | Soft-delete user                             |
+| Method   | Path         | Auth | Description                                              |
+| :------- | :----------- | :--- | :------------------------------------------------------- |
+| `GET`    | `/users/me`  | 🔒   | Get authenticated user profile                           |
+| `GET`    | `/users`     | 👑   | List users (search, role and status filters, pagination) |
+| `GET`    | `/users/:id` | 👑   | Get user by ID                                           |
+| `POST`   | `/users`     | 👑   | Create user                                              |
+| `PATCH`  | `/users/:id` | 👑   | Update user                                              |
+| `DELETE` | `/users/:id` | 👑   | Soft-delete user                                         |
 
 ### Categories
 

@@ -11,7 +11,6 @@ import type { USER_ROLES, User } from '@/types/user'
 import { ROUTES } from '@/constants/routes'
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import {
-  ALL_STATUSES_VALUE,
   ROLE_FILTER_OPTIONS,
   STATUS_FILTER_OPTIONS,
   STATUS_OPTIONS,
@@ -54,9 +53,7 @@ export const PageContent = () => {
       : null
 
   const normalizedStatus =
-    status && STATUS_OPTIONS.some((option) => option.value === status)
-      ? status
-      : null
+    STATUS_OPTIONS.find((option) => option.value === status)?.value ?? null
 
   const { users, meta, isLoading, isFetching, isError, errorMessage, refetch } =
     useUsers({
@@ -118,7 +115,7 @@ export const PageContent = () => {
   const handleStatusChange = (value: unknown) => {
     if (typeof value !== 'string') return
     updateUrl({
-      status: value === ALL_STATUSES_VALUE ? null : value,
+      status: value === STATUS_FILTER_OPTIONS[0].value ? null : value,
       page: 1,
     })
   }
@@ -292,15 +289,17 @@ export const PageContent = () => {
                     .replace(/\b\w/g, (char) => char.toUpperCase()),
                 }))}
                 placeholder="All Roles"
+                ariaLabel="Role filter"
               />
             </div>
             <div className="min-w-40">
               <Select
                 classNameTrigger="rounded-full"
-                selected={normalizedStatus ?? ALL_STATUSES_VALUE}
+                selected={normalizedStatus ?? STATUS_FILTER_OPTIONS[0].value}
                 onValueChange={handleStatusChange}
                 options={[...STATUS_FILTER_OPTIONS]}
                 placeholder="All statuses"
+                ariaLabel="Status filter"
               />
             </div>
             <Button

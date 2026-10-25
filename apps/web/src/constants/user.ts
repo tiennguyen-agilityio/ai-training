@@ -25,12 +25,10 @@ export const STATUS_OPTIONS: readonly {
   { value: USER_STATUS.INACTIVE, label: 'Inactive' },
 ]
 
-export const ALL_STATUSES_VALUE = 'all-status'
-
 export const STATUS_FILTER_OPTIONS: readonly {
   value: string
   label: string
-}[] = [{ value: ALL_STATUSES_VALUE, label: 'All statuses' }, ...STATUS_OPTIONS]
+}[] = [{ value: 'all-status', label: 'All statuses' }, ...STATUS_OPTIONS]
 
 export const ROLE_FILTER_OPTIONS = [
   'All Roles',

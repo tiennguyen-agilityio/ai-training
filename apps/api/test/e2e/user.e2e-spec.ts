@@ -175,6 +175,22 @@ describe('UserController auth (e2e)', () => {
   });
 
   describe('authenticated ACTIVE ADMIN local user', () => {
+    // An admin session plus one active, one inactive and one soft-deleted user.
+    const seedStatusUsers = async () => {
+      const admin = await createTestUser({ role: UserRole.ADMIN });
+      const activeUser = await createTestUser({ role: UserRole.USER });
+      const inactiveUser = await createTestUser({
+        role: UserRole.USER,
+        status: UserStatus.INACTIVE,
+      });
+      const deletedUser = await createTestUser({ role: UserRole.USER });
+      await RequestContext.create(orm.em, () =>
+        userService.remove(deletedUser.id),
+      );
+      mockSessionFor(admin.clerkId);
+      return { activeUser, inactiveUser, deletedUser };
+    };
+
     it('GET /users responds 200 with the paginated envelope', async () => {
       const user = await createTestUser({ role: UserRole.ADMIN });
       mockSessionFor(user.clerkId);
@@ -220,17 +236,7 @@ describe('UserController auth (e2e)', () => {
     });
 
     it('GET /users?status=INACTIVE returns only inactive users, including soft-deleted ones', async () => {
-      const admin = await createTestUser({ role: UserRole.ADMIN });
-      const activeUser = await createTestUser({ role: UserRole.USER });
-      const inactiveUser = await createTestUser({
-        role: UserRole.USER,
-        status: UserStatus.INACTIVE,
-      });
-      const deletedUser = await createTestUser({ role: UserRole.USER });
-      await RequestContext.create(orm.em, () =>
-        userService.remove(deletedUser.id),
-      );
-      mockSessionFor(admin.clerkId);
+      const { activeUser, inactiveUser, deletedUser } = await seedStatusUsers();
 
       const response = await request(app.getHttpServer())
         .get(`${API_BASE_PATH}/users?status=INACTIVE&limit=100`)
@@ -247,17 +253,7 @@ describe('UserController auth (e2e)', () => {
     });
 
     it('GET /users?status=ACTIVE excludes inactive and soft-deleted users', async () => {
-      const admin = await createTestUser({ role: UserRole.ADMIN });
-      const activeUser = await createTestUser({ role: UserRole.USER });
-      const inactiveUser = await createTestUser({
-        role: UserRole.USER,
-        status: UserStatus.INACTIVE,
-      });
-      const deletedUser = await createTestUser({ role: UserRole.USER });
-      await RequestContext.create(orm.em, () =>
-        userService.remove(deletedUser.id),
-      );
-      mockSessionFor(admin.clerkId);
+      const { activeUser, inactiveUser, deletedUser } = await seedStatusUsers();
 
       const response = await request(app.getHttpServer())
         .get(`${API_BASE_PATH}/users?status=ACTIVE&limit=100`)

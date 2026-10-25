@@ -1,7 +1,7 @@
 import { API_FALLBACK_ERRORS, ERROR_MESSAGES } from '@/constants/messages'
 import { API_ROUTES } from '@/constants/routes'
 import { deleteUserById, fetchUsers } from '@/services/user'
-import { USER_ROLES } from '@/types/user'
+import { USER_ROLES, USER_STATUS } from '@/types/user'
 
 describe('fetchUsers', () => {
   const originalFetch = globalThis.fetch
@@ -129,7 +129,7 @@ describe('fetchUsers', () => {
     })
     globalThis.fetch = fetchMock as typeof fetch
 
-    await fetchUsers({ status: ' INACTIVE ' })
+    await fetchUsers({ status: USER_STATUS.INACTIVE })
 
     const calledUrl = String(fetchMock.mock.calls[0]?.[0])
     expect(calledUrl).toContain('status=INACTIVE')

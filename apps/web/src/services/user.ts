@@ -12,7 +12,7 @@ export interface FetchUsersOptions {
   limit?: number
   search?: string
   role?: string
-  status?: string
+  status?: USER_STATUS
 }
 
 function readString(value: unknown): string | null {
@@ -197,7 +197,7 @@ export async function fetchUsers(
       limit,
       search: search?.trim(),
       role: role?.trim(),
-      status: status?.trim(),
+      status,
     },
     fallbackError: API_FALLBACK_ERRORS.USERS_LOAD,
   })

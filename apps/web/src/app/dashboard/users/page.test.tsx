@@ -49,31 +49,24 @@ jest.mock('@/components/Select', () => ({
     selected,
     onValueChange,
     options,
-    placeholder,
+    ariaLabel,
   }: {
     selected?: string
     onValueChange?: (value: string) => void
     options: { value: string; label: string }[]
-    placeholder?: string
+    ariaLabel?: string
   }) => (
-    <label>
-      <span className="sr-only">
-        {placeholder === 'All statuses' ? 'Status filter' : 'Role filter'}
-      </span>
-      <select
-        aria-label={
-          placeholder === 'All statuses' ? 'Status filter' : 'Role filter'
-        }
-        value={selected ?? ''}
-        onChange={(event) => onValueChange?.(event.target.value)}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <select
+      aria-label={ariaLabel}
+      value={selected ?? ''}
+      onChange={(event) => onValueChange?.(event.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
   ),
 }))
 

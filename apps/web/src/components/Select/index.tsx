@@ -19,6 +19,7 @@ export interface SelectProps extends Omit<
 > {
   errorMessage?: string
   label?: React.ReactNode
+  ariaLabel?: string
   placeholder?: string
   selected?: string | number
   options: OptionItem[]
@@ -27,6 +28,7 @@ export interface SelectProps extends Omit<
 
 export const Select = ({
   label,
+  ariaLabel,
   placeholder = '',
   selected,
   options,
@@ -74,6 +76,7 @@ export const Select = ({
       >
         <SelectTrigger
           id={controlId}
+          aria-label={ariaLabel}
           className={cn(
             'w-full',
             classNameTrigger,
