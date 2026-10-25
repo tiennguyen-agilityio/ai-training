@@ -25,6 +25,11 @@ export const STATUS_OPTIONS: readonly {
   { value: USER_STATUS.INACTIVE, label: 'Inactive' },
 ]
 
+export const STATUS_FILTER_OPTIONS: readonly {
+  value: string
+  label: string
+}[] = [{ value: 'all-status', label: 'All statuses' }, ...STATUS_OPTIONS]
+
 export const ROLE_FILTER_OPTIONS = [
   'All Roles',
   ...Object.values(USER_ROLES).map((role) => role.toString()),

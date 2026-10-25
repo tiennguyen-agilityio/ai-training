@@ -1,7 +1,7 @@
 import { API_FALLBACK_ERRORS, ERROR_MESSAGES } from '@/constants/messages'
 import { API_ROUTES } from '@/constants/routes'
 import { deleteUserById, fetchUsers } from '@/services/user'
-import { USER_ROLES } from '@/types/user'
+import { USER_ROLES, USER_STATUS } from '@/types/user'
 
 describe('fetchUsers', () => {
   const originalFetch = globalThis.fetch
@@ -120,6 +120,32 @@ describe('fetchUsers', () => {
     expect(calledUrl.startsWith(`${API_ROUTES.USERS}?`)).toBe(true)
     expect(calledUrl).toContain('search=ada')
     expect(calledUrl).toContain('role=ADMIN')
+  })
+
+  it('appends the status query param when provided', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [] }),
+    })
+    globalThis.fetch = fetchMock as typeof fetch
+
+    await fetchUsers({ status: USER_STATUS.INACTIVE })
+
+    const calledUrl = String(fetchMock.mock.calls[0]?.[0])
+    expect(calledUrl).toContain('status=INACTIVE')
+  })
+
+  it('omits status when not provided', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [] }),
+    })
+    globalThis.fetch = fetchMock as typeof fetch
+
+    await fetchUsers({ page: 1 })
+
+    const calledUrl = String(fetchMock.mock.calls[0]?.[0])
+    expect(calledUrl).not.toContain('status=')
   })
 
   it('returns http error when response is not ok', async () => {

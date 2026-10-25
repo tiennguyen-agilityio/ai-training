@@ -48,6 +48,7 @@ export type UserProfileSyncInput = Partial<
 
 export const userQuerySchema = paginationQuerySchema.extend({
   role: z.enum(UserRole).optional(),
+  status: z.enum(UserStatus).optional(),
 });
 
 export type UserQueryInput = z.infer<typeof userQuerySchema>;

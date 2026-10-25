@@ -126,6 +126,7 @@ export function usersListQueryKey(params: FetchUsersOptions) {
     params.limit ?? PAGE_SIZE,
     params.search ?? '',
     params.role ?? '',
+    params.status ?? '',
   ] as const
 }
 

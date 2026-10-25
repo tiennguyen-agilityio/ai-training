@@ -81,6 +81,19 @@ describe('Select', () => {
     expect(screen.getByText('Large')).toBeInTheDocument()
   })
 
+  it('names the trigger with ariaLabel when there is no visible label', () => {
+    render(
+      <Select
+        ariaLabel="Status filter"
+        options={[{ value: 'active', label: 'Active' }]}
+      />,
+    )
+
+    expect(
+      screen.getByRole('button', { name: 'Status filter' }),
+    ).toBeInTheDocument()
+  })
+
   it('forwards disabled state to the trigger', () => {
     render(
       <Select
