@@ -1,0 +1,48 @@
+name: Preview cleanup
+
+# When a PR closes (merged or not), delete its Render API preview
+# (named by .github/scripts/render.sh, created by deploy-api.yml). Render never
+# deletes image previews on its own. PRs without an API preview end here with nothing to do.
+
+on:
+  # Any base: a PR retargeted away from develop after its preview was made must still clean up.
+  pull_request:
+    types: [closed]
+
+jobs:
+  delete-api-preview:
+    # Same filter as api-preview in ci.yml, on the PR's author: whoever closes the PR is irrelevant.
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    environment: develop-deploy
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Delete the API preview
+        run: |
+          # require_env, render, api_preview_name, find_api_preview
+          source .github/scripts/render.sh
+          require_env RENDER_API_KEY
+          name=$(api_preview_name "$PR_NUMBER")
+          id=$(find_api_preview "$name")
+          if [ -z "$id" ]; then
+            echo "No API preview for PR #$PR_NUMBER" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # On an error, print Render's reason (the response holds no secrets).
+          if ! response=$(render DELETE "/services/$id"); then
+            echo "Render delete of $name failed: $response" >&2; exit 1
+          fi
+          echo "Deleted API preview $name ($id)" >> "$GITHUB_STEP_SUMMARY"

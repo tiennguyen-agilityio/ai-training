@@ -121,18 +121,12 @@ jobs:
         env:
           URL: ${{ steps.deploy.outputs.url }}
         run: |
-          git fetch --quiet --depth=1 origin develop
-          head=$(git rev-parse FETCH_HEAD)
-          if [ "$head" != "$GITHUB_SHA" ]; then
-            rc=0
-            git diff --quiet "$GITHUB_SHA" "$head" -- \
-              apps/web packages package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json || rc=$?
-            if [ "$rc" -eq 1 ]; then
-              echo "develop moved to $head with web changes; its own run sets the alias" | tee -a "$GITHUB_STEP_SUMMARY"
-              exit 0
-            elif [ "$rc" -ne 0 ]; then
-              echo "git diff $GITHUB_SHA..$head failed with exit $rc" >&2; exit "$rc"
-            fi
+          # newer_develop
+          source .github/scripts/newer-develop.sh
+          newer=$(newer_develop apps/web packages package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json)
+          if [ -n "$newer" ]; then
+            echo "develop moved to $newer with web changes; its own run sets the alias" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
           vercel alias set "$URL" "$DEVELOP_ALIAS" --token="$VERCEL_TOKEN"
           echo "Web development: https://$DEVELOP_ALIAS" >> "$GITHUB_STEP_SUMMARY"

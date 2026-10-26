@@ -12,18 +12,12 @@ on:
       - 'turbo.json'
       - '.dockerignore'
       - '.github/workflows/**'
+      - '.github/scripts/**'
+  # No path filter: every PR must report `pull-request-checks`, the status check the branch
+  # ruleset requires (a skipped workflow would leave it pending). `quality` finds what is affected.
   pull_request:
     branches: [main, develop]
     types: [opened, synchronize, reopened]
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'turbo.json'
-      - '.dockerignore'
-      - '.github/workflows/**'
 
 env:
   TURBO_TELEMETRY_DISABLED: 1
@@ -34,8 +28,8 @@ jobs:
     env:
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
     outputs:
-      api_affected: ${{ steps.api.outputs.affected }}
-      web_affected: ${{ steps.web.outputs.affected }}
+      api_affected: ${{ steps.affected.outputs.api }}
+      web_affected: ${{ steps.affected.outputs.web }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -75,41 +69,30 @@ jobs:
             pnpm exec turbo run test build
           fi
 
-      - name: Is the API affected?
-        id: api
+      - name: Which apps are affected?
+        id: affected
         run: |
           if [ "${{ steps.base.outputs.usable }}" != "true" ]; then
-            echo "affected=true" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          if git diff --name-only "$TURBO_SCM_BASE" HEAD -- .github/workflows .dockerignore | grep -q .; then
-            echo "affected=true" >> "$GITHUB_OUTPUT"; exit 0
+            printf 'api=true\nweb=true\n' >> "$GITHUB_OUTPUT"; exit 0
           fi
           json=$(pnpm exec turbo ls --affected --output=json)
-          if printf '%s' "$json" | jq -e '.packages.items | any(.name == "api")' >/dev/null; then
-            echo "affected=true" >> "$GITHUB_OUTPUT"
-          else
-            rc=$?
-            [ "$rc" -eq 1 ] || { echo "jq failed with exit $rc on turbo ls output" >&2; exit "$rc"; }
-            echo "affected=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Is the web affected?
-        id: web
-        run: |
-          if [ "${{ steps.base.outputs.usable }}" != "true" ]; then
-            echo "affected=true" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          if git diff --name-only "$TURBO_SCM_BASE" HEAD -- .github/workflows | grep -q .; then
-            echo "affected=true" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          json=$(pnpm exec turbo ls --affected --output=json)
-          if printf '%s' "$json" | jq -e '.packages.items | any(.name == "web")' >/dev/null; then
-            echo "affected=true" >> "$GITHUB_OUTPUT"
-          else
-            rc=$?
-            [ "$rc" -eq 1 ] || { echo "jq failed with exit $rc on turbo ls output" >&2; exit "$rc"; }
-            echo "affected=false" >> "$GITHUB_OUTPUT"
-          fi
+          # affected <package> <paths...>: true when turbo lists the package or one of the paths changed
+          affected() {
+            local package=$1; shift
+            if git diff --name-only "$TURBO_SCM_BASE" HEAD -- "$@" | grep -q .; then
+              echo true; return
+            fi
+            local rc=0
+            printf '%s' "$json" | jq -e --arg package "$package" '.packages.items | any(.name == $package)' >/dev/null || rc=$?
+            case "$rc" in
+              0) echo true ;;
+              1) echo false ;;
+              *) echo "jq failed with exit $rc on turbo ls output" >&2; return "$rc" ;;
+            esac
+          }
+          api=$(affected api .github/workflows .github/scripts .dockerignore)
+          web=$(affected web .github/workflows .github/scripts)
+          printf 'api=%s\nweb=%s\n' "$api" "$web" >> "$GITHUB_OUTPUT"
 
   build-and-scan:
     needs: quality
@@ -144,111 +127,56 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
 
-  push-develop:
+  api-preview:
     needs: [quality, build-and-scan]
-    if: needs.quality.outputs.api_affected == 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/develop') || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'develop'))
-    runs-on: ubuntu-latest
-    environment: develop-publish
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set image name (lowercase)
-        run: echo "IMAGE_NAME=$(echo ghcr.io/${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: apps/api/Dockerfile
-          target: production
-          push: true
-          tags: |
-            ${{ env.IMAGE_NAME }}:develop
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  push-production:
-    needs: [quality, build-and-scan]
-    if: needs.quality.outputs.api_affected == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: production-publish
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set image name (lowercase)
-        run: echo "IMAGE_NAME=$(echo ghcr.io/${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Determine tags
-        id: meta
-        run: |
-          SHA="${{ github.sha }}"
-          TAGS="${{ env.IMAGE_NAME }}:$SHA,${{ env.IMAGE_NAME }}:latest"
-          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
-
-      - name: Build and push
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: apps/api/Dockerfile
-          target: production
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy-develop:
-    needs: push-develop
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    environment: develop-deploy
-    steps:
-      - name: Trigger Render deploy
-        run: |
-          curl --fail -X POST "https://api.render.com/v1/services/${{ vars.RENDER_SERVICE_ID }}/deploys" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}"
-
-  deploy-production:
-    needs: push-production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: ${{ vars.AUTO_DEPLOY == 'true' && 'render-auto' || 'render-manual' }}
-    steps:
-      - name: Trigger Render deploy
-        run: |
-          curl --fail -X POST "https://api.render.com/v1/services/${{ vars.RENDER_SERVICE_ID }}/deploys" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}"
-
-  web-preview:
-    needs: quality
     if: >-
-      needs.quality.outputs.web_affected == 'true' &&
+      needs.quality.outputs.api_affected == 'true' &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.base.ref == 'develop' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: read
+    concurrency:
+      group: api-preview-${{ github.event.pull_request.number }}
+      # Queue, don't cancel: an older run can reach the group last and would cancel the
+      # newest one, failing pull-request-checks. Stale api-preview and preview-comment runs
+      # skip on their PR head checks; a stale web-preview still builds but is never commented.
+      cancel-in-progress: false
+    uses: ./.github/workflows/deploy-api.yml
+    with:
+      target: preview
+    secrets: inherit
+
+  api-develop:
+    needs: [quality, build-and-scan]
+    if: needs.quality.outputs.api_affected == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    # GitHub checks every job of the called workflow against these, skipped ones included,
+    # so this also covers deploy-api.yml's `preview` job (pull-requests: read).
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: read
+    concurrency:
+      group: api-develop
+      cancel-in-progress: false
+    uses: ./.github/workflows/deploy-api.yml
+    with:
+      target: develop
+    secrets: inherit
+
+  # Built against the PR's API preview when there is one (api_url); otherwise against the
+  # develop API. `!cancelled()` keeps it running when api-preview is skipped or fails.
+  web-preview:
+    needs: [quality, api-preview]
+    if: >-
+      !cancelled() &&
+      needs.quality.result == 'success' &&
+      needs.api-preview.result != 'cancelled' &&
+      (needs.quality.outputs.web_affected == 'true' || needs.quality.outputs.api_affected == 'true') &&
       github.event_name == 'pull_request' &&
       github.event.pull_request.base.ref == 'develop' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
@@ -257,23 +185,24 @@ jobs:
       contents: read
     concurrency:
       group: web-preview-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
+      # Queue, don't cancel: see api-preview.
+      cancel-in-progress: false
     uses: ./.github/workflows/deploy-web.yml
     with:
       target: preview
-    secrets:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      api_url: ${{ needs.api-preview.outputs.url }}
+    secrets: inherit
 
   preview-comment:
-    needs: web-preview
+    needs: [quality, web-preview, api-preview]
+    if: ${{ !cancelled() && needs.web-preview.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
     concurrency:
       group: preview-comment-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
+      # Queue, don't cancel: see api-preview.
+      cancel-in-progress: false
     steps:
       - name: Post or update the preview comment
         shell: bash
@@ -282,6 +211,9 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           WEB_URL: ${{ needs.web-preview.outputs.url }}
+          API_AFFECTED: ${{ needs.quality.outputs.api_affected }}
+          API_RESULT: ${{ needs.api-preview.result }}
+          API_URL: ${{ needs.api-preview.outputs.url }}
         run: |
           # A run for an older push can finish last; never overwrite the comment with it.
           current=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .head.sha)
@@ -290,7 +222,25 @@ jobs:
             exit 0
           fi
           marker='<!-- preview-links -->'
-          body=$(printf '%s\n**Web preview:** %s\n\nPR head: %s' "$marker" "$WEB_URL" "$HEAD_SHA")
+          MIGRATIONS=0
+          if [ -n "$API_URL" ]; then
+            MIGRATIONS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" \
+              --jq '.[].filename | select(startswith("apps/api/src/migrations/"))' | wc -l)
+          fi
+          build_body() {
+            printf '%s\n**Web preview:** %s\n' "$marker" "$WEB_URL"
+            if [ -n "$API_URL" ]; then
+              printf '**API preview (Swagger):** %s/api/docs\n' "$API_URL"
+            elif [ "$API_AFFECTED" = true ]; then
+              printf '**API preview:** not deployed (%s); the web preview uses the develop API\n' "$API_RESULT"
+            fi
+            if [ -n "$API_URL" ] && [ "$MIGRATIONS" -gt 0 ]; then
+              # shellcheck disable=SC2016 # Markdown backticks, not command substitution
+              printf '\n> ⚠️ This PR changes `apps/api/src/migrations/`: the API preview runs on the develop database without these migrations.\n'
+            fi
+            printf '\nPR head: %s' "$HEAD_SHA"
+          }
+          body=$(build_body)
           comments="repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments"
           ids=$(gh api --paginate "$comments" \
             --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id")
@@ -300,6 +250,23 @@ jobs:
           else
             gh api -X POST "$comments" -f body="$body" >/dev/null
           fi
+
+  # The one status check the develop/main ruleset requires: fails when any PR job failed or
+  # was cancelled; skipped jobs (nothing affected, fork, dependabot) count as passed.
+  pull-request-checks:
+    if: always() && github.event_name == 'pull_request'
+    needs: [quality, build-and-scan, api-preview, web-preview, preview-comment]
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Check the pull request jobs
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "quality build-and-scan api-preview web-preview preview-comment: $RESULTS"
+          case " $RESULTS " in
+            *" failure "* | *" cancelled "*) echo "A pull request job failed or was cancelled" >&2; exit 1 ;;
+          esac
 
   web-develop:
     needs: quality
@@ -312,7 +279,4 @@ jobs:
     uses: ./.github/workflows/deploy-web.yml
     with:
       target: develop
-    secrets:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    secrets: inherit
