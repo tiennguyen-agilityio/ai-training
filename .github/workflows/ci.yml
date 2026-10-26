@@ -230,7 +230,7 @@ jobs:
           build_body() {
             printf '%s\n**Web preview:** %s\n' "$marker" "$WEB_URL"
             if [ -n "$API_URL" ]; then
-              printf '**API preview:** %s\n' "$API_URL"
+              printf '**API preview (Swagger):** %s/api/docs\n' "$API_URL"
             elif [ "$API_AFFECTED" = true ]; then
               printf '**API preview:** not deployed (%s); the web preview uses the develop API\n' "$API_RESULT"
             fi
