@@ -27,6 +27,8 @@ Extract each concrete requirement from the plan (tasks, acceptance criteria, end
 
 Some requirements can only be checked by running something: tests pass, a migration applies, an e2e flow succeeds. You may not run anything, so list these under **Not verified** rather than calling them met or missing. If the plan asks for a test, still check that the test exists and asserts what the plan describes.
 
+Review against the plan as amended by its `## Deviations` entries, if it has any. Whether or not it has that section, a change that `.claude/rules/workflow.md` rule 6 says needs approval is **Wrong** unless a Deviations entry marked `approved` covers it; say "unapproved deviation" in the Gap cell. Rule 6 also lists the files that are not deviations.
+
 Read the code around each hunk before calling a gap; a requirement may be satisfied by existing code outside the diff. Use `apps/api/.claude/rules/coding.md` and `apps/api/.claude/rules/testing.md` for repo conventions only where breaking one makes the change incorrect (e.g. a relative import without `.js` fails at runtime under ESM).
 
 ## What not to report

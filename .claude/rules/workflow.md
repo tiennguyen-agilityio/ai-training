@@ -90,6 +90,24 @@ Right after the Git section, map every card requirement to a task and a test:
 | R1 | Task <n> | `<test name>` |
 ```
 
+Right after `## Card requirements`, list what could go wrong while building the change, for Gate 1 to question:
+
+```markdown
+## Risks
+
+| Risk | Source | Mitigation |
+| --- | --- | --- |
+| <what could break> | <design constraint or anti-goal, or `<path>`> | Task <n> (`<test name>`) or `accepted: <reason>` |
+
+- Riskiest task: Task <n> — <why>.
+- Rejected approaches: <approach> — <why>.
+```
+
+- A risk is about making the change: an existing caller, query or migration it could break, a limit or ordering it relies on, a step that is hard to undo. Input cases that no test covers stay in `writing-plans`' Review Focus.
+- Each risk has a mitigation task with its test, or is `accepted` with the reason.
+- Rejected approaches come from the design's decisions and from planning; "none" if only one approach was considered.
+- No risk found → the table becomes one line `None found: <what was checked>`; the two bullets stay.
+
 ## 5. Global Constraints
 
 The plan's Global Constraints come from `apps/api/.claude/rules/coding.md` and `apps/api/.claude/rules/testing.md`. Read both while planning, even if no `src/` file has been opened yet, and cite the rules that apply.
@@ -108,6 +126,16 @@ Tasks end at "run the tests, expect PASS". Commits happen only after the user ap
   - do not commit.
 - `writing-plans`: no commit steps; it ends after saving the plan and does not invoke an execution skill.
 - `executing-plans` in `/work-ticket`: after each task passes, dispatch the `plan-reviewer` subagent with the plan path and the task number. It checks that task against its acceptance criteria and that each test the plan names for it asserts the AC. Fix any gap before the next task.
+- Deviations from the plan in `/work-ticket`, at step 6 and in any fix at steps 7, 8 and 10 (overrides `executing-plans`' "Rulings, not stalls" and adds a fifth case to its "Four things stop you"). Classify each one by whether it changes what Gate 1 approved:
+  - It changes an acceptance criterion, the scope, the `## Card requirements` mapping, an endpoint or request/response shape, an entity or migration, a dependency, or touches a file the plan does not list (a generated name the plan describes, such as `Migration<timestamp>.ts`, counts as listed) → stop before making it and ask:
+    - A "Update the plan as proposed" (Recommended): edit `plan.md`, including `## Card requirements` and `## Risks` when the change affects them, and add the entry to `## Deviations` (task, what changes, why, `approved <YYYY-MM-DD>`). A new task takes the next free number; never renumber tasks, since the ledger records them by number. An R dropped from scope keeps its row, with `out of scope, approved <YYYY-MM-DD>` in the Test column.
+    - B "Keep the plan; find another way". If no way inside the plan works, ask again with only A and C.
+    - C "Stop to revise the design and plan": add the entry to `## Deviations` marked `pending`, remove the Gate 1 row (and the design's `**Design approved:**` line if the design must change), then stop and notify. On resume, revise the plan for each `pending` entry before Gate 1 asks again; after approval, continue at step 6 on the existing branch.
+  - Anything else (an internal name, a helper split out, the order of steps inside a task) → no question; add the entry to `## Deviations` (task, what changed, why) before dispatching `plan-reviewer`.
+  - Either way, also write the `Ruling:` line in the `executing-plans` ledger: a task brief copies only its own `### Task N` section, so the ledger is how later tasks learn the decision.
+  - `## Deviations` sits right after `## Risks`, before the first task; at the end of the plan, the brief of the last task would include it.
+  - Not deviations: files the workflow itself creates (`docs/images/<feature-name>/` screenshots) and the lockfile change of an approved dependency.
+  - A deviation that `plan-reviewer` reports as already in the diff gets the same question, with B meaning revert it.
 - `subagent-driven-development` (not used by `/work-ticket`):
   - implementers do not commit;
   - do not run `review-package`;
@@ -173,6 +201,7 @@ Before asking to commit, write `report.md` with:
 - an `R → test → PASS` table from the final verify run. An AC with no test, or whose test sits in a SKIPPED gate (e.g. e2e skipped by the database guard), is listed under Not verified with the reason, for the user to check, never as PASS;
 - the code-review result: findings fixed, and findings left with their reason (cleanup or false positive);
 - one Security line. Step 8 writes `Security: pending`. Step 10 of `/work-ticket`, after the commit, replaces it with `no findings`, `findings fixed` (plus each finding and its fix) or `skipped, no security-relevant change`. A rerun of step 8 during step 10 keeps the Security line and its findings as they are;
+- the plan's `## Deviations`, or "none";
 - tests added, and decisions made at each gate.
 
 ## 10. Finishing the branch
