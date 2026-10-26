@@ -1,6 +1,6 @@
 # Feature workflow (overrides for superpowers)
 
-For a feature or bug task, use the superpowers skills: `brainstorming` → `writing-plans` → `subagent-driven-development` or `executing-plans` → `requesting-code-review` → `finishing-a-development-branch`. They allow user preferences to override their defaults; in this repo, the rules below override them. `/work-ticket` runs the whole flow for a Trello card.
+For a feature or bug task, use the superpowers skills `brainstorming` → `writing-plans` → `executing-plans` (or `subagent-driven-development` outside `/work-ticket`). They allow user preferences to override their defaults; in this repo, the rules below override them. After implementing, follow this repo's own rules in this order: code review (rule 8), verify (rule 7), report (rule 9), commit (rule 11), security review on the commit (rule 8), finishing the branch (rule 10). `/work-ticket` runs the whole flow for a Trello card.
 
 ## 1. Save paths
 
@@ -35,7 +35,7 @@ The design lists every requirement on the card, analysed from the description (l
 - [ ] R1 — <requirement in the card's words> (description | checklist)
 ```
 
-Each `R<n>` is ticked at step 9 of `/work-ticket`, once its task is finished.
+Each `R<n>` is ticked at step 8 of `/work-ticket`, once its test passes in the final verify run.
 
 The design records every question asked during brainstorming and builder checks:
 
@@ -76,7 +76,7 @@ Add right after `**Spec:**`, filled from real git output, never guessed:
 - Base branch defaults to `develop` (`docs/conventions/git.md`). PR target defaults to the base branch.
 - Base commit at planning time: `git fetch origin <base>`, then `git log -1 --format='%h — %s (%ad)' --date=short origin/<base>`.
 - Base commit at branch creation: replace it with `git log -1 --format='%h — %s (%ad)' --date=short HEAD`, run on the new feature branch.
-- At Gate 1 approval, add the row `| Gate 1 | approved <YYYY-MM-DD>, <native or subagent-driven> |` at the end of the table. The plan never has it before then.
+- At Gate 1 approval, add the row `| Gate 1 | approved <YYYY-MM-DD>, <native or subagent-driven> |` at the end of the table; `/work-ticket` always writes `native`. The plan never has it before then.
 - `<type>` is `fix`, `feat` or `refactor`. Pick `<type>/<feature-name>` from the card before writing the design.
 - Branch name check: `git fetch origin`, then `git branch -a --list '<branch>' 'origin/<branch>'`. Any output → ask the user for another name.
 
@@ -107,7 +107,8 @@ Tasks end at "run the tests, expect PASS". Commits happen only after the user ap
   - read the code without asking permission first;
   - do not commit.
 - `writing-plans`: no commit steps; it ends after saving the plan and does not invoke an execution skill.
-- `subagent-driven-development`:
+- `executing-plans` in `/work-ticket`: after each task passes, dispatch the `plan-reviewer` subagent with the plan path and the task number. It checks that task against its acceptance criteria and that each test the plan names for it asserts the AC. Fix any gap before the next task.
+- `subagent-driven-development` (not used by `/work-ticket`):
   - implementers do not commit;
   - do not run `review-package`;
   - for each task review and fix re-review, write `git diff HEAD -U10` and `git status --short -uall` to a file under `.superpowers/sdd/` and give the reviewer its path;
@@ -122,8 +123,10 @@ Start from `apps/api/`:
 2. If the list is not empty, run `pnpm exec eslint --fix <files>` and `pnpm exec prettier --write <files>` on it.
 3. Run the `verify` skill (lint without `--fix`, format check, build, unit, e2e with the database guard). Never `pnpm run lint` as a check — it autofixes.
 
+Steps 1–2 (the autofix) also run right after implementing, before the code review (rule 8), so the review reads a formatted diff; in `/work-ticket` that is the end of step 6. `verify` runs after the code review, at step 8 of `/work-ticket`.
+
 - **Coverage baseline.** Right after creating the feature branch and before changing any code, from `apps/api/`, run `pnpm run test:cov --coverage.reporter=json-summary --coverage.reporter=text-summary`, then `node .claude/skills/verify/coverage-diff.mjs snapshot ../../<spec dir>/coverage-baseline.json`. If code already changed (e.g. on resume), note "no clean baseline" in the report.
-- **Unit gate runs with coverage.** In this workflow the unit gate is the same `test:cov` command, not `pnpm run test`, so tests run once.
+- **Unit gate runs with coverage.** Inside `verify`, the unit gate is the same `test:cov` command, not `pnpm run test`, so tests run once per verify run. The `pnpm run test` at the end of `/work-ticket` step 6 is separate: it catches one task breaking another before the code review.
 - **Test report after every verify run**, pass or fail, overwritten each time. Fill `.claude/templates/test-report.md` into `<spec dir>/test-report.md`:
   - Overview numbers come from the vitest output of this run (passed / failed / skipped / duration / file count).
   - One Bugs block per failing test, with the location, a rerun command, whether it fails in isolation (rerun that test alone), and the cause. Request/Response only for e2e; never include tokens or cookies.
@@ -131,30 +134,55 @@ Start from `apps/api/`:
   - A skipped e2e run is a row with `—` and "Skipped: <reason>".
 - The last verify run before commit produces the report; it must match the code being committed.
 
-## 8. Code review before commit
+## 8. Code review and security review
 
-Use `superpowers:requesting-code-review`, adjusted for uncommitted work:
+**Code review, before the commit.** First run `git add -N` on the untracked files from `git status --short -uall`, so `git diff` shows new files too. Then invoke the built-in `code-review` skill at `medium`, and name in the prompt:
+- the target: the working tree against the plan's base commit, i.e. `git diff <base commit>`. Its default target falls back to `git diff HEAD~1` on a branch with no upstream, and on a fresh feature branch that is the last merged PR;
+- the rules to check against: `apps/api/.claude/rules/coding.md` and `apps/api/.claude/rules/testing.md`.
 
-- `{BASE_SHA}` is the base commit from the plan's Git section; `{HEAD_SHA}` is `WORKTREE (uncommitted)`.
-- Tell the reviewer to run `git diff <base commit>` (staged and unstaged) and `git status --short -uall`, and to read untracked files in full. `git diff BASE..HEAD` would miss uncommitted code.
-- `{PLAN_OR_REQUIREMENTS}` is the plan path. The reviewer also checks against `apps/api/.claude/rules/coding.md` and `apps/api/.claude/rules/testing.md`.
-- Handle feedback with `superpowers:receiving-code-review`: fix Critical and Important, then rerun `verify` and the review; record Minor in the report; push back with reasoning when the reviewer is wrong.
-- In `/work-ticket`, a fix from the requirements review (step 8) or the code review (step 9) reruns step 7, then step 8, then step 9. `report.md` is written only when steps 7–9 pass with no fix in between.
-- With subagent-driven execution each task was already reviewed; this whole-change review still runs.
+The acceptance criteria were already checked per task (rule 6). Handle each finding by its type:
+
+| Finding | Action |
+| --- | --- |
+| Bug: wrong behaviour, crash, data loss, security hole, an AC not met | Fix |
+| Violation of `apps/api/.claude/rules/coding.md` or `testing.md` | Fix |
+| Cleanup or suggestion (naming, refactor, simplification) | Do not fix; one line in `report.md` |
+| False positive | Push back with the reason; one line in `report.md` |
+
+After fixing a bug, run the related tests, then `code-review` on the fix. In `/work-ticket`, a fix that changes logic in `src/` after a failed verify also goes back to the code review for that fix, instead of the `verify` skill's step 4 ("Fix and rerun").
+
+**Round limit.** A round is one fix plus the check that follows it: `code-review` on a logic fix, or a `verify` rerun for a test, lint or format fix. The first review of the whole change is not a round. At most 2 rounds before the commit (code review and verify together) and 2 more after it (the security review, where one round is a finding's fix → code review → verify → amend → rerun). Then stop, notify and ask the user.
+
+**Security review, after the commit and before the push.** Run it when the committed change (`<base commit>..HEAD`) touches access control (guards, `@AdminOnly`/`@Roles`, Clerk auth, the global `APP_GUARD`, `apps/api/src/modules/webhook/`), config or secrets (`configs/`, `.env*`, CORS, Docker, CI workflows) or dependencies (`package.json`, the lockfile, the `catalog:`). Otherwise skip it.
+
+Invoke the built-in `security-review` skill. It runs `git diff origin/HEAD...`, the committed branch diff against origin's default branch (`develop`), so it needs the commit but no PR. First check `git rev-parse --abbrev-ref origin/HEAD`. If it fails, or is not `origin/<base branch>` from the plan, that diff is not this change's diff: tell the user and ask before running it. A missing `origin/HEAD` is set with `git remote set-head origin -a`. A finding:
+1. fix it, then run the code review on the fix;
+2. run `verify` (rule 7);
+3. `git add -A`, show `git diff --cached --stat`, and amend the commit after the user approves Gate 2 again;
+4. rerun `security-review`.
+
+The round limit above applies. Nothing is pushed yet, so no force-push is needed.
+
+The multi-agent `/claude-security` scan is not part of this flow. The user runs it by hand on a high-risk PR, before a release, or as a periodic scan.
 
 ## 9. Report
 
-Before asking to commit, write `report.md`: a link to `test-report.md`, the `verify` table, plan-review result (gaps found and fixed), code-review result (Critical/Important fixed, Minor left), card requirement coverage, tests added, and decisions made at each gate.
+Before asking to commit, write `report.md` with:
+
+- a link to `test-report.md` and the `verify` table;
+- an `R → test → PASS` table from the final verify run. An AC with no test, or whose test sits in a SKIPPED gate (e.g. e2e skipped by the database guard), is listed under Not verified with the reason, for the user to check, never as PASS;
+- the code-review result: findings fixed, and findings left with their reason (cleanup or false positive);
+- one Security line. Step 8 writes `Security: pending`. Step 10 of `/work-ticket`, after the commit, replaces it with `no findings`, `findings fixed` (plus each finding and its fix) or `skipped, no security-relevant change`. A rerun of step 8 during step 10 keeps the Security line and its findings as they are;
+- tests added, and decisions made at each gate.
 
 ## 10. Finishing the branch
 
-Use `superpowers:finishing-a-development-branch` with:
+No `superpowers:finishing-a-development-branch`, and no verify rerun: the last verify run produced the report, and pre-push runs `turbo run build test --affected`.
 
-- Step 1 runs the `verify` skill instead of a generic test command.
-- Step 3 takes the base branch from the plan's Git section.
-- Step 4 first runs the `pr-description` skill, which saves the draft to `<spec dir>/pr-description.md`, and shows the title, the body and its TODOs. Then it offers A "Push and create a Pull Request with this description" (Recommended) and B "Keep the branch as-is". The local merge option is not offered, because this repo merges through GitHub PRs with a merge commit. Nothing is pushed before the user picks A.
+- Run the `pr-description` skill, which saves the draft to `<spec dir>/pr-description.md`. Show the title, the body and its TODOs.
+- Then ask A "Push and create the PR with this description" (Recommended) or B "Keep the branch as-is". There is no local merge option: this repo merges through GitHub PRs with a merge commit. Nothing is pushed before the user picks A.
 - To change the draft, the user answers in D (Other); edit `pr-description.md`, show it again and ask again. Every `<TODO>` is resolved before A runs; a missing screenshot is added under `docs/images/<feature-name>/` and the commit amended once the user approves.
-- Option A: `git push -u origin <branch>`, then `gh pr create --base <PR target> --head <branch> --title "<title>" --body-file <spec dir>/pr-description.md`. In `/work-ticket`, step 12 then moves the card to REVIEW; `.github/workflows/trello.yml` moves the card on the description's `**Ticket:**` line to DONE when the PR is merged.
+- Option A: `git push -u origin <branch>`, then `gh pr create --base <PR target> --head <branch> --title "<title>" --body-file <spec dir>/pr-description.md`. The base branch and the PR target come from the plan's Git section. In `/work-ticket`, step 12 then moves the card to REVIEW; `.github/workflows/trello.yml` moves the card on the description's `**Ticket:**` line to DONE when the PR is merged.
 
 ## 11. Commit
 

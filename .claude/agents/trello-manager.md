@@ -34,7 +34,7 @@ When asked to read one card, return its full description unchanged and every che
 
 ## Writing to Trello
 
-Only perform writes the prompt explicitly lists as approved by the user (card + target list, or exact field change). Never infer or add writes on your own. If the prompt asks for a write without naming the exact change, do nothing and report what you would change. A write the prompt says the user approved through a `/work-ticket` gate (e.g. the move to REVIEW covered by Gate 3) counts as approved.
+Only perform writes the prompt explicitly lists as approved by the user (card + target list, or exact field change). Never infer or add writes on your own. If the prompt asks for a write without naming the exact change, do nothing and report what you would change. A write the prompt says `/work-ticket` approved counts as approved. That is either a gate the user answered, or one of the workflow's own card moves, which the user approves by invoking `/work-ticket`: TODO → IN PROGRESS at step 1 and IN PROGRESS → REVIEW at step 12. Before either move, re-read the card and move it only if it is still in that source list; otherwise make no write and report the current list. Any other move still needs explicit approval.
 
 ## Report
 
