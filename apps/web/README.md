@@ -62,15 +62,16 @@ For Clerk and other secrets, use `.env` (see `.env.example`). For environment va
 
 ## DEPLOY
 
-Web is deployed to Vercel (project `ai-training`) by GitHub Actions (`.github/workflows/ci.yml` calls the reusable `.github/workflows/deploy-web.yml`), only after the `quality` job (test + build) passes and only when `web` is affected. The Vercel project is not connected to Git (`vercel.json` sets `git.deploymentEnabled: false`), so nothing else deploys it.
+Web is deployed to Vercel (project `ai-training`) by GitHub Actions (`.github/workflows/ci.yml` calls the reusable `.github/workflows/deploy-web.yml`), only after the `quality` job (test + build) passes and only when `web` is affected (for PR previews: `web` or the API). The Vercel project is not connected to Git (`vercel.json` sets `git.deploymentEnabled: false`), so nothing else deploys it.
 
-| Environment | Trigger                 | URL                                                                | Vercel env |
-| ----------- | ----------------------- | ------------------------------------------------------------------ | ---------- |
-| Preview     | PR into `develop`       | new URL per push that changes web; one PR comment shows the latest | Preview    |
-| Development | merge into `develop`    | https://ai-training-develop.vercel.app (alias to the latest build) | Preview    |
-| Production  | `main` (not configured) | —                                                                  | Production |
+| Environment | Trigger                 | URL                                                                           | Vercel env |
+| ----------- | ----------------------- | ----------------------------------------------------------------------------- | ---------- |
+| Preview     | PR into `develop`       | new URL per push that changes web or the API; one PR comment shows the latest | Preview    |
+| Development | merge into `develop`    | https://ai-training-develop.vercel.app (alias to the latest build)            | Preview    |
+| Production  | `main` (not configured) | —                                                                             | Production |
 
 - `vercel.json` sets only the build command and turns off Git deploys, so these Vercel project settings must stay: Framework Preset Next.js, Root Directory `apps/web`, Node.js 24.x, Install Command not overridden (default `pnpm install` installs the whole workspace).
 - App env vars live in the Vercel project: Preview, shared by preview and development. Production is reserved for `main`.
 - GitHub holds only the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` and the variable `VERCEL_DEVELOP_ALIAS`.
-- Both environments call the develop API (`NEXT_PUBLIC_API_URL`) from the browser. The development alias is listed in the API's `CORS_ORIGIN`; preview URLs change on every deploy and need the wildcard entry from card #16 — until then their API calls are blocked by CORS.
+- The browser calls the API at `NEXT_PUBLIC_API_URL`. Development and web-only PRs use the develop API. A PR that changes the API gets its own API preview (Render service `ai-training-api-preview-pull-request-<n>`, usually `https://ai-training-api-preview-pull-request-<n>.onrender.com`; the PR comment shows the real URL, see the root `CLAUDE.md`), and its web preview is built against it (`deploy-web.yml` input `api_url`).
+- The API's `CORS_ORIGIN` lists the development alias and the wildcard `https://ai-training-*-tiennd0502gmailcoms-projects.vercel.app` for preview URLs; API previews copy it from develop.

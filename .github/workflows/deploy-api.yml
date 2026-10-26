@@ -1,0 +1,274 @@
+name: Deploy API (Render)
+
+# Reusable: called from ci.yml after `quality` and `build-and-scan` pass. Builds apps/api
+# (Dockerfile target `production`), pushes the image to GHCR, then deploys it on Render:
+# develop → the develop service, which pulls `:develop`; preview → a preview of that service
+# per PR, running `:pull-request-<n>`. A PR image gets its own tag, so `:develop` only ever
+# holds merged code.
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: >-
+          preview = pull_request into develop (pushes `:pull-request-<n>` and deploys the
+          Render preview `ai-training-api-preview-pull-request-<n>`); develop = push to develop
+          (pushes `:develop` + `:<sha>`, then deploys Render develop; only `:<sha>` and no deploy
+          when develop has already moved on with API changes)
+        type: string
+        required: true
+    outputs:
+      url:
+        description: 'API preview URL (preview only; empty when this run did not deploy one)'
+        value: ${{ jobs.preview.outputs.url }}
+
+jobs:
+  push-image:
+    runs-on: ubuntu-latest
+    environment: develop-publish
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      current: ${{ steps.tags.outputs.current }}
+      image: ${{ steps.tags.outputs.image }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      TARGET: ${{ inputs.target }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check inputs and pick the tags
+        id: tags
+        run: |
+          # newer_develop
+          source .github/scripts/newer-develop.sh
+          image=$(echo "ghcr.io/$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+          case "$TARGET" in
+            preview)
+              if [ "$GITHUB_EVENT_NAME" != pull_request ] || [ -z "$PR_NUMBER" ]; then
+                echo "target preview needs a pull_request event with a PR number, got $GITHUB_EVENT_NAME '$PR_NUMBER'" >&2; exit 1
+              fi
+              tags="$image:pull-request-$PR_NUMBER" ;;
+            develop)
+              if [ "$GITHUB_EVENT_NAME" != push ] || [ "$GITHUB_REF" != refs/heads/develop ]; then
+                echo "target develop needs a push to develop, got $GITHUB_EVENT_NAME $GITHUB_REF" >&2; exit 1
+              fi
+              tags="$image:develop,$image:$GITHUB_SHA" ;;
+            *) echo "Unknown target '$TARGET' (expected preview or develop)" >&2; exit 1 ;;
+          esac
+          current=true
+          # Runs can finish in any order; never let an older push overwrite a newer image.
+          # develop: when a newer develop commit changes what the API image is built from
+          # (newer-develop.sh, shared with deploy-web.yml's alias step), still push the immutable
+          # `:<sha>` but leave `:develop` and the deploy to that commit's run. Trade-off: if that
+          # run never gets here (its quality fails), `:develop` stays on the previous build until
+          # the next API push.
+          if [ "$TARGET" = develop ]; then
+            newer=$(newer_develop apps/api packages package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json .dockerignore)
+            if [ -n "$newer" ]; then
+              current=false
+              tags="$image:$GITHUB_SHA"
+              echo "develop moved to $newer with API changes; pushing only :$GITHUB_SHA, its own run moves :develop and deploys" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          if [ "$TARGET" = preview ]; then
+            latest=$(git ls-remote origin "refs/pull/$PR_NUMBER/head" | cut -f1)
+            if [ -n "$latest" ] && [ "$latest" != "$HEAD_SHA" ]; then
+              current=false
+              tags=''
+              echo "PR head moved to $latest; its own run pushes the API image" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          # current = this run may move the shared tag and deploy; tags = what it pushes (may be empty)
+          {
+            echo "tags=$tags"
+            echo "image=${tags%%,*}"
+            echo "current=$current"
+          } >> "$GITHUB_OUTPUT"
+          if [ -n "$tags" ]; then
+            echo "API image ($TARGET): ${tags//,/ }" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.tags.outputs.tags != ''
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        if: steps.tags.outputs.tags != ''
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        if: steps.tags.outputs.tags != ''
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          target: production
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          # build-and-scan (ci.yml) already wrote this build's layers to the cache.
+          cache-from: type=gha
+
+  deploy:
+    needs: push-image
+    if: inputs.target == 'develop' && needs.push-image.outputs.current == 'true'
+    runs-on: ubuntu-latest
+    environment: develop-deploy
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Trigger Render deploy
+        run: |
+          # require_env, render
+          source .github/scripts/render.sh
+          require_env RENDER_API_KEY RENDER_SERVICE_ID
+          # On an error, print Render's reason (the response holds no secrets).
+          if ! response=$(render POST "/services/$RENDER_SERVICE_ID/deploys"); then
+            echo "Render deploy trigger failed: $response" >&2; exit 1
+          fi
+          echo "Render develop deploy triggered" >> "$GITHUB_STEP_SUMMARY"
+
+  # A Render image preview copies the develop service's settings and env (develop database,
+  # Clerk, CORS_ORIGIN with the Vercel preview wildcard) when it is created. One service per
+  # PR: later pushes redeploy it, so its URL stays the same; preview-cleanup.yml deletes it
+  # when the PR closes, and this job deletes it itself if the PR closed while it was running.
+  preview:
+    needs: push-image
+    if: inputs.target == 'preview' && needs.push-image.outputs.current == 'true'
+    runs-on: ubuntu-latest
+    environment: develop-deploy
+    # 12 min deploy wait + up to 4 min health check + Render calls
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      IMAGE: ${{ needs.push-image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Create or redeploy the API preview
+        id: deploy
+        run: |
+          # require_env, render, api_preview_name, find_api_preview
+          source .github/scripts/render.sh
+          # jq filters (also run against sample responses by the spec's check script)
+          service_url='.serviceDetails.url // .service.serviceDetails.url // empty'
+          deploy_status='.status // .deploy.status // empty'
+          # shellcheck disable=SC2016 # $t is a jq variable
+          new_deploy='[.[] | .deploy | select((.createdAt | sub("\\.[0-9]+"; "") | fromdateiso8601) >= ($t | tonumber))] | sort_by(.createdAt) | .[0].id // empty'
+
+          require_env RENDER_API_KEY RENDER_SERVICE_ID
+          # True only when GitHub says the PR is closed; a failed lookup is not "closed".
+          pr_closed() {
+            local state
+            state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .state) || return 2
+            [ "$state" = closed ]
+          }
+
+          # preview-cleanup.yml only deletes what exists when the PR closes; never create after it.
+          if pr_closed; then
+            echo "PR #$PR_NUMBER is closed; no API preview" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          name=$(api_preview_name "$PR_NUMBER")
+          # However this step ends (deploy failed, timed out, curl error), never leave a preview
+          # behind for a PR that closed meanwhile: preview-cleanup.yml may have run already.
+          id=''
+          delete_if_closed() {
+            if [ -n "$id" ] && pr_closed; then
+              render DELETE "/services/$id" >/dev/null && \
+                echo "PR #$PR_NUMBER closed during the deploy; deleted $name" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          }
+          trap delete_if_closed EXIT
+          id=$(find_api_preview "$name")
+          if [ -z "$id" ]; then
+            created=$(render POST "/services/$RENDER_SERVICE_ID/preview" \
+              "$(jq -nc --arg image "$IMAGE" --arg name "$name" '{imagePath: $image, name: $name, plan: "free"}')")
+            id=$(jq -r '.service.id // empty' <<<"$created")
+            deploy_id=$(jq -r '.deployId // empty' <<<"$created")
+            url=$(jq -r "$service_url" <<<"$created")
+            action=created
+          else
+            # epoch seconds, 2 s early: Render's createdAt has fractions; the previous deploy is minutes older
+            requested=$(( $(date -u +%s) - 2 ))
+            deploy_id=$(render POST "/services/$id/deploys" "$(jq -nc --arg image "$IMAGE" '{imageUrl: $image}')" | jq -r '.id // empty')
+            # A deploy queued behind a running one may come back without a body: wait for the
+            # deploy created by this request, never the previous push's one that is still running.
+            for _ in $(seq 6); do
+              [ -n "$deploy_id" ] && break
+              sleep 5
+              deploy_id=$(render GET "/services/$id/deploys?limit=5" | jq -r --arg t "$requested" "$new_deploy")
+            done
+            url=$(render GET "/services/$id" | jq -r "$service_url")
+            action=redeployed
+          fi
+          if [ -z "$id" ] || [ -z "$deploy_id" ] || ! [[ "$url" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "Unexpected Render response (service '$id', deploy '$deploy_id', url '$url')" >&2; exit 1
+          fi
+
+          status=''
+          for _ in $(seq 72); do
+            status=$(render GET "/services/$id/deploys/$deploy_id" | jq -r "$deploy_status")
+            case "$status" in
+              live) break ;;
+              *failed|canceled|deactivated) echo "Render deploy $deploy_id of $name ended as $status" >&2; exit 1 ;;
+            esac
+            sleep 10
+          done
+          if [ "$status" != live ]; then
+            echo "Render deploy $deploy_id of $name is still '$status' after 12 minutes" >&2; exit 1
+          fi
+
+          # The PR may have closed while this ran (the EXIT trap deletes the service).
+          if pr_closed; then
+            exit 0
+          fi
+
+          # `live` means Render's checks passed; also make sure the app answers (any non-5xx).
+          code=000
+          for _ in $(seq 6); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$url/" || true)
+            if [ "$code" != 000 ] && [ "$code" -lt 500 ]; then break; fi
+            sleep 10
+          done
+          if [ "$code" = 000 ] || [ "$code" -ge 500 ]; then
+            echo "API preview $url does not answer (HTTP $code)" >&2; exit 1
+          fi
+
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "API preview ($action): $url" >> "$GITHUB_STEP_SUMMARY"
