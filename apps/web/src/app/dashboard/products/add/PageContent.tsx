@@ -13,13 +13,17 @@ import type {
   ProductImagePayload,
   ProductPayload,
 } from '@/types/product'
-import { DISCOUNT_TYPE, PRODUCT_STATUS, ROAST_LEVEL } from '@/types/product'
+import {
+  DiscountType,
+  ProductStatus,
+  RoastLevel,
+  VALIDATION_RULES,
+} from '@repo/constants'
 
 // Constants
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { EMPTY_IMAGE } from '@/constants/images'
 import { DISCOUNT_TYPE_OPTIONS, UNIT_OPTIONS } from '@/constants/product'
-import { VALIDATION_RULES } from '@/constants/validation'
 
 // Hooks
 import { useCategories } from '@/hooks/useCategory'
@@ -65,10 +69,10 @@ interface ImageValidationErrors {
   gallery: string
 }
 
-const roastLevels: ROAST_LEVEL[] = [
-  ROAST_LEVEL.LIGHT,
-  ROAST_LEVEL.MEDIUM,
-  ROAST_LEVEL.DARK,
+const roastLevels: RoastLevel[] = [
+  RoastLevel.LIGHT,
+  RoastLevel.MEDIUM,
+  RoastLevel.DARK,
 ]
 const DEFAULT_TASTING_NOTES = ['Chocolate', 'Hazelnut', 'Berries']
 
@@ -76,13 +80,13 @@ const PRODUCT_FORM_DEFAULT_VALUES: ProductFormValues = {
   categoryId: '',
   name: '',
   description: '',
-  roastLevel: ROAST_LEVEL.LIGHT,
+  roastLevel: RoastLevel.LIGHT,
   isOrganic: true,
   isFairTrade: false,
   weight: 0,
   unit: '',
   price: 0,
-  discountType: DISCOUNT_TYPE.PERCENT,
+  discountType: DiscountType.PERCENT,
   discountValue: 0,
   quantity: '',
   origin: '',
@@ -92,7 +96,7 @@ const PRODUCT_FORM_DEFAULT_VALUES: ProductFormValues = {
 const ETHICS_TOGGLE_CLASSES =
   'inline-flex h-12 w-max max-w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-4 text-xs font-semibold uppercase tracking-wider whitespace-nowrap disabled:pointer-events-none disabled:opacity-50'
 
-const getRoastIndex = (value: ROAST_LEVEL) => {
+const getRoastIndex = (value: RoastLevel) => {
   const found = roastLevels.indexOf(value)
   return found === -1 ? 0 : found
 }
@@ -156,7 +160,7 @@ const PageContent = () => {
   const discountType = watch('discountType')
   const isOrganic = watch('isOrganic')
   const isFairTrade = watch('isFairTrade')
-  const isPercentDiscount = discountType === DISCOUNT_TYPE.PERCENT
+  const isPercentDiscount = discountType === DiscountType.PERCENT
   const isSubmitting = isPending || isUploadingImages
 
   const handleDiscardDraft = () => {
@@ -328,9 +332,7 @@ const PageContent = () => {
       roastLevel: data.roastLevel,
       isOrganic: data.isOrganic,
       isFairTrade: data.isFairTrade,
-      status: isListedOnStorefront
-        ? PRODUCT_STATUS.ACTIVE
-        : PRODUCT_STATUS.DRAFT,
+      status: isListedOnStorefront ? ProductStatus.ACTIVE : ProductStatus.DRAFT,
       tastingNotes: tastingNotes?.join(', ') ?? '',
       origin: data.origin.trim(),
       processingMethod: data.processingMethod.trim(),
@@ -701,7 +703,7 @@ const PageContent = () => {
                     : values
                   setValue(
                     'roastLevel',
-                    roastLevels[nextIndex] ?? ROAST_LEVEL.LIGHT,
+                    roastLevels[nextIndex] ?? RoastLevel.LIGHT,
                     {
                       shouldDirty: true,
                     },

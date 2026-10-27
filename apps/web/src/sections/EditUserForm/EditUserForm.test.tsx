@@ -6,7 +6,7 @@ import { EditUserForm } from '@/sections/EditUserForm'
 import { useUpdateUserInfo } from '@/hooks/useUser'
 import { uploadImageToImgBB } from '@/services/image'
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
-import { USER_ROLES, USER_STATUS } from '@/types/user'
+import { UserRole, UserStatus } from '@repo/constants'
 
 jest.mock('@/hooks/useUser', () => ({
   useUpdateUserInfo: jest.fn(),
@@ -65,8 +65,8 @@ describe('EditUserForm', () => {
     lastName: 'Lee',
     name: 'Pat Lee',
     avatarUrl: 'https://example.com/pat.png',
-    role: USER_ROLES.USER,
-    status: USER_STATUS.ACTIVE,
+    role: UserRole.USER,
+    status: UserStatus.ACTIVE,
   }
 
   const defaultProps = {
@@ -98,8 +98,8 @@ describe('EditUserForm', () => {
 
     expect(screen.getByLabelText(/first name/i)).toHaveValue('Pat')
     expect(screen.getByLabelText(/last name/i)).toHaveValue('Lee')
-    expect(screen.getByLabelText('Role')).toHaveValue(USER_ROLES.USER)
-    expect(screen.getByLabelText('Status')).toHaveValue(USER_STATUS.ACTIVE)
+    expect(screen.getByLabelText('Role')).toHaveValue(UserRole.USER)
+    expect(screen.getByLabelText('Status')).toHaveValue(UserStatus.ACTIVE)
   })
 
   it('submits the updated name, role, and status for the target user id', async () => {
@@ -108,10 +108,10 @@ describe('EditUserForm', () => {
 
     await user.clear(screen.getByLabelText(/first name/i))
     await user.type(screen.getByLabelText(/first name/i), 'Patricia')
-    await user.selectOptions(screen.getByLabelText('Role'), USER_ROLES.ADMIN)
+    await user.selectOptions(screen.getByLabelText('Role'), UserRole.ADMIN)
     await user.selectOptions(
       screen.getByLabelText('Status'),
-      USER_STATUS.INACTIVE,
+      UserStatus.INACTIVE,
     )
     await user.click(screen.getByRole('button', { name: /save changes/i }))
 
@@ -121,8 +121,8 @@ describe('EditUserForm', () => {
         payload: {
           firstName: 'Patricia',
           lastName: 'Lee',
-          role: USER_ROLES.ADMIN,
-          status: USER_STATUS.INACTIVE,
+          role: UserRole.ADMIN,
+          status: UserStatus.INACTIVE,
         },
       },
       expect.objectContaining({
@@ -162,8 +162,8 @@ describe('EditUserForm', () => {
         payload: {
           firstName: 'Pat',
           lastName: 'Lee',
-          role: USER_ROLES.USER,
-          status: USER_STATUS.ACTIVE,
+          role: UserRole.USER,
+          status: UserStatus.ACTIVE,
           avatarUrl: 'https://example.com/new-avatar.png',
         },
       },

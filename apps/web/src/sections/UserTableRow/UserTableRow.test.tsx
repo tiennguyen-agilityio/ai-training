@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { UserTableRow } from '@/sections/UserTableRow'
-import { USER_ROLES, USER_STATUS } from '@/types/user'
+import { UserRole, UserStatus } from '@repo/constants'
 
 const baseUser = {
   id: 'u-1',
@@ -11,8 +11,8 @@ const baseUser = {
   lastName: 'Lee',
   name: 'Pat Lee',
   avatarUrl: null,
-  role: USER_ROLES.USER,
-  status: USER_STATUS.ACTIVE,
+  role: UserRole.USER,
+  status: UserStatus.ACTIVE,
 }
 
 describe('UserTableRow', () => {

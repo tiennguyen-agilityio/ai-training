@@ -10,12 +10,12 @@ import { useDeleteProduct, useProducts } from '@/hooks/useProduct'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { type ProductOptions } from '@/services/product'
 import {
-  DISCOUNT_TYPE,
-  PRODUCT_STATUS,
-  PRODUCT_UNIT,
-  ROAST_LEVEL,
-  type Product,
-} from '@/types/product'
+  DiscountType,
+  ProductStatus,
+  ProductUnit,
+  RoastLevel,
+} from '@repo/constants'
+import { type Product } from '@/types/product'
 
 let navQueryString = ''
 
@@ -93,10 +93,10 @@ const productsFixture: Product[] = [
     categoryId: 'whole-bean',
     name: 'Ethiopian Yirgacheffe',
     description: 'Floral and citrus profile',
-    roastLevel: ROAST_LEVEL.LIGHT,
+    roastLevel: RoastLevel.LIGHT,
     isOrganic: true,
     isFairTrade: true,
-    status: PRODUCT_STATUS.ACTIVE,
+    status: ProductStatus.ACTIVE,
     tastingNotes: 'Lemon, bergamot, jasmine',
     origin: 'Ethiopia',
     processingMethod: 'Washed',
@@ -104,9 +104,9 @@ const productsFixture: Product[] = [
       {
         sku: 'SKU-1',
         weight: 250,
-        unit: PRODUCT_UNIT.G,
+        unit: ProductUnit.G,
         price: 24,
-        discountType: DISCOUNT_TYPE.PERCENT,
+        discountType: DiscountType.PERCENT,
         discountValue: 10,
         quantity: 42,
       },
@@ -120,10 +120,10 @@ const productsFixture: Product[] = [
     categoryId: 'brew-gear',
     name: 'The Chemist Brewer',
     description: 'Manual dripper',
-    roastLevel: ROAST_LEVEL.MEDIUM,
+    roastLevel: RoastLevel.MEDIUM,
     isOrganic: false,
     isFairTrade: false,
-    status: PRODUCT_STATUS.DRAFT,
+    status: ProductStatus.DRAFT,
     tastingNotes: 'Chocolate, caramel',
     origin: 'Colombia',
     processingMethod: 'Honey',
@@ -131,7 +131,7 @@ const productsFixture: Product[] = [
       {
         sku: 'SKU-2',
         weight: 1,
-        unit: PRODUCT_UNIT.KG,
+        unit: ProductUnit.KG,
         price: 85,
         discountType: null,
         discountValue: null,
@@ -147,10 +147,10 @@ const productsFixture: Product[] = [
     categoryId: 'whole-bean',
     name: 'Midnight Blend',
     description: 'House blend',
-    roastLevel: ROAST_LEVEL.DARK,
+    roastLevel: RoastLevel.DARK,
     isOrganic: false,
     isFairTrade: true,
-    status: PRODUCT_STATUS.ACTIVE,
+    status: ProductStatus.ACTIVE,
     tastingNotes: 'Dark chocolate, molasses',
     origin: 'Brazil',
     processingMethod: 'Natural',
@@ -158,9 +158,9 @@ const productsFixture: Product[] = [
       {
         sku: 'SKU-3',
         weight: 500,
-        unit: PRODUCT_UNIT.G,
+        unit: ProductUnit.G,
         price: 18.5,
-        discountType: DISCOUNT_TYPE.FIXED,
+        discountType: DiscountType.FIXED,
         discountValue: 2,
         quantity: 128,
       },

@@ -29,7 +29,8 @@ import { cn } from '@/utils/styles'
 import { useUrlState } from '@/hooks/useUrlState'
 import { useDebouncedUrlSearch } from '@/hooks/useDebouncedUrlSearch'
 import { Select } from '@/components/Select'
-import { PRODUCT_STATUS, type Product } from '@/types/product'
+import { ProductStatus } from '@repo/constants'
+import { type Product } from '@/types/product'
 import Loading from '@/components/Loading'
 
 const ALL_CATEGORIES_VALUE = 'all-categories'
@@ -270,7 +271,7 @@ export const PageContent = () => {
               isStackedOnMobile
               getRowKey={(product, index) => product.id ?? `product-${index}`}
               resolveRowClassName={(product) =>
-                product.status === PRODUCT_STATUS.ARCHIVED
+                product.status === ProductStatus.ARCHIVED
                   ? 'border-b border-border bg-muted-foreground/20'
                   : ''
               }

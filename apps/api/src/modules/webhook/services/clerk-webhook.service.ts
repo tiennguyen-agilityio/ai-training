@@ -10,7 +10,7 @@ import {
   AuthProvider,
   type AuthWebhookEvent,
 } from '../../../common/providers/auth.provider.js';
-import { UserRole, UserStatus } from '../../../common/enums/user.enum.js';
+import { UserRole, UserStatus } from '@repo/constants';
 
 const ClerkWebhookEventType = {
   USER_CREATED: 'user.created',

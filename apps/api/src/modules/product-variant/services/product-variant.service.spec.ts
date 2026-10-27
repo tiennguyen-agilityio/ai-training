@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProductVariantService } from './product-variant.service.js';
 import { ProductVariant } from '../entities/product-variant.entity.js';
 import { ProductVariantRepository } from '../repositories/product-variant.repository.js';
-import { ProductUnit } from '../enums/product-variant.enum.js';
+import { ProductUnit } from '@repo/constants';
 import {
   DuplicateResourceException,
   ItemNotFoundException,

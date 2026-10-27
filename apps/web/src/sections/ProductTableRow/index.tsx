@@ -6,7 +6,8 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { PRODUCT_STATUS, ROAST_LEVEL, type Product } from '@/types/product'
+import { ProductStatus, RoastLevel } from '@repo/constants'
+import { type Product } from '@/types/product'
 import { formatPrice } from '@/utils/common'
 import { getProductListPrice, getProductPrimaryImageUrl } from '@/utils/product'
 import { cn } from '@/utils/styles'
@@ -39,24 +40,24 @@ function readProductStock(product: Product): number {
 
 function formatRoastLevel(level: Product['roastLevel']): string {
   switch (level) {
-    case ROAST_LEVEL.LIGHT:
+    case RoastLevel.LIGHT:
       return 'Light Roast'
-    case ROAST_LEVEL.MEDIUM:
+    case RoastLevel.MEDIUM:
       return 'Medium Roast'
-    case ROAST_LEVEL.DARK:
+    case RoastLevel.DARK:
       return 'Dark Roast'
     default:
       return 'Unknown roast'
   }
 }
 
-function getStatusStyles(status: PRODUCT_STATUS): string {
+function getStatusStyles(status: ProductStatus): string {
   switch (status) {
-    case PRODUCT_STATUS.ACTIVE:
+    case ProductStatus.ACTIVE:
       return 'bg-emerald-100 text-emerald-700'
-    case PRODUCT_STATUS.INACTIVE:
+    case ProductStatus.INACTIVE:
       return 'bg-muted text-muted-foreground'
-    case PRODUCT_STATUS.ARCHIVED:
+    case ProductStatus.ARCHIVED:
       return 'bg-foreground/10 text-foreground/70'
     default:
       return 'bg-amber-100 text-amber-700'
@@ -78,8 +79,8 @@ export function ProductTableRow({
   const categoryLabel = readProductCategory(product, categoryOptions)
   const roastLevel = formatRoastLevel(product.roastLevel)
   const origin = product.origin?.trim() || 'Unknown origin'
-  const status = product.status ?? PRODUCT_STATUS.DRAFT
-  const isArchived = status === PRODUCT_STATUS.ARCHIVED
+  const status = product.status ?? ProductStatus.DRAFT
+  const isArchived = status === ProductStatus.ARCHIVED
   const stock = readProductStock(product)
   const price = getProductListPrice(product)
   const imageUrl = getProductPrimaryImageUrl(product)

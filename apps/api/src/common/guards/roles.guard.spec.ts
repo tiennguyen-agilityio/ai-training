@@ -1,7 +1,7 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { RolesGuard } from './roles.guard.js';
 import { ROLES_KEY } from '../decorators/roles.decorator.js';
-import { UserRole, UserStatus } from '../enums/user.enum.js';
+import { UserRole, UserStatus } from '@repo/constants';
 import type { User } from '../../modules/user/entities/user.entity.js';
 
 import type { Mock } from 'vitest';

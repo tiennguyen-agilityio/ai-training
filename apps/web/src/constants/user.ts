@@ -2,27 +2,22 @@ import { Mail, UserCheck, UserPlus, Users } from 'lucide-react'
 
 import type { StatCardItem } from '@/components/StatsCards'
 import type { TableColumn } from '@/components/Table'
-import { USER_ROLES, USER_STATUS } from '@/types/user'
-
-export const ROLES = {
-  USER: 'USER',
-  ADMIN: 'ADMIN',
-} as const
+import { UserRole, UserStatus } from '@repo/constants'
 
 export const ROLES_OPTIONS: readonly {
-  value: USER_ROLES
+  value: UserRole
   label: string
 }[] = [
-  { value: USER_ROLES.USER, label: 'User' },
-  { value: USER_ROLES.ADMIN, label: 'Admin' },
+  { value: UserRole.USER, label: 'User' },
+  { value: UserRole.ADMIN, label: 'Admin' },
 ]
 
 export const STATUS_OPTIONS: readonly {
-  value: USER_STATUS
+  value: UserStatus
   label: string
 }[] = [
-  { value: USER_STATUS.ACTIVE, label: 'Active' },
-  { value: USER_STATUS.INACTIVE, label: 'Inactive' },
+  { value: UserStatus.ACTIVE, label: 'Active' },
+  { value: UserStatus.INACTIVE, label: 'Inactive' },
 ]
 
 export const STATUS_FILTER_OPTIONS: readonly {
@@ -32,7 +27,7 @@ export const STATUS_FILTER_OPTIONS: readonly {
 
 export const ROLE_FILTER_OPTIONS = [
   'All Roles',
-  ...Object.values(USER_ROLES).map((role) => role.toString()),
+  ...Object.values(UserRole).map((role) => role.toString()),
 ] as const
 
 export const USERS_TABLE_COLUMNS: TableColumn[] = [

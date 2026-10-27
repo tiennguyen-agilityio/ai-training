@@ -9,7 +9,7 @@ import {
 } from '@mikro-orm/decorators/legacy';
 import { BaseEntity } from '../../../common/entities/base.entity.js';
 import { Product } from '../../product/entities/product.entity.js';
-import { DiscountType, ProductUnit } from '../enums/product-variant.enum.js';
+import { DiscountType, ProductUnit } from '@repo/constants';
 
 @Entity({ tableName: 'product_variants' })
 export class ProductVariant extends BaseEntity {

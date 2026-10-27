@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { UserStatus } from '../enums/user.enum.js';
+import { UserStatus } from '@repo/constants';
 import { ERROR_MESSAGES } from '../constants/message.constant.js';
 
 @Injectable()

@@ -1,37 +1,17 @@
-export enum ROAST_LEVEL {
-  LIGHT = 'LIGHT',
-  MEDIUM = 'MEDIUM',
-  DARK = 'DARK',
-}
-
-export enum PRODUCT_UNIT {
-  KG = 'KG',
-  G = 'G',
-  L = 'L',
-  ML = 'ML',
-}
-
-export enum DISCOUNT_TYPE {
-  PERCENT = 'PERCENT',
-  FIXED = 'FIXED',
-}
-
-export enum PRODUCT_STATUS {
-  DRAFT = 'DRAFT',
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  ARCHIVED = 'ARCHIVED',
-}
-
-export type ProductStatus = PRODUCT_STATUS
+import type {
+  DiscountType,
+  ProductStatus,
+  ProductUnit,
+  RoastLevel,
+} from '@repo/constants'
 
 export interface ProductVariantPayload {
   id?: string
   sku?: string
   weight: number
-  unit: PRODUCT_UNIT
+  unit: ProductUnit
   price: number
-  discountType: DISCOUNT_TYPE | null
+  discountType: DiscountType | null
   discountValue: number | null
   quantity: number
 }
@@ -41,10 +21,10 @@ export interface ProductVariant {
   productId: string
   sku?: string
   weight: number
-  unit: PRODUCT_UNIT
+  unit: ProductUnit
   name: string
   price: number
-  discountType: DISCOUNT_TYPE | null
+  discountType: DiscountType | null
   discountValue: number | null
   quantity: number
 }
@@ -69,7 +49,7 @@ export interface ProductPayload {
   categoryId: string
   name: string
   description: string
-  roastLevel: ROAST_LEVEL
+  roastLevel: RoastLevel
   isOrganic: boolean
   isFairTrade: boolean
   status: ProductStatus
@@ -94,7 +74,7 @@ export interface Product {
   categoryId: string
   name: string
   description: string
-  roastLevel: ROAST_LEVEL
+  roastLevel: RoastLevel
   isOrganic: boolean
   isFairTrade: boolean
   status: ProductStatus
@@ -111,13 +91,13 @@ export interface ProductFormValues {
   categoryId: string
   name: string
   description: string
-  roastLevel: ROAST_LEVEL
+  roastLevel: RoastLevel
   isOrganic: boolean
   isFairTrade: boolean
   weight: number
-  unit: PRODUCT_UNIT | ''
+  unit: ProductUnit | ''
   price: number
-  discountType: DISCOUNT_TYPE
+  discountType: DiscountType
   discountValue: number
   quantity: number | ''
   origin: string

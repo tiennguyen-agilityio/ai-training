@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Product } from '../entities/product.entity.js';
-import { ProductStatus } from '../enums/product.enum.js';
+import { ProductStatus, VALIDATION_RULES } from '@repo/constants';
 import {
   type CreateProductInput,
   type UpdateProductInput,
@@ -13,7 +13,6 @@ import {
   ERROR_DESCRIPTIONS,
 } from '../../../common/constants/message.constant.js';
 import { ERROR_CODES } from '../../../common/constants/error-code.constant.js';
-import { VALIDATION_RULES } from '../../../common/constants/validation.constant.js';
 import {
   DuplicateResourceException,
   ItemNotFoundException,

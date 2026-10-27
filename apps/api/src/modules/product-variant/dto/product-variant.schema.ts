@@ -1,7 +1,6 @@
 import { z } from 'zod';
-import { VALIDATION_RULES } from '../../../common/constants/validation.constant.js';
+import { VALIDATION_RULES, DiscountType, ProductUnit } from '@repo/constants';
 import { ERROR_MESSAGES } from '../../../common/constants/message.constant.js';
-import { DiscountType, ProductUnit } from '../enums/product-variant.enum.js';
 
 const decimal = (min: number, max: number) =>
   z.coerce.number().min(min).max(max).transform(String);

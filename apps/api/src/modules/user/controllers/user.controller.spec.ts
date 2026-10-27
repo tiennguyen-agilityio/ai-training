@@ -4,7 +4,7 @@ import { UserController } from './user.controller.js';
 import { UserService } from '../services/user.service.js';
 import { User } from '../entities/user.entity.js';
 import { ResponseUserDto } from '../dto/response-user.dto.js';
-import { UserRole, UserStatus } from '../../../common/enums/user.enum.js';
+import { UserRole, UserStatus } from '@repo/constants';
 
 import type { Mock } from 'vitest';
 describe('UserController', () => {

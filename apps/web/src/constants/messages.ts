@@ -14,7 +14,7 @@ export const ERROR_MESSAGES = {
   FIELD_REQUIRED: 'This field is required',
   // Exact text the API returns for this constraint (DiscountType.PERCENT) —
   // see ERROR_MESSAGES.PRODUCT_VARIANT.INVALID_DISCOUNT_PERCENT in
-  // coffee-shop-api/src/common/constants/message.constant.ts.
+  // apps/api/src/common/constants/message.constant.ts.
   DISCOUNT_PERCENT_MAX:
     'DiscountValue must be less than 100 when DiscountType is PERCENT',
   DISCOUNT_FIXED_MUST_BE_LESS_THAN_PRICE:
@@ -36,43 +36,6 @@ export const ERROR_MESSAGES = {
   CVC_INVALID: 'Enter a valid CVC',
   PROFILE_SYNC_DELAYED:
     'Saved, but syncing your profile is taking longer than expected. Refresh in a moment to confirm.',
-} as const
-
-// Mirrors VALIDATION_MESSAGES in
-// coffee-shop-api/src/common/constants/message.constant.ts so field-level
-// messages read identically whether they come from the API or client-side
-// zod validation. `label` is the raw field name capitalized (first letter
-// only, so e.g. "processingMethod" -> "ProcessingMethod"), matching how the
-// API derives it in validation-error.util.ts.
-export const VALIDATION_MESSAGES = {
-  isNotEmpty: (label: string) => `${label} should not be empty`,
-  isInt: (label: string) => `${label} must be an integer number`,
-  isNumber: (label: string) =>
-    `${label} must be a number conforming to the specified constraints`,
-  isBoolean: (label: string) => `${label} must be a boolean value`,
-  isArray: (label: string) => `${label} must be an array`,
-  isString: (label: string) => `${label} must be a string`,
-  isPositive: (label: string) => `${label} must be a positive number`,
-  // `minimum`/`maximum` take a pre-formatted string (e.g. via
-  // formatNumberThousands) to show a friendlier number than the raw API
-  // value — the API itself always interpolates the raw number.
-  min: (label: string, minimum?: number | string) =>
-    `${label} must not be less than ${minimum}`,
-  minLength: (label: string, minimum?: number) =>
-    `${label} must be longer than or equal to ${minimum} characters`,
-  max: (label: string, maximum?: number | string) =>
-    `${label} must be less than ${maximum}`,
-  arrayMinSize: (label: string, minimum?: number) =>
-    `${label} must contain at least ${minimum} elements`,
-  arrayMaxSize: (label: string, maximum?: number) =>
-    `${label} must contain no more than ${maximum} elements`,
-  maxLength: (label: string, maximum?: number) =>
-    `${label} must be shorter than or equal to ${maximum} characters`,
-  isUuid: (label: string) => `${label} must be a UUID`,
-  isUrl: (label: string) => `${label} must be a URL address`,
-  invalidFormat: (label: string) => `${label} has an invalid format`,
-  isEnum: (label: string, values: unknown[]) =>
-    `${label} must be one of the following values: ${values.join(', ')}`,
 } as const
 
 export const API_FALLBACK_ERRORS = {

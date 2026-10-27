@@ -4,7 +4,7 @@ import { CategoryService } from '../services/category.service.js';
 import { Category } from '../entities/category.entity.js';
 import { ResponseCategoryDto } from '../dto/response-category.dto.js';
 import { User } from '../../user/entities/user.entity.js';
-import { UserRole, UserStatus } from '../../../common/enums/user.enum.js';
+import { UserRole, UserStatus } from '@repo/constants';
 import {
   DuplicateResourceException,
   InvalidStateException,

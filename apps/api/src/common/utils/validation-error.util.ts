@@ -1,6 +1,6 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { ErrorDetailDto } from '../dto/error.dto.js';
-import { VALIDATION_MESSAGES } from '../constants/message.constant.js';
+import { VALIDATION_MESSAGES } from '@repo/constants';
 import { ERROR_CODES } from '../constants/error-code.constant.js';
 
 /**

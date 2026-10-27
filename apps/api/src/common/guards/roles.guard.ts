@@ -7,7 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { ROLES_KEY } from '../decorators/roles.decorator.js';
-import { UserRole } from '../enums/user.enum.js';
+import { UserRole } from '@repo/constants';
 import { ERROR_MESSAGES } from '../constants/message.constant.js';
 
 @Injectable()

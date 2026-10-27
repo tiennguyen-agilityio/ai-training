@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { UserResolutionMiddleware } from './user-resolution.middleware.js';
-import { UserRole, UserStatus } from '../enums/user.enum.js';
+import { UserRole, UserStatus } from '@repo/constants';
 import type { User } from '../../modules/user/entities/user.entity.js';
 import { ItemNotFoundException } from '../exceptions/base.exception.js';
 

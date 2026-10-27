@@ -1,22 +1,30 @@
 import { z } from 'zod'
 
-import { ERROR_MESSAGES, VALIDATION_MESSAGES } from '@/constants/messages'
-import { VALIDATION_RULES } from '@/constants/validation'
+import {
+  VALIDATION_MESSAGES,
+  VALIDATION_RULES,
+  DiscountType,
+  ProductUnit,
+  RoastLevel,
+} from '@repo/constants'
+import { ERROR_MESSAGES } from '@/constants/messages'
 import { formatNumberThousands } from '@/utils/number'
-import { DISCOUNT_TYPE, PRODUCT_UNIT, ROAST_LEVEL } from '@/types/product'
 
 const { NAME, PRICE, WEIGHT, DISCOUNT, QUANTITY } = VALIDATION_RULES
 
-// Shows a friendlier rounded number (e.g. 99999999.99 -> "100,000,000")
-// than the raw API cap, which has an unwieldy .99 remainder.
+// Exact bound with thousand separators, e.g. 99999999.99 -> "99,999,999.99":
+// formatting is the UI's job, the shared message only interpolates it.
+const formatBound = (value: number) =>
+  formatNumberThousands(value, Number.isInteger(value) ? 0 : 2)
+
 const numberInRange = (label: string, min: number, max: number) =>
   z
     .number({ error: ERROR_MESSAGES.FIELD_REQUIRED })
     .refine((value) => Number.isFinite(value) && value >= min, {
-      message: VALIDATION_MESSAGES.min(label, formatNumberThousands(min)),
+      message: VALIDATION_MESSAGES.min(label, formatBound(min)),
     })
     .refine((value) => Number.isFinite(value) && value <= max, {
-      message: VALIDATION_MESSAGES.max(label, formatNumberThousands(max)),
+      message: VALIDATION_MESSAGES.max(label, formatBound(max)),
     })
 
 // label matches the API's raw DTO field name (capitalize-first-letter only,
@@ -60,19 +68,19 @@ export const createProductFormSchema = z
       .min(1, { message: ERROR_MESSAGES.FIELD_REQUIRED }),
     name: nameSchema,
     description: descriptionSchema,
-    roastLevel: z.nativeEnum(ROAST_LEVEL),
+    roastLevel: z.nativeEnum(RoastLevel),
     isOrganic: z.boolean(),
     isFairTrade: z.boolean(),
     weight: numberInRange('Weight', WEIGHT.MIN, WEIGHT.MAX),
     unit: z
-      .union([z.literal(''), z.nativeEnum(PRODUCT_UNIT)], {
+      .union([z.literal(''), z.nativeEnum(ProductUnit)], {
         error: ERROR_MESSAGES.FIELD_REQUIRED,
       })
       .refine((value) => value !== '', {
         message: ERROR_MESSAGES.FIELD_REQUIRED,
       }),
     price: numberInRange('Price', PRICE.MIN, PRICE.MAX),
-    discountType: z.nativeEnum(DISCOUNT_TYPE),
+    discountType: z.nativeEnum(DiscountType),
     discountValue: numberInRange('DiscountValue', DISCOUNT.MIN, DISCOUNT.MAX),
     quantity: z
       .union(
@@ -96,7 +104,7 @@ export const createProductFormSchema = z
   .superRefine((data, ctx) => {
     // API requires discountValue strictly < PERCENT_MAX (100), not <=.
     if (
-      data.discountType === DISCOUNT_TYPE.PERCENT &&
+      data.discountType === DiscountType.PERCENT &&
       data.discountValue >= DISCOUNT.PERCENT_MAX
     ) {
       ctx.addIssue({
@@ -107,7 +115,7 @@ export const createProductFormSchema = z
     }
 
     if (
-      data.discountType === DISCOUNT_TYPE.FIXED &&
+      data.discountType === DiscountType.FIXED &&
       data.discountValue >= data.price
     ) {
       ctx.addIssue({
@@ -127,7 +135,7 @@ export const editProductFormSchema = z.object({
     .min(1, { message: ERROR_MESSAGES.FIELD_REQUIRED }),
   name: nameSchema,
   description: descriptionSchema,
-  roastLevel: z.nativeEnum(ROAST_LEVEL),
+  roastLevel: z.nativeEnum(RoastLevel),
   isOrganic: z.boolean(),
   isFairTrade: z.boolean(),
   origin: originSchema,

@@ -4,7 +4,7 @@ import { ChevronDown, Pencil, Trash2 } from 'lucide-react'
 
 // Types
 import type { User } from '@/types/user'
-import { USER_ROLES, USER_STATUS } from '@/types/user'
+import { UserRole, UserStatus } from '@repo/constants'
 
 // Components
 import { Avatar } from '@/components/Avatar'
@@ -24,7 +24,7 @@ import { cn } from '@/utils/styles'
 
 export interface UserTableRowProps {
   user: User
-  onRequestRoleChange?: (user: User, nextRole: USER_ROLES) => void
+  onRequestRoleChange?: (user: User, nextRole: UserRole) => void
   onRequestEdit?: (user: User) => void
   onRequestDelete?: (user: User) => void
   isRoleDisabled?: boolean
@@ -46,10 +46,10 @@ export function UserTableRow({
   const emailRaw = user.email ?? ''
   const emailDisplay = formatUserListEmailForDisplay(emailRaw)
   const imageUrl = user.avatarUrl ?? ''
-  const rowRole = user.role ?? USER_ROLES.USER
-  const status = user.status ?? USER_STATUS.INACTIVE
-  const isActive = status === USER_STATUS.ACTIVE
-  const isAdmin = rowRole === USER_ROLES.ADMIN
+  const rowRole = user.role ?? UserRole.USER
+  const status = user.status ?? UserStatus.INACTIVE
+  const isActive = status === UserStatus.ACTIVE
+  const isAdmin = rowRole === UserRole.ADMIN
   const isUserDeleted = Boolean(user.deletedAt)
   const roleChangeSubject =
     [name.trim(), emailDisplay].find((segment) => segment.length > 0) ?? 'user'

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 
 // Types
-import { PRODUCT_STATUS, type ROAST_LEVEL } from '@/types/product'
+import { ProductStatus, type RoastLevel } from '@repo/constants'
 
 // Constants
 import {
@@ -35,7 +35,7 @@ import { PaginationBar } from '@/components/Pagination'
 import FiltersPanel from '../FiltersPanel'
 import { EMPTY_IMAGE } from '@/constants/images'
 
-const getRoastLabel = (value: ROAST_LEVEL) =>
+const getRoastLabel = (value: RoastLevel) =>
   ROAST_LEVEL_OPTIONS.find((option) => option.value === value)?.label ?? value
 
 export default function RoastsPageContent() {
@@ -93,7 +93,7 @@ export default function RoastsPageContent() {
       page: listPage,
       limit: listLimit,
       search: listSearch.trim(),
-      status: PRODUCT_STATUS.ACTIVE,
+      status: ProductStatus.ACTIVE,
     }
     if (lo > ROAST_PRICE_MIN || hi < ROAST_PRICE_MAX) {
       params.minPrice = lo
@@ -141,7 +141,7 @@ export default function RoastsPageContent() {
       ? ROAST_LEVEL_OPTIONS.map((option) => option.value)
       : selectedRoastLevels
 
-  const handleToggleRoastLevel = (value: ROAST_LEVEL) => {
+  const handleToggleRoastLevel = (value: RoastLevel) => {
     setIsRoastLevelTouched(true)
     const next = checkedRoastLevels.includes(value)
       ? checkedRoastLevels.filter((item) => item !== value)

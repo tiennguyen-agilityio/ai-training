@@ -18,7 +18,8 @@ import { ROLES_OPTIONS, STATUS_OPTIONS } from '@/constants/user'
 import { useUpdateUserInfo } from '@/hooks/useUser'
 import { updateUserFormSchema, type UpdateUserFormValues } from '@/schemas/user'
 import { uploadImageToImgBB } from '@/services/image'
-import { USER_ROLES, USER_STATUS, type User } from '@/types/user'
+import { UserRole, UserStatus } from '@repo/constants'
+import { type User } from '@/types/user'
 
 interface EditUserFormProps {
   open: boolean
@@ -45,8 +46,8 @@ export function EditUserForm({ open, onOpenChange, user }: EditUserFormProps) {
     defaultValues: {
       firstName: '',
       lastName: '',
-      role: USER_ROLES.USER,
-      status: USER_STATUS.ACTIVE,
+      role: UserRole.USER,
+      status: UserStatus.ACTIVE,
     },
   })
 
@@ -55,8 +56,8 @@ export function EditUserForm({ open, onOpenChange, user }: EditUserFormProps) {
     reset({
       firstName: user?.firstName ?? '',
       lastName: user?.lastName ?? '',
-      role: user?.role ?? USER_ROLES.USER,
-      status: user?.status ?? USER_STATUS.ACTIVE,
+      role: user?.role ?? UserRole.USER,
+      status: user?.status ?? UserStatus.ACTIVE,
     })
     setAvatarPreview(user?.avatarUrl ?? '')
     setPendingAvatarUrl(null)

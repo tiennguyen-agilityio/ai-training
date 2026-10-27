@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { VALIDATION_RULES } from '../constants/validation.constant.js';
+import { VALIDATION_RULES } from '@repo/constants';
 
 const { MIN_PAGE, DEFAULT_PAGE, MIN_LIMIT, MAX_LIMIT, DEFAULT_LIMIT } =
   VALIDATION_RULES.PAGINATION;

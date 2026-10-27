@@ -1,6 +1,6 @@
 import type { IncomingHttpHeaders } from 'http';
 import type { Request } from 'express';
-import { UserRole, UserStatus } from '../enums/user.enum.js';
+import { UserRole, UserStatus } from '@repo/constants';
 
 export class AuthWebhookEvent {
   type!: string;

@@ -20,7 +20,8 @@ import {
   type UpdateUserPayload,
   updateUserById,
 } from '@/services/user'
-import type { User, USER_ROLES } from '@/types/user'
+import type { UserRole } from '@repo/constants'
+import type { User } from '@/types/user'
 import { type ResponseMeta } from '@/types/api'
 import { getQueryErrorMessage } from '@/utils/query'
 
@@ -36,7 +37,7 @@ export function useUpdateUserRole() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (input: { id: string; role: USER_ROLES }) => {
+    mutationFn: async (input: { id: string; role: UserRole }) => {
       const result = await updateUserById(input.id, { role: input.role })
       if (!result.ok) {
         throw new Error(result.error)

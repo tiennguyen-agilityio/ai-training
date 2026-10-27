@@ -4,7 +4,7 @@ import { createClerkClient, getAuth } from '@clerk/express';
 import { Webhook } from 'svix';
 import type { Mock } from 'vitest';
 import { ClerkAuthProvider } from './clerk-auth.provider.js';
-import { UserRole, UserStatus } from '../enums/user.enum.js';
+import { UserRole, UserStatus } from '@repo/constants';
 
 const { verify, updateUserMetadata, banUser, unbanUser, unlockUser } =
   vi.hoisted(() => ({

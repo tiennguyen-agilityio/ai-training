@@ -6,7 +6,7 @@ import type { Request } from 'express';
 import { Webhook, type WebhookRequiredHeaders } from 'svix';
 import { AuthProvider, AuthWebhookEvent } from './auth.provider.js';
 import { ERROR_MESSAGES } from '../constants/message.constant.js';
-import { UserRole, UserStatus } from '../enums/user.enum.js';
+import { UserRole, UserStatus } from '@repo/constants';
 
 function requiredHeader(
   headers: IncomingHttpHeaders,

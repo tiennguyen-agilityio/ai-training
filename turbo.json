@@ -13,7 +13,12 @@
     "test:cov": { "dependsOn": ["^build"], "outputs": ["coverage/**"] },
     "format": { "cache": false },
     "format:check": { "dependsOn": ["^format:check"] },
-    "dev": { "cache": false, "persistent": true, "passThroughEnv": ["*"] },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": ["*"]
+    },
     "start": { "cache": false, "persistent": true, "passThroughEnv": ["*"] }
   }
 }

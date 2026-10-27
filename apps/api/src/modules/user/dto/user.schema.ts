@@ -3,8 +3,7 @@ import {
   paginationQuerySchema,
   type PaginationQueryInput,
 } from '../../../common/dto/pagination.schema.js';
-import { VALIDATION_RULES } from '../../../common/constants/validation.constant.js';
-import { UserRole, UserStatus } from '../../../common/enums/user.enum.js';
+import { VALIDATION_RULES, UserRole, UserStatus } from '@repo/constants';
 
 export const createUserSchema = z.object({
   clerkId: z.string().regex(VALIDATION_RULES.CLERK_ID.REGEX),

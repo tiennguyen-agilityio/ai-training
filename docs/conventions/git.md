@@ -47,7 +47,7 @@ Commit messages follow [Conventional Commits](https://www.conventionalcommits.or
 
 | Hook | Runs | Effect |
 |---|---|---|
-| `pre-commit` | `lint-staged` | Closest config per staged file: API `*.ts` → `eslint --fix` + `prettier --write`; web js/ts → `eslint --fix` + `prettier --write`, css/md/json → `prettier --write`; `packages/` and root files → `prettier --write` |
+| `pre-commit` | `lint-staged` | Closest config per staged file: API `*.ts` → `eslint --fix` + `prettier --write`; web js/ts → `eslint --fix` + `prettier --write`, css/md/json → `prettier --write`; `packages/constants` `*.ts` → `eslint --fix` + `prettier --write`, its js/json → `prettier --write`; other `packages/` and root files → `prettier --write` |
 | `commit-msg` | `commitlint` | Rejects messages that are not Conventional Commits |
 | `pre-push` | `turbo run build test --affected` | Builds and tests only the packages changed against `origin/develop` (override with `TURBO_SCM_BASE`); blocks the push on failure |
 

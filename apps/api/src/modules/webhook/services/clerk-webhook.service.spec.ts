@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { ClerkWebhookService } from './clerk-webhook.service.js';
-import { UserRole } from '../../../common/enums/user.enum.js';
+import { UserRole } from '@repo/constants';
 import type { User } from '../../user/entities/user.entity.js';
 import type { Mock } from 'vitest';
 import {

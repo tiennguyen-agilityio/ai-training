@@ -5,7 +5,8 @@ import { Download, Printer, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 
 // Types
-import type { USER_ROLES, User } from '@/types/user'
+import type { UserRole } from '@repo/constants'
+import type { User } from '@/types/user'
 
 // Constants
 import { ROUTES } from '@/constants/routes'
@@ -76,7 +77,7 @@ export const PageContent = () => {
     null,
   )
   const [optimisticRoles, setOptimisticRoles] = useState<
-    Partial<Record<string, USER_ROLES>>
+    Partial<Record<string, UserRole>>
   >({})
   const { mutate: updateUserRoleMutate } = useUpdateUserRole()
   const { mutate: deleteUserMutate, isPending: isDeletePending } =
@@ -124,7 +125,7 @@ export const PageContent = () => {
     setSearchInput(event.target.value)
   }
 
-  const handleUserRoleUpdate = (user: User, nextRole: USER_ROLES) => {
+  const handleUserRoleUpdate = (user: User, nextRole: UserRole) => {
     const userId = user.id
     if (!userId) return
 

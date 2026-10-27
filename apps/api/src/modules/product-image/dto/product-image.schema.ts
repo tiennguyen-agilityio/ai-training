@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { VALIDATION_RULES } from '../../../common/constants/validation.constant.js';
+import { VALIDATION_RULES } from '@repo/constants';
 
 export const createProductImageSchema = z.object({
   url: z.url({ protocol: /^https?$/, hostname: z.regexes.domain }),

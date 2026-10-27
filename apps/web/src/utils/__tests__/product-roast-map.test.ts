@@ -1,9 +1,5 @@
-import {
-  PRODUCT_STATUS,
-  PRODUCT_UNIT,
-  ROAST_LEVEL,
-  type Product,
-} from '@/types/product'
+import { ProductStatus, ProductUnit, RoastLevel } from '@repo/constants'
+import { type Product } from '@/types/product'
 import { mapProductToRoastCollection } from '@/utils/product'
 
 const PLACEHOLDER = 'https://example.com/placeholder.jpg'
@@ -15,10 +11,10 @@ describe('mapProductToRoastCollection', () => {
       categoryId: 'cat',
       name: 'Test Bean',
       description: 'Smooth',
-      roastLevel: ROAST_LEVEL.MEDIUM,
+      roastLevel: RoastLevel.MEDIUM,
       isOrganic: false,
       isFairTrade: false,
-      status: PRODUCT_STATUS.ACTIVE,
+      status: ProductStatus.ACTIVE,
       tastingNotes: 'Chocolate, caramel',
       origin: 'Colombia',
       processingMethod: 'Washed',
@@ -26,7 +22,7 @@ describe('mapProductToRoastCollection', () => {
         {
           sku: 's',
           weight: 250,
-          unit: PRODUCT_UNIT.G,
+          unit: ProductUnit.G,
           price: 18.5,
           discountType: null,
           discountValue: null,
@@ -43,7 +39,7 @@ describe('mapProductToRoastCollection', () => {
     expect(item.id).toBe('p-1')
     expect(item.name).toBe('Test Bean')
     expect(item.price).toBe(18.5)
-    expect(item.roastLevel).toBe(ROAST_LEVEL.MEDIUM)
+    expect(item.roastLevel).toBe(RoastLevel.MEDIUM)
     expect(item.imageUrl).toBe(PLACEHOLDER)
     expect(item.flavorNotes).toBe('Chocolate, caramel')
     expect(item.roastMeta).toContain('Colombia')
@@ -57,10 +53,10 @@ describe('mapProductToRoastCollection', () => {
       categoryId: 'cat',
       name: 'Low Stock Bean',
       description: '',
-      roastLevel: ROAST_LEVEL.DARK,
+      roastLevel: RoastLevel.DARK,
       isOrganic: false,
       isFairTrade: false,
-      status: PRODUCT_STATUS.ACTIVE,
+      status: ProductStatus.ACTIVE,
       tastingNotes: '',
       origin: '',
       processingMethod: '',
@@ -68,7 +64,7 @@ describe('mapProductToRoastCollection', () => {
         {
           sku: 's',
           weight: 250,
-          unit: PRODUCT_UNIT.G,
+          unit: ProductUnit.G,
           price: 20,
           discountType: null,
           discountValue: null,

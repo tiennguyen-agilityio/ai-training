@@ -1,12 +1,4 @@
-export enum USER_ROLES {
-  ADMIN = 'ADMIN',
-  USER = 'USER',
-}
-
-export enum USER_STATUS {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-}
+import type { UserRole, UserStatus } from '@repo/constants'
 
 export interface User {
   id?: string
@@ -27,8 +19,8 @@ export interface User {
   } | null
   name: string | null
   avatarUrl: string | null
-  role?: USER_ROLES
-  status?: USER_STATUS
+  role?: UserRole
+  status?: UserStatus
 }
 
 export interface ClerkUser extends User {

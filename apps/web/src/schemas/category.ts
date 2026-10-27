@@ -1,8 +1,8 @@
 import { z } from 'zod'
 
-import { ERROR_MESSAGES, VALIDATION_MESSAGES } from '@/constants/messages'
+import { VALIDATION_MESSAGES, VALIDATION_RULES } from '@repo/constants'
+import { ERROR_MESSAGES } from '@/constants/messages'
 import { formDataEntryToString } from '@/utils/validation'
-import { VALIDATION_RULES } from '@/constants/validation'
 
 const { NAME } = VALIDATION_RULES
 

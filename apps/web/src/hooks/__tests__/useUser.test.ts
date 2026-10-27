@@ -1,13 +1,13 @@
 import { usersListQueryKey } from '@/hooks/useUser'
-import { USER_STATUS } from '@/types/user'
+import { UserStatus } from '@repo/constants'
 
 describe('usersListQueryKey', () => {
   it('separates lists by status', () => {
     const all = usersListQueryKey({ page: 1 })
-    const active = usersListQueryKey({ page: 1, status: USER_STATUS.ACTIVE })
+    const active = usersListQueryKey({ page: 1, status: UserStatus.ACTIVE })
     const inactive = usersListQueryKey({
       page: 1,
-      status: USER_STATUS.INACTIVE,
+      status: UserStatus.INACTIVE,
     })
 
     expect(active).not.toEqual(inactive)

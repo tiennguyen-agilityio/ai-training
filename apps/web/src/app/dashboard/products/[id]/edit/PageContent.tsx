@@ -8,7 +8,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
 import type { Product, ProductUpdatePayload } from '@/types/product'
-import { PRODUCT_STATUS, ROAST_LEVEL } from '@/types/product'
+import { ProductStatus, RoastLevel } from '@repo/constants'
 
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { CATEGORY_QUERY_OPTIONS } from '@/constants/category'
@@ -60,17 +60,17 @@ interface ImageValidationErrors {
   gallery: string
 }
 
-const roastLevels: ROAST_LEVEL[] = [
-  ROAST_LEVEL.LIGHT,
-  ROAST_LEVEL.MEDIUM,
-  ROAST_LEVEL.DARK,
+const roastLevels: RoastLevel[] = [
+  RoastLevel.LIGHT,
+  RoastLevel.MEDIUM,
+  RoastLevel.DARK,
 ]
 
 const EDIT_FORM_DEFAULTS: EditProductFormValues = {
   categoryId: '',
   name: '',
   description: '',
-  roastLevel: ROAST_LEVEL.LIGHT,
+  roastLevel: RoastLevel.LIGHT,
   isOrganic: true,
   isFairTrade: false,
   origin: '',
@@ -80,7 +80,7 @@ const EDIT_FORM_DEFAULTS: EditProductFormValues = {
 const ETHICS_TOGGLE_CLASSES =
   'inline-flex h-12 w-max max-w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-4 text-xs font-semibold uppercase tracking-wider whitespace-nowrap disabled:pointer-events-none disabled:opacity-50'
 
-const getRoastIndex = (value: ROAST_LEVEL) => {
+const getRoastIndex = (value: RoastLevel) => {
   const found = roastLevels.indexOf(value)
   return found === -1 ? 0 : found
 }
@@ -134,7 +134,7 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
   useEffect(() => {
     reset(mapProductToEditFormValues(product))
     setTastingNotes(parseTastingNotesString(product.tastingNotes))
-    setIsListedOnStorefront(product.status === PRODUCT_STATUS.ACTIVE)
+    setIsListedOnStorefront(product.status === ProductStatus.ACTIVE)
     const { primaryUrl, galleryItems } = splitProductImagesForGallery(product)
     setServerPrimaryUrl(primaryUrl)
     setExistingGalleryItems(galleryItems)
@@ -151,7 +151,7 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
   const initialTastingNotes = parseTastingNotesString(
     product?.tastingNotes ?? '',
   )
-  const initialIsListedOnStorefront = product.status === PRODUCT_STATUS.ACTIVE
+  const initialIsListedOnStorefront = product.status === ProductStatus.ACTIVE
   const { primaryUrl: initialPrimaryUrl, galleryItems: initialGalleryItems } =
     splitProductImagesForGallery(product)
   const hasStatusChanged = isListedOnStorefront !== initialIsListedOnStorefront
@@ -182,7 +182,7 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
   const handleResetChanges = () => {
     reset(mapProductToEditFormValues(product))
     setTastingNotes(parseTastingNotesString(product.tastingNotes))
-    setIsListedOnStorefront(product.status === PRODUCT_STATUS.ACTIVE)
+    setIsListedOnStorefront(product.status === ProductStatus.ACTIVE)
     const { primaryUrl, galleryItems } = splitProductImagesForGallery(product)
     setServerPrimaryUrl(primaryUrl)
     setExistingGalleryItems(galleryItems)
@@ -320,14 +320,14 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
     const { addImages, removeImageIds, updateImages } =
       buildProductUpdateImageDiff(product.images, finalImages)
 
-    let nextStatus = PRODUCT_STATUS.DRAFT
+    let nextStatus = ProductStatus.DRAFT
     if (isListedOnStorefront) {
-      nextStatus = PRODUCT_STATUS.ACTIVE
+      nextStatus = ProductStatus.ACTIVE
     } else if (
-      product.status === PRODUCT_STATUS.ACTIVE ||
-      product.status === PRODUCT_STATUS.INACTIVE
+      product.status === ProductStatus.ACTIVE ||
+      product.status === ProductStatus.INACTIVE
     ) {
-      nextStatus = PRODUCT_STATUS.INACTIVE
+      nextStatus = ProductStatus.INACTIVE
     }
 
     const updatePayload: ProductUpdatePayload = {
@@ -586,7 +586,7 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
                     : values
                   setValue(
                     'roastLevel',
-                    roastLevels[nextIndex] ?? ROAST_LEVEL.LIGHT,
+                    roastLevels[nextIndex] ?? RoastLevel.LIGHT,
                     { shouldDirty: true },
                   )
                 }}
