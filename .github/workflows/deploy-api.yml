@@ -217,8 +217,9 @@ jobs:
           trap delete_if_closed EXIT
           id=$(find_api_preview "$name")
           if [ -z "$id" ]; then
+            # No plan: the preview takes the develop service's; Render refuses `free` under a paid one.
             created=$(render POST "/services/$RENDER_SERVICE_ID/preview" \
-              "$(jq -nc --arg image "$IMAGE" --arg name "$name" '{imagePath: $image, name: $name, plan: "free"}')")
+              "$(jq -nc --arg image "$IMAGE" --arg name "$name" '{imagePath: $image, name: $name}')")
             id=$(jq -r '.service.id // empty' <<<"$created")
             deploy_id=$(jq -r '.deployId // empty' <<<"$created")
             url=$(jq -r "$service_url" <<<"$created")
