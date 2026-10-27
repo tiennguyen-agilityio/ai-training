@@ -112,6 +112,7 @@ export default function FiltersPanel({
           options={sortOptions}
           selected={sortBy}
           placeholder="Curated Selection"
+          ariaLabel="Sort by"
           classNameTrigger="h-11 bg-surface-container-high rounded-sm"
           onValueChange={(value) => {
             if (typeof value !== 'string') return
