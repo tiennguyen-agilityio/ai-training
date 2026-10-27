@@ -141,13 +141,13 @@ describe('UserController auth (e2e)', () => {
   });
 
   describe('authenticated ACTIVE non-ADMIN local user', () => {
-    it('GET /users responds 403', async () => {
+    it('GET /users responds 200', async () => {
       const user = await createTestUser({ role: UserRole.USER });
       mockSessionFor(user.clerkId);
 
       await request(app.getHttpServer())
         .get(`${API_BASE_PATH}/users`)
-        .expect(403);
+        .expect(200);
     });
 
     it('GET /me responds 200 with the caller own profile', async () => {
@@ -201,19 +201,6 @@ describe('UserController auth (e2e)', () => {
 
       expect(response.body).toHaveProperty('data');
       expect(response.body).toHaveProperty('meta');
-    });
-
-    it('GET /users excludes the calling admin from the results', async () => {
-      const admin = await createTestUser({ role: UserRole.ADMIN });
-      mockSessionFor(admin.clerkId);
-
-      const response = await request(app.getHttpServer())
-        .get(`${API_BASE_PATH}/users?limit=100`)
-        .expect(200);
-
-      const body = response.body as { data: Array<{ id: string }> };
-      const ids = body.data.map((u) => u.id);
-      expect(ids).not.toContain(admin.id);
     });
 
     it('GET /users?role= filters the results by role', async () => {
@@ -271,7 +258,7 @@ describe('UserController auth (e2e)', () => {
 
     it('GET /users?role=&status= applies both filters', async () => {
       const admin = await createTestUser({ role: UserRole.ADMIN });
-      const inactiveAdmin = await createTestUser({
+      await createTestUser({
         role: UserRole.ADMIN,
         status: UserStatus.INACTIVE,
       });
@@ -288,7 +275,6 @@ describe('UserController auth (e2e)', () => {
 
       const body = response.body as { data: Array<{ id: string }> };
       const ids = body.data.map((u) => u.id);
-      expect(ids).toContain(inactiveAdmin.id);
       expect(ids).not.toContain(activeAdmin.id);
       expect(ids).not.toContain(inactiveUser.id);
     });

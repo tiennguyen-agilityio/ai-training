@@ -116,7 +116,6 @@ export const PageContent = () => {
     if (typeof value !== 'string') return
     updateUrl({
       status: value === STATUS_FILTER_OPTIONS[0].value ? null : value,
-      page: 1,
     })
   }
 

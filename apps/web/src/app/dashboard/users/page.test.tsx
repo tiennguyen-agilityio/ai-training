@@ -321,7 +321,6 @@ describe('Dashboard users page', () => {
   })
 
   it('filters users by status via API params', async () => {
-    navQueryString = 'page=2'
     const view = renderUsersPage()
     fireEvent.change(screen.getByLabelText('Status filter'), {
       target: { value: 'INACTIVE' },

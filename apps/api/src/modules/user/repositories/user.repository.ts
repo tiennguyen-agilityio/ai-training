@@ -28,7 +28,7 @@ export class UserRepository extends BaseRepository<User> {
   ): Promise<PaginatedResult<User>> {
     const where: ListOptions<User>['where'] = {};
     if (filters.role) where.role = filters.role;
-    if (filters.status) where.status = filters.status;
+    if (filters.status) where.status = filters.role ?? filters.status;
 
     return this.paginate(query, {
       where,

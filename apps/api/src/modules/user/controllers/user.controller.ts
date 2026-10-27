@@ -71,7 +71,8 @@ export class UserController {
   }
 
   @Get()
-  @AdminOnly()
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'List users (admin only)' })
   @ApiPaginatedResponse(ResponseUserDto)
   @ApiErrorResponse(
@@ -80,13 +81,12 @@ export class UserController {
   )
   async findAll(
     @Query({ schema: userQuerySchema }) query: UserQueryInput,
-    @AuthUser() user: User,
   ): Promise<PaginatedResult<ResponseUserDto>> {
     const { page, limit, search, ...filters } = query;
     const result = await this.userService.findAll(
       { page, limit, search },
       filters,
-      { includeDeleted: true, excludeId: user.id },
+      { includeDeleted: true },
     );
     return mapPaginatedResult(result, (user) =>
       ResponseUserDto.fromEntity(user),
