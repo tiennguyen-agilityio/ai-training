@@ -2,21 +2,21 @@ import { fireEvent, render, screen } from '@testing-library/react'
 
 import { ProductTableRow } from '@/sections/ProductTableRow'
 import {
-  DISCOUNT_TYPE,
-  PRODUCT_STATUS,
-  PRODUCT_UNIT,
-  ROAST_LEVEL,
-} from '@/types/product'
+  DiscountType,
+  ProductStatus,
+  ProductUnit,
+  RoastLevel,
+} from '@repo/constants'
 
 const baseProduct = {
   id: 'p-1',
   categoryId: 'cat-1',
   name: 'Test Product',
   description: '',
-  roastLevel: ROAST_LEVEL.LIGHT,
+  roastLevel: RoastLevel.LIGHT,
   isOrganic: true,
   isFairTrade: true,
-  status: PRODUCT_STATUS.ACTIVE,
+  status: ProductStatus.ACTIVE,
   tastingNotes: '',
   origin: 'Ethiopia',
   processingMethod: 'Washed',
@@ -24,9 +24,9 @@ const baseProduct = {
     {
       sku: 'S1',
       weight: 250,
-      unit: PRODUCT_UNIT.G,
+      unit: ProductUnit.G,
       price: 12,
-      discountType: DISCOUNT_TYPE.PERCENT,
+      discountType: DiscountType.PERCENT,
       discountValue: 0,
       quantity: 1,
     },

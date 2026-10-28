@@ -11,15 +11,13 @@ import { AppModule } from './../../src/app.module.js';
 import { UserService } from './../../src/modules/user/services/user.service.js';
 import { CategoryService } from './../../src/modules/category/services/category.service.js';
 import { ProductService } from './../../src/modules/product/services/product.service.js';
-import { UserRole } from './../../src/common/enums/user.enum.js';
 import {
+  UserRole,
   ProductStatus,
   RoastLevel,
-} from './../../src/modules/product/enums/product.enum.js';
-import {
   DiscountType,
   ProductUnit,
-} from './../../src/modules/product-variant/enums/product-variant.enum.js';
+} from '@repo/constants';
 import { API_BASE_PATH } from './../utils/api-path.util.js';
 import { initTestApp } from './../utils/init-test-app.util.js';
 

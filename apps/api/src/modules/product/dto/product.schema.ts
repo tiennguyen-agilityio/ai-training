@@ -3,14 +3,14 @@ import {
   paginationQuerySchema,
   type PaginationQueryInput,
 } from '../../../common/dto/pagination.schema.js';
-import { VALIDATION_RULES } from '../../../common/constants/validation.constant.js';
-import { ERROR_MESSAGES } from '../../../common/constants/message.constant.js';
-import { ERROR_CODES } from '../../../common/constants/error-code.constant.js';
 import {
-  ProductSortBy,
+  VALIDATION_RULES,
   ProductStatus,
   RoastLevel,
-} from '../enums/product.enum.js';
+  ProductSortBy,
+} from '@repo/constants';
+import { ERROR_MESSAGES } from '../../../common/constants/message.constant.js';
+import { ERROR_CODES } from '../../../common/constants/error-code.constant.js';
 import { createProductImageSchema } from '../../product-image/dto/product-image.schema.js';
 import { createProductVariantSchema } from '../../product-variant/dto/product-variant.schema.js';
 

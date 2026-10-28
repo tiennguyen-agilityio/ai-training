@@ -22,6 +22,8 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 FROM deps AS development
 ARG PORT
 COPY --from=pruner /app/out/full/ .
+# deps installs with --ignore-scripts, so the shared package's prepare build never ran.
+RUN pnpm --filter @repo/constants build
 WORKDIR /app/apps/api
 EXPOSE ${PORT}
 CMD ["pnpm", "run", "start:dev"]
@@ -37,6 +39,7 @@ COPY --from=pruner /app/out/json/ .
 RUN pnpm --filter api install --frozen-lockfile --prod --ignore-scripts \
   && rm -rf /root/.cache /pnpm/store /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/packages/constants/dist ./packages/constants/dist
 WORKDIR /app/apps/api
 USER node
 EXPOSE ${PORT}

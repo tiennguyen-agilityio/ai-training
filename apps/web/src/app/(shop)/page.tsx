@@ -8,7 +8,7 @@ import { EMPTY_IMAGE } from '@/constants/images'
 import { MENU } from '@/constants/nav'
 import { shopRoastDetailPath } from '@/constants/routes'
 import { fetchProducts } from '@/services/product'
-import { PRODUCT_STATUS } from '@/types/product'
+import { ProductStatus } from '@repo/constants'
 import { formatPrice } from '@/utils/common'
 import { mapProductToRoastCollection } from '@/utils/product'
 import { cn } from '@/utils/styles'
@@ -71,7 +71,7 @@ const HomePage = async () => {
   const productsResult = await fetchProducts({
     limit: 4,
     page: 1,
-    status: PRODUCT_STATUS.ACTIVE,
+    status: ProductStatus.ACTIVE,
   })
 
   const curatedProducts =

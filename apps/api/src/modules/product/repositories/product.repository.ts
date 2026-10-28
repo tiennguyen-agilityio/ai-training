@@ -4,7 +4,7 @@ import {
   type CreateProductInput,
   type ProductFilters,
 } from '../dto/product.schema.js';
-import { ProductSortBy } from '../enums/product.enum.js';
+import { ProductSortBy } from '@repo/constants';
 import { BaseRepository } from '../../../common/repositories/base.repository.js';
 import {
   FindOptions,

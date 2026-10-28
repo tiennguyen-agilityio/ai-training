@@ -5,9 +5,10 @@ import {
   ROAST_SORT_VALUE,
   type RoastSortValue,
 } from '@/constants/roast'
-import { ROAST_LEVEL } from '@/types/product'
+import { RoastLevel } from '@repo/constants'
 
-const ROAST_LEVEL_SET = new Set<string>(Object.values(ROAST_LEVEL))
+const ROAST_LEVEL_SET = new Set<string>(Object.values(RoastLevel))
+const ROAST_SORT_VALUES: readonly string[] = Object.values(ROAST_SORT_VALUE)
 
 export function parseOptionalQueryParam(value: string | null): string | null {
   const v = value?.trim() ?? ''
@@ -66,30 +67,25 @@ export function parseRoastPriceQueryParam(
   return Math.min(Math.max(n, ROAST_PRICE_MIN), ROAST_PRICE_MAX)
 }
 
-export function parseRoastLevelsParam(value: string | null): ROAST_LEVEL[] {
+export function parseRoastLevelsParam(value: string | null): RoastLevel[] {
   if (value == null || value.trim() === '') return []
   const parts = value.split(',').map((s) => s.trim().toUpperCase())
-  const out: ROAST_LEVEL[] = []
+  const out: RoastLevel[] = []
   for (const part of parts) {
     if (ROAST_LEVEL_SET.has(part)) {
-      out.push(part as ROAST_LEVEL)
+      out.push(part as RoastLevel)
     }
   }
   return out
 }
 
+function isRoastSortValue(value: string): value is RoastSortValue {
+  return ROAST_SORT_VALUES.includes(value)
+}
+
 export function parseRoastSortParam(value: string | null): RoastSortValue {
   const v = value?.trim() ?? ''
-  if (
-    v === ROAST_SORT_VALUE.CURATED ||
-    v === ROAST_SORT_VALUE.PRICE_ASC ||
-    v === ROAST_SORT_VALUE.PRICE_DESC ||
-    v === ROAST_SORT_VALUE.NAME_ASC ||
-    v === ROAST_SORT_VALUE.NAME_DESC
-  ) {
-    return v
-  }
-  return ROAST_SORT_VALUE.CURATED
+  return isRoastSortValue(v) ? v : ROAST_SORT_VALUE.CURATED
 }
 
 /** Shop /roasts: list + filters in query string (real API + shareable state). */

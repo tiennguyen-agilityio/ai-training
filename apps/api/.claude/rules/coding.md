@@ -40,13 +40,15 @@ The layering and conventions the code actually follows. Plans, code reviews and 
 
 **Message and code strings are centralized.**
 
-| File                                          | Contents                               |
-| --------------------------------------------- | -------------------------------------- |
-| `src/common/constants/message.constant.ts`    | `ERROR_MESSAGES`, `ERROR_DESCRIPTIONS` |
-| `src/common/constants/error-code.constant.ts` | `ERROR_CODES`                          |
-| `src/common/constants/validation.constant.ts` | Validation bounds                      |
+| File                                          | Contents                                                         |
+| --------------------------------------------- | ---------------------------------------------------------------- |
+| `src/common/constants/message.constant.ts`    | `ERROR_MESSAGES`, `ERROR_DESCRIPTIONS`                           |
+| `src/common/constants/error-code.constant.ts` | `ERROR_CODES`                                                    |
+| `@repo/constants` (`packages/constants`)      | `VALIDATION_RULES` (bounds), `VALIDATION_MESSAGES`, shared enums |
 
-Controllers reuse the same constants in their `@ApiErrorResponse` docs — so **a new error needs an entry in all three places**.
+Controllers reuse the same constants in their `@ApiErrorResponse` docs — so **a new error needs an entry in all three places** (`ERROR_MESSAGES`, `ERROR_DESCRIPTIONS`, `ERROR_CODES`).
+
+`@repo/constants` is shared with web, and the API is its source of truth: `DiscountType`, `ProductUnit`, `RoastLevel`, `ProductStatus`, `ProductSortBy`, `UserRole` and `UserStatus` are imported from it, never redeclared. An enum web does not use may stay in the API; move it to the package as soon as web needs it.
 
 **Responses** are shaped by `Response*Dto` classes with a static `fromEntity`; entities are never returned directly.
 

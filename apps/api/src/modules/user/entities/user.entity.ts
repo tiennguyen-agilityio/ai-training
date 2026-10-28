@@ -1,7 +1,7 @@
 import { Opt } from '@mikro-orm/core';
 import { Entity, Enum, Property, Unique } from '@mikro-orm/decorators/legacy';
 import { BaseEntity } from '../../../common/entities/base.entity.js';
-import { UserRole, UserStatus } from '../../../common/enums/user.enum.js';
+import { UserRole, UserStatus } from '@repo/constants';
 
 @Entity({ tableName: 'users' })
 export class User extends BaseEntity {

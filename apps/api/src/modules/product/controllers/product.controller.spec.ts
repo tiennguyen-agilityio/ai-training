@@ -3,11 +3,15 @@ import { BadRequestException } from '@nestjs/common';
 import { ProductController } from './product.controller.js';
 import { ProductService } from '../services/product.service.js';
 import { Product } from '../entities/product.entity.js';
-import { ProductStatus, RoastLevel } from '../enums/product.enum.js';
+import {
+  ProductStatus,
+  RoastLevel,
+  UserRole,
+  UserStatus,
+} from '@repo/constants';
 import type { CreateProductInput } from '../dto/product.schema.js';
 import { ResponseProductDto } from '../dto/response-product.dto.js';
 import { User } from '../../user/entities/user.entity.js';
-import { UserRole, UserStatus } from '../../../common/enums/user.enum.js';
 import {
   DuplicateResourceException,
   ItemNotFoundException,

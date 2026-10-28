@@ -6,17 +6,17 @@ import {
   updateProductSchema,
   productQuerySchema,
 } from '../../modules/product/dto/product.schema.js';
-import { RoastLevel } from '../../modules/product/enums/product.enum.js';
-import { ProductUnit } from '../../modules/product-variant/enums/product-variant.enum.js';
+import {
+  RoastLevel,
+  ProductUnit,
+  VALIDATION_RULES,
+  VALIDATION_MESSAGES,
+} from '@repo/constants';
 import { paginationQuerySchema } from '../dto/pagination.schema.js';
 import { idParamSchema } from '../dto/id-param.schema.js';
 import { createUserSchema } from '../../modules/user/dto/user.schema.js';
-import { VALIDATION_RULES } from '../constants/validation.constant.js';
 import { ERROR_CODES } from '../constants/error-code.constant.js';
-import {
-  ERROR_MESSAGES,
-  VALIDATION_MESSAGES,
-} from '../constants/message.constant.js';
+import { ERROR_MESSAGES } from '../constants/message.constant.js';
 
 describe('toErrorDetailsFromStandardSchemaIssues (Standard Schema pilot: createCategorySchema)', () => {
   const validate = async (input: unknown) =>

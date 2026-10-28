@@ -1,5 +1,5 @@
 import type { User } from '@/types/user'
-import { USER_ROLES, USER_STATUS } from '@/types/user'
+import { UserRole, UserStatus } from '@repo/constants'
 import type { Response, ResponseMeta } from '@/types/api'
 
 import { API_FALLBACK_ERRORS, ERROR_MESSAGES } from '@/constants/messages'
@@ -12,7 +12,7 @@ export interface FetchUsersOptions {
   limit?: number
   search?: string
   role?: string
-  status?: USER_STATUS
+  status?: UserStatus
 }
 
 function readString(value: unknown): string | null {
@@ -24,11 +24,11 @@ function getRole(value: unknown): User['role'] {
   if (typeof value !== 'string') return undefined
 
   const normalized = value.trim().toUpperCase()
-  if (normalized === USER_ROLES.ADMIN || normalized === 'MANAGER') {
-    return USER_ROLES.ADMIN
+  if (normalized === UserRole.ADMIN || normalized === 'MANAGER') {
+    return UserRole.ADMIN
   }
-  if (normalized === USER_ROLES.USER || normalized === 'BARISTA') {
-    return USER_ROLES.USER
+  if (normalized === UserRole.USER || normalized === 'BARISTA') {
+    return UserRole.USER
   }
 
   return undefined
@@ -38,11 +38,11 @@ function getStatus(value: unknown): User['status'] {
   if (typeof value !== 'string') return undefined
 
   const normalized = value.trim().toUpperCase()
-  if (normalized === USER_STATUS.ACTIVE) {
-    return USER_STATUS.ACTIVE
+  if (normalized === UserStatus.ACTIVE) {
+    return UserStatus.ACTIVE
   }
-  if (normalized === USER_STATUS.INACTIVE) {
-    return USER_STATUS.INACTIVE
+  if (normalized === UserStatus.INACTIVE) {
+    return UserStatus.INACTIVE
   }
 
   return undefined
@@ -213,8 +213,8 @@ export async function fetchUsers(
 }
 
 export interface UpdateUserPayload {
-  role?: USER_ROLES
-  status?: USER_STATUS
+  role?: UserRole
+  status?: UserStatus
   firstName?: string
   lastName?: string
   avatarUrl?: string

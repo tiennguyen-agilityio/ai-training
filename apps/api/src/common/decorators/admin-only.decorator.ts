@@ -4,7 +4,7 @@ import { AuthGuard } from '../guards/auth.guard.js';
 import { RolesGuard } from '../guards/roles.guard.js';
 import { Roles } from './roles.decorator.js';
 import { ApiErrorResponse } from './api-response.decorator.js';
-import { UserRole } from '../enums/user.enum.js';
+import { UserRole } from '@repo/constants';
 import { ERROR_MESSAGES } from '../constants/message.constant.js';
 
 /**

@@ -7,8 +7,7 @@ import { ProductRepository } from '../repositories/product.repository.js';
 import { CategoryService } from '../../category/services/category.service.js';
 import { ProductImageService } from '../../product-image/services/product-image.service.js';
 import { ProductVariantService } from '../../product-variant/services/product-variant.service.js';
-import { ProductUnit } from '../../product-variant/enums/product-variant.enum.js';
-import { ProductStatus, RoastLevel } from '../enums/product.enum.js';
+import { ProductUnit, ProductStatus, RoastLevel } from '@repo/constants';
 import type { CreateProductInput } from '../dto/product.schema.js';
 import {
   DuplicateResourceException,

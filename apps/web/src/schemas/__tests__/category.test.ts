@@ -1,5 +1,5 @@
-import { ERROR_MESSAGES, VALIDATION_MESSAGES } from '@/constants/messages'
-import { VALIDATION_RULES } from '@/constants/validation'
+import { VALIDATION_MESSAGES, VALIDATION_RULES } from '@repo/constants'
+import { ERROR_MESSAGES } from '@/constants/messages'
 import { parseCreateCategoryForm } from '@/schemas/category'
 
 const { NAME } = VALIDATION_RULES

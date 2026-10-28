@@ -2,22 +2,22 @@ import { render, screen } from '@testing-library/react'
 
 import { ProductDetailSpecGrid } from '@/components/ProductDetailSpecGrid'
 import {
-  DISCOUNT_TYPE,
-  PRODUCT_STATUS,
-  PRODUCT_UNIT,
-  ROAST_LEVEL,
-  type Product,
-} from '@/types/product'
+  DiscountType,
+  ProductStatus,
+  ProductUnit,
+  RoastLevel,
+} from '@repo/constants'
+import { type Product } from '@/types/product'
 
 const fixture: Product = {
   id: 'p-1',
   categoryId: 'cat',
   name: 'Ethiopian Yirgacheffe',
   description: 'Floral',
-  roastLevel: ROAST_LEVEL.LIGHT,
+  roastLevel: RoastLevel.LIGHT,
   isOrganic: true,
   isFairTrade: true,
-  status: PRODUCT_STATUS.ACTIVE,
+  status: ProductStatus.ACTIVE,
   tastingNotes: 'Jasmine, Bergamot',
   origin: 'Yirgacheffe, Ethiopia',
   processingMethod: 'Washed',
@@ -25,9 +25,9 @@ const fixture: Product = {
     {
       sku: 's',
       weight: 250,
-      unit: PRODUCT_UNIT.G,
+      unit: ProductUnit.G,
       price: 24,
-      discountType: DISCOUNT_TYPE.PERCENT,
+      discountType: DiscountType.PERCENT,
       discountValue: 0,
       quantity: 40,
     },

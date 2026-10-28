@@ -10,7 +10,7 @@ import { ROUTES } from '@/constants/routes'
 
 // Types
 import { type MenuItem } from '@/types/menu'
-import { USER_ROLES } from '@/types/user'
+import { UserRole } from '@repo/constants'
 
 // Components
 import { Menu } from '@/components/Menu'
@@ -117,7 +117,7 @@ const Header = ({ className, menu = MENU }: ShopHeaderProps) => {
           <SignedIn>
             <div className="shrink-0">
               <UserDropdown
-                isAdmin={user?.role === USER_ROLES.ADMIN}
+                isAdmin={user?.role === UserRole.ADMIN}
                 showChevron={false}
               />
             </div>

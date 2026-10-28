@@ -7,9 +7,13 @@ services:
   app:
     build:
       target: development
+    init: true
     volumes:
       - ./src:/app/apps/api/src
-    command: pnpm run start:dev
+      - ../../packages/constants/src:/app/packages/constants/src
+    # turbo runs the package's tsc --watch next to nest --watch, like pnpm dev:api.
+    # -C keeps the image's WORKDIR, so `compose exec app pnpm run <script>` stays in apps/api.
+    command: pnpm -C /app exec turbo run dev --filter=api...
     environment:
       CHOKIDAR_USEPOLLING: 'true'
       TSC_WATCHFILE: UsePollingDelay

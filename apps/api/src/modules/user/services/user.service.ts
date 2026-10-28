@@ -21,7 +21,7 @@ import {
   InvalidRequestException,
 } from '../../../common/exceptions/base.exception.js';
 import { AuthProvider } from '../../../common/providers/auth.provider.js';
-import { UserRole, UserStatus } from '../../../common/enums/user.enum.js';
+import { UserRole, UserStatus } from '@repo/constants';
 import { assignDefinedFields } from '../../../common/utils/object.util.js';
 
 @Injectable()

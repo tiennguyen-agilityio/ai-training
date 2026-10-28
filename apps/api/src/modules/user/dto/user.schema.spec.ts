@@ -1,5 +1,5 @@
 import { userQuerySchema } from './user.schema.js';
-import { UserStatus } from '../../../common/enums/user.enum.js';
+import { UserStatus } from '@repo/constants';
 
 describe('userQuerySchema', () => {
   it('accepts ACTIVE and INACTIVE as status', () => {

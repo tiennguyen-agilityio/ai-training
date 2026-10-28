@@ -3,7 +3,7 @@
 import type * as React from 'react'
 
 import { type RoastSortValue } from '@/constants/roast'
-import type { ROAST_LEVEL } from '@/types/product'
+import type { RoastLevel } from '@repo/constants'
 import { PriceRangeSlider } from '@/components/PriceRangeSlider'
 import { SearchInput } from '@/components/SearchInput'
 import { Select } from '@/components/Select'
@@ -19,9 +19,9 @@ export interface FiltersPanelProps {
   onPriceRangeChange: (next: [number, number]) => void
   minPrice: number
   maxPrice: number
-  roastLevelOptions: { value: ROAST_LEVEL; label: string }[]
-  selectedRoastLevels: ROAST_LEVEL[]
-  onToggleRoastLevel: (value: ROAST_LEVEL) => void
+  roastLevelOptions: { value: RoastLevel; label: string }[]
+  selectedRoastLevels: RoastLevel[]
+  onToggleRoastLevel: (value: RoastLevel) => void
   sortOptions: OptionItem[]
   sortBy: RoastSortValue
   onSortByChange: (value: RoastSortValue) => void

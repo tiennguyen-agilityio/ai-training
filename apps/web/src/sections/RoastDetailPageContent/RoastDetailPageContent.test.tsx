@@ -5,12 +5,12 @@ import { useParams, useRouter } from 'next/navigation'
 import RoastDetailPageContent from '@/sections/RoastDetailPageContent'
 import { useProductById } from '@/hooks/useProduct'
 import {
-  DISCOUNT_TYPE,
-  PRODUCT_STATUS,
-  PRODUCT_UNIT,
-  ROAST_LEVEL,
-  type Product,
-} from '@/types/product'
+  DiscountType,
+  ProductStatus,
+  ProductUnit,
+  RoastLevel,
+} from '@repo/constants'
+import { type Product } from '@/types/product'
 
 jest.mock('next/navigation', () => ({
   useParams: jest.fn(),
@@ -64,10 +64,10 @@ const productFixture: Product = {
   categoryId: 'whole-bean',
   name: 'Ethiopian Yirgacheffe',
   description: 'Floral and citrus profile for pour-over.',
-  roastLevel: ROAST_LEVEL.LIGHT,
+  roastLevel: RoastLevel.LIGHT,
   isOrganic: true,
   isFairTrade: true,
-  status: PRODUCT_STATUS.ACTIVE,
+  status: ProductStatus.ACTIVE,
   tastingNotes: 'Jasmine, Bergamot',
   origin: 'Yirgacheffe, Ethiopia',
   processingMethod: 'Washed',
@@ -75,9 +75,9 @@ const productFixture: Product = {
     {
       sku: 'SKU-1',
       weight: 250,
-      unit: PRODUCT_UNIT.G,
+      unit: ProductUnit.G,
       price: 24,
-      discountType: DISCOUNT_TYPE.PERCENT,
+      discountType: DiscountType.PERCENT,
       discountValue: 0,
       quantity: 40,
     },

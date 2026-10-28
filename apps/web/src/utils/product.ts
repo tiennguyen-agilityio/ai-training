@@ -2,9 +2,8 @@ import type { UploadImageGalleryItem } from '@/components/UploadImage/Gallery'
 import { OUT_OF_STOCK_LABEL } from '@/constants/order'
 import { type RoastCollection } from '@/constants/roast'
 import type { EditProductFormValues } from '@/schemas/product'
+import { DiscountType, RoastLevel } from '@repo/constants'
 import {
-  DISCOUNT_TYPE,
-  ROAST_LEVEL,
   type Product,
   type ProductFormValues,
   type ProductImage,
@@ -16,10 +15,10 @@ import { getPrimaryVariantQuantity } from '@/utils/inventory'
 export const LOW_STOCK_THRESHOLD = 10
 
 function formatProductRoastMeta(product: Product): string {
-  const levelLabel: Record<ROAST_LEVEL, string> = {
-    [ROAST_LEVEL.LIGHT]: 'Light roast',
-    [ROAST_LEVEL.MEDIUM]: 'Medium roast',
-    [ROAST_LEVEL.DARK]: 'Dark roast',
+  const levelLabel: Record<RoastLevel, string> = {
+    [RoastLevel.LIGHT]: 'Light roast',
+    [RoastLevel.MEDIUM]: 'Medium roast',
+    [RoastLevel.DARK]: 'Dark roast',
   }
   const origin = product.origin?.trim()
   const roast = levelLabel[product.roastLevel]
@@ -106,9 +105,9 @@ export function mapProductToFormValues(product: Product): ProductFormValues {
     Number.isFinite(Number(variant?.discountValue))
 
   const discountType =
-    variant?.discountType === DISCOUNT_TYPE.FIXED
-      ? DISCOUNT_TYPE.FIXED
-      : DISCOUNT_TYPE.PERCENT
+    variant?.discountType === DiscountType.FIXED
+      ? DiscountType.FIXED
+      : DiscountType.PERCENT
 
   return {
     categoryId: product.categoryId,

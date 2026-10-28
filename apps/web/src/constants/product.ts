@@ -1,22 +1,22 @@
-import { DISCOUNT_TYPE, PRODUCT_STATUS, PRODUCT_UNIT } from '@/types/product'
+import { DiscountType, ProductStatus, ProductUnit } from '@repo/constants'
 import type { TableColumn } from '@/components/Table'
 
 export const UNIT_OPTIONS: {
-  value: PRODUCT_UNIT
+  value: ProductUnit
   label: string
 }[] = [
-  { value: PRODUCT_UNIT.G, label: 'Grams' },
-  { value: PRODUCT_UNIT.KG, label: 'Kilograms' },
-  { value: PRODUCT_UNIT.L, label: 'Liters' },
-  { value: PRODUCT_UNIT.ML, label: 'Milliliters' },
+  { value: ProductUnit.G, label: 'Grams' },
+  { value: ProductUnit.KG, label: 'Kilograms' },
+  { value: ProductUnit.L, label: 'Liters' },
+  { value: ProductUnit.ML, label: 'Milliliters' },
 ]
 
 export const DISCOUNT_TYPE_OPTIONS: {
-  value: DISCOUNT_TYPE
+  value: DiscountType
   label: string
 }[] = [
-  { value: DISCOUNT_TYPE.PERCENT, label: 'Percent' },
-  { value: DISCOUNT_TYPE.FIXED, label: 'Fixed' },
+  { value: DiscountType.PERCENT, label: 'Percent' },
+  { value: DiscountType.FIXED, label: 'Fixed' },
 ]
 
 export const PRODUCTS_TABLE_COLUMNS: TableColumn[] = [
@@ -49,10 +49,10 @@ export const PRODUCT_STATUS_OPTIONS: {
   label: string
 }[] = [
   { value: 'all-status', label: 'All statuses' },
-  { value: PRODUCT_STATUS.DRAFT, label: 'Draft' },
-  { value: PRODUCT_STATUS.ACTIVE, label: 'Active' },
-  { value: PRODUCT_STATUS.INACTIVE, label: 'Inactive' },
-  { value: PRODUCT_STATUS.ARCHIVED, label: 'Archived' },
+  { value: ProductStatus.DRAFT, label: 'Draft' },
+  { value: ProductStatus.ACTIVE, label: 'Active' },
+  { value: ProductStatus.INACTIVE, label: 'Inactive' },
+  { value: ProductStatus.ARCHIVED, label: 'Archived' },
 ]
 
 export const SERIES_KICKER = 'THE SENSORY BREW — SERIES 01'

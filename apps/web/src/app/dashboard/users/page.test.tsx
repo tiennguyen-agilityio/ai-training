@@ -17,7 +17,7 @@ import {
 } from '@/hooks/useUser'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { USER_ROLES, USER_STATUS } from '@/types/user'
+import { UserRole, UserStatus } from '@repo/constants'
 
 let navQueryString = ''
 
@@ -145,8 +145,8 @@ const usersFixture = [
     lastName: 'Vance',
     name: 'Julian Vance',
     avatarUrl: 'https://i.pravatar.cc/100?img=12',
-    role: USER_ROLES.ADMIN,
-    status: USER_STATUS.ACTIVE,
+    role: UserRole.ADMIN,
+    status: UserStatus.ACTIVE,
   },
   {
     id: 'u-2',
@@ -155,8 +155,8 @@ const usersFixture = [
     lastName: 'Rossi',
     name: 'Elena Rossi',
     avatarUrl: 'https://i.pravatar.cc/100?img=32',
-    role: USER_ROLES.USER,
-    status: USER_STATUS.ACTIVE,
+    role: UserRole.USER,
+    status: UserStatus.ACTIVE,
   },
   {
     id: 'u-3',
@@ -165,8 +165,8 @@ const usersFixture = [
     lastName: 'Thorne',
     name: 'Marcus Thorne',
     avatarUrl: 'https://i.pravatar.cc/100?img=15',
-    role: USER_ROLES.USER,
-    status: USER_STATUS.INACTIVE,
+    role: UserRole.USER,
+    status: UserStatus.INACTIVE,
   },
   {
     id: 'u-4',
@@ -175,8 +175,8 @@ const usersFixture = [
     lastName: 'Bloom',
     name: 'Sasha Bloom',
     avatarUrl: 'https://i.pravatar.cc/100?img=47',
-    role: USER_ROLES.ADMIN,
-    status: USER_STATUS.ACTIVE,
+    role: UserRole.ADMIN,
+    status: UserStatus.ACTIVE,
   },
   {
     id: 'u-5',
@@ -185,8 +185,8 @@ const usersFixture = [
     lastName: 'Carter',
     name: 'Lena Carter',
     avatarUrl: 'https://i.pravatar.cc/100?img=6',
-    role: USER_ROLES.USER,
-    status: USER_STATUS.ACTIVE,
+    role: UserRole.USER,
+    status: UserStatus.ACTIVE,
   },
   {
     id: 'u-6',
@@ -195,8 +195,8 @@ const usersFixture = [
     lastName: 'Grimes',
     name: 'Noah Grimes',
     avatarUrl: 'https://i.pravatar.cc/100?img=9',
-    role: USER_ROLES.ADMIN,
-    status: USER_STATUS.INACTIVE,
+    role: UserRole.ADMIN,
+    status: UserStatus.INACTIVE,
   },
 ]
 
@@ -294,7 +294,7 @@ describe('Dashboard users page', () => {
     await waitFor(() => {
       expect(mockUseUsers).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          role: USER_ROLES.ADMIN,
+          role: UserRole.ADMIN,
           page: 1,
           limit: PAGE_SIZE,
         }),
@@ -331,7 +331,7 @@ describe('Dashboard users page', () => {
     await waitFor(() => {
       expect(mockUseUsers).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          status: USER_STATUS.INACTIVE,
+          status: UserStatus.INACTIVE,
           page: 1,
           limit: PAGE_SIZE,
         }),

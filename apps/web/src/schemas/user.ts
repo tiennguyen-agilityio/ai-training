@@ -1,9 +1,13 @@
 import { z } from 'zod'
 
-import { ERROR_MESSAGES, VALIDATION_MESSAGES } from '@/constants/messages'
-import { VALIDATION_RULES } from '@/constants/validation'
+import {
+  VALIDATION_MESSAGES,
+  VALIDATION_RULES,
+  UserRole,
+  UserStatus,
+} from '@repo/constants'
+import { ERROR_MESSAGES } from '@/constants/messages'
 import { formDataEntryToString } from '@/utils/validation'
-import { USER_ROLES, USER_STATUS } from '@/types/user'
 
 const { NAME } = VALIDATION_RULES
 
@@ -85,8 +89,8 @@ export type UpdateProfileValues = z.infer<typeof updateProfileSchema>
 export const updateUserFormSchema = z.object({
   firstName: firstNameSchema,
   lastName: lastNameSchema,
-  role: z.nativeEnum(USER_ROLES),
-  status: z.nativeEnum(USER_STATUS),
+  role: z.nativeEnum(UserRole),
+  status: z.nativeEnum(UserStatus),
 })
 
 export type UpdateUserFormValues = z.infer<typeof updateUserFormSchema>

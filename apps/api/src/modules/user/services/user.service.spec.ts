@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from './user.service.js';
 import { User } from '../entities/user.entity.js';
-import { UserRole, UserStatus } from '../../../common/enums/user.enum.js';
+import { UserRole, UserStatus } from '@repo/constants';
 import { AuthProvider } from '../../../common/providers/auth.provider.js';
 import { UserRepository } from '../repositories/user.repository.js';
 import type { Mock } from 'vitest';

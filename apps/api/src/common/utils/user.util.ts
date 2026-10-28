@@ -1,5 +1,5 @@
 import { User } from '../../modules/user/entities/user.entity.js';
-import { UserRole, UserStatus } from '../enums/user.enum.js';
+import { UserRole, UserStatus } from '@repo/constants';
 
 export function isActiveAdmin(user?: User): boolean {
   return (

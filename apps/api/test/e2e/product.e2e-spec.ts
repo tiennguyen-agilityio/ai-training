@@ -11,23 +11,21 @@ import { CategoryService } from './../../src/modules/category/services/category.
 import { ProductService } from './../../src/modules/product/services/product.service.js';
 import { ProductImageService } from './../../src/modules/product-image/services/product-image.service.js';
 import { ProductVariantService } from './../../src/modules/product-variant/services/product-variant.service.js';
-import { UserRole } from './../../src/common/enums/user.enum.js';
-import { API_BASE_PATH } from './../utils/api-path.util.js';
-import { initTestApp } from './../utils/init-test-app.util.js';
 import {
+  UserRole,
   DiscountType,
   ProductUnit,
-} from './../../src/modules/product-variant/enums/product-variant.enum.js';
+  ProductStatus,
+  RoastLevel,
+  ProductSortBy,
+} from '@repo/constants';
+import { API_BASE_PATH } from './../utils/api-path.util.js';
+import { initTestApp } from './../utils/init-test-app.util.js';
 import type { User } from './../../src/modules/user/entities/user.entity.js';
 import type { Category } from './../../src/modules/category/entities/category.entity.js';
 import type { Product } from './../../src/modules/product/entities/product.entity.js';
 import { ERROR_CODES } from './../../src/common/constants/error-code.constant.js';
 import { slugFrom } from './../../src/common/utils/slug.util.js';
-import {
-  ProductSortBy,
-  ProductStatus,
-  RoastLevel,
-} from './../../src/modules/product/enums/product.enum.js';
 
 vi.mock('@clerk/express', async () => {
   const actual: object = await vi.importActual('@clerk/express');

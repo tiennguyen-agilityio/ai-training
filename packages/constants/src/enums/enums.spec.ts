@@ -1,0 +1,43 @@
+import { ProductSortBy, ProductStatus, RoastLevel } from './product.enum.js';
+import { DiscountType, ProductUnit } from './product-variant.enum.js';
+import { UserRole, UserStatus } from './user.enum.js';
+
+describe('shared enums', () => {
+  it('DiscountType has the API values', () => {
+    expect(Object.values(DiscountType)).toEqual(['PERCENT', 'FIXED']);
+  });
+
+  it('ProductUnit has the API values in the API order', () => {
+    expect(Object.values(ProductUnit)).toEqual(['KG', 'G', 'ML', 'L']);
+  });
+
+  it('RoastLevel has the API values', () => {
+    expect(Object.values(RoastLevel)).toEqual(['LIGHT', 'MEDIUM', 'DARK']);
+  });
+
+  it('ProductStatus has the API values', () => {
+    expect(Object.values(ProductStatus)).toEqual([
+      'DRAFT',
+      'ACTIVE',
+      'INACTIVE',
+      'ARCHIVED',
+    ]);
+  });
+
+  it('ProductSortBy has the API values', () => {
+    expect(Object.values(ProductSortBy)).toEqual([
+      'NAME_ASC',
+      'NAME_DESC',
+      'PRICE_ASC',
+      'PRICE_DESC',
+    ]);
+  });
+
+  it('UserRole has the API values', () => {
+    expect(Object.values(UserRole)).toEqual(['ADMIN', 'USER']);
+  });
+
+  it('UserStatus has the API values', () => {
+    expect(Object.values(UserStatus)).toEqual(['ACTIVE', 'INACTIVE']);
+  });
+});
