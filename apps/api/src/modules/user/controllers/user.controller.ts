@@ -71,8 +71,7 @@ export class UserController {
   }
 
   @Get()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
+  @AdminOnly()
   @ApiOperation({ summary: 'List users (admin only)' })
   @ApiPaginatedResponse(ResponseUserDto)
   @ApiErrorResponse(
