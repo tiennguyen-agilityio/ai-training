@@ -80,12 +80,13 @@ export class UserController {
   )
   async findAll(
     @Query({ schema: userQuerySchema }) query: UserQueryInput,
+    @AuthUser() user: User,
   ): Promise<PaginatedResult<ResponseUserDto>> {
     const { page, limit, search, ...filters } = query;
     const result = await this.userService.findAll(
       { page, limit, search },
       filters,
-      { includeDeleted: true },
+      { includeDeleted: true, excludeId: user.id },
     );
     return mapPaginatedResult(result, (user) =>
       ResponseUserDto.fromEntity(user),

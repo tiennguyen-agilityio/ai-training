@@ -203,6 +203,19 @@ describe('UserController auth (e2e)', () => {
       expect(response.body).toHaveProperty('meta');
     });
 
+    it('GET /users excludes the calling admin from the results', async () => {
+      const admin = await createTestUser({ role: UserRole.ADMIN });
+      mockSessionFor(admin.clerkId);
+
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/users?limit=100`)
+        .expect(200);
+
+      const body = response.body as { data: Array<{ id: string }> };
+      const ids = body.data.map((u) => u.id);
+      expect(ids).not.toContain(admin.id);
+    });
+
     it('GET /users?role= filters the results by role', async () => {
       const admin = await createTestUser({ role: UserRole.ADMIN });
       const otherAdmin = await createTestUser({ role: UserRole.ADMIN });

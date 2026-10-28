@@ -75,16 +75,15 @@ describe('UserController', () => {
       const meta = { limit: 10, currentPage: 1, pageCount: 1, totalCount: 1 };
       userService.findAll.mockResolvedValue({ data: [user], meta });
 
-      const result = await controller.findAll({
-        page: 1,
-        limit: 10,
-        role: UserRole.ADMIN,
-      });
+      const result = await controller.findAll(
+        { page: 1, limit: 10, role: UserRole.ADMIN },
+        user,
+      );
 
       expect(userService.findAll).toHaveBeenCalledWith(
         { page: 1, limit: 10, search: undefined },
         { role: UserRole.ADMIN },
-        { includeDeleted: true },
+        { includeDeleted: true, excludeId: user.id },
       );
       expect(result).toEqual({
         data: [ResponseUserDto.fromEntity(user)],
@@ -96,16 +95,15 @@ describe('UserController', () => {
       const meta = { limit: 10, currentPage: 1, pageCount: 1, totalCount: 1 };
       userService.findAll.mockResolvedValue({ data: [user], meta });
 
-      await controller.findAll({
-        page: 1,
-        limit: 10,
-        status: UserStatus.INACTIVE,
-      });
+      await controller.findAll(
+        { page: 1, limit: 10, status: UserStatus.INACTIVE },
+        user,
+      );
 
       expect(userService.findAll).toHaveBeenCalledWith(
         { page: 1, limit: 10, search: undefined },
         { status: UserStatus.INACTIVE },
-        { includeDeleted: true },
+        { includeDeleted: true, excludeId: user.id },
       );
     });
 
@@ -113,7 +111,7 @@ describe('UserController', () => {
       userService.findAll.mockRejectedValue(new BadRequestException());
 
       await expect(
-        controller.findAll({ page: 999, limit: 10 }),
+        controller.findAll({ page: 999, limit: 10 }, user),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
