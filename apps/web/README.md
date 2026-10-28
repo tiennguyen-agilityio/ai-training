@@ -1,49 +1,84 @@
-# Node.js E-commerce Website
+# Coffee Shop Web
 
-## OVERVIEW
+The shop and admin dashboard for the [Coffee Shop API](../api/README.md), built with Next.js.
 
-The web app lives in **`apps/web/`** (package `web` in the root pnpm workspace): **Next.js 15** (App Router), **React 19**, **TypeScript**, **Tailwind CSS v4**, **shadcn/ui** (tokens in `src/app/globals.css`, components in `src/components/ui/`). Tooling: ESLint, Prettier, Jest + React Testing Library. Git hooks live at the repo root (`.husky/`); run `pnpm install` at the root to enable them.
+**Live:** [Website](https://ai-training-develop.vercel.app/)
 
----
+## Tech Stack
 
-## STRUCTURE FOLDER
+- [Next.js](https://nextjs.org) v15 (App Router)
+- [React](https://react.dev) v19
+- [TypeScript](https://www.typescriptlang.org) v6
+- [Tailwind CSS](https://tailwindcss.com) v4
+- [shadcn/ui](https://ui.shadcn.com) (CLI v4)
+- [Clerk](https://clerk.com) (`@clerk/nextjs` v6)
+- [TanStack Query](https://tanstack.com/query) v5
+- [Zustand](https://zustand.docs.pmnd.rs) v5
+- [React Hook Form](https://react-hook-form.com) v7
+- [Zod](https://zod.dev) v4
+- [Jest](https://jestjs.io) v30
+- [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) v16
+- [`@repo/constants`](../../packages/constants) (workspace)
 
-```text
-apps/web/
-├── src/
-│   ├── app/                    # App Router
-│   │   ├── layout.tsx
-│   │   ├── globals.css         # Theme + Tailwind @theme
-│   │   ├── (shop)/             # Shop, URL /
-│   │   │   ├── layout.tsx
-│   │   │   └── page.tsx
-│   │   └── dashboard/          # URL /dashboard
-│   │       ├── layout.tsx
-│   │       └── page.tsx
-│   ├── components/
-│   │   ├── ui/                 # shadcn / primitives
-│   │   ├── features/           # By domain
-│   │   └── shared/             # Header, footer, … (when present)
-│   ├── hooks/
-│   ├── utils/
-│   ├── services/               # Server Actions, API client
-│   ├── store/
-│   ├── types/
-│   └── middleware.ts
-├── public/
-├── components.json
-├── eslint.config.mjs
-├── jest.config.ts
-├── next.config.ts
-├── package.json
-├── postcss.config.mjs
-├── prettier.config.mjs     # extends @repo/prettier-config (no semicolons)
-└── tsconfig.json
+## Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org) >= 24
+- [pnpm](https://pnpm.io) 10.34.5 (pinned by `packageManager` in the root `package.json`)
+- A running API: locally on `http://localhost:3000` (see the [API README](../api/README.md#getting-started)), or the develop API
+- A [Clerk](https://clerk.com) application
+
+### Installation
+
+1. Install the workspace at the repo root (this also installs the git hooks and builds `@repo/constants`):
+
+   ```bash
+   pnpm install
+   ```
+
+2. In `apps/web/`, create the env file and fill it in (see [Environment Variables](#environment-variables)):
+
+   ```bash
+   cp .env.example .env
+   ```
+
+### Environment Variables
+
+`.env.example` leaves every value empty except the two fallback redirect URLs, which it sets to `/`. An empty value does not fall back to the defaults in the code, so set every other variable.
+
+| Variable                                          | Description                                                              | Local value              |
+| ------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------ |
+| `CLERK_SECRET_KEY`                                | Clerk backend secret key                                                 | from the Clerk dashboard |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`               | Clerk publishable key                                                    | from the Clerk dashboard |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL`                   | Sign-in route                                                            | `/sign-in`               |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL`                   | Sign-up route                                                            | `/sign-up`               |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | Where to go after sign-in when no redirect is given                      | `/`                      |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | Where to go after sign-up when no redirect is given                      | `/`                      |
+| `NEXT_PUBLIC_API_URL`                             | Base URL of the API; the app appends `/api/v1`                           | `http://localhost:3000`  |
+| `NEXT_PUBLIC_IMAGE_URL`                           | ImgBB upload endpoint; image upload is off when this or the key is empty | your ImgBB upload URL    |
+| `NEXT_PUBLIC_IMAGE_KEY`                           | ImgBB API key                                                            | your ImgBB key           |
+| `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN`                 | Mapbox token for the address lookup at checkout                          | your Mapbox token        |
+
+### Running Locally
+
+From the repo root (recommended, it also rebuilds `@repo/constants` on change):
+
+```bash
+pnpm dev:web
 ```
 
----
+Or from `apps/web/`:
 
-## GETTING STARTED
+```bash
+pnpm dev
+```
+
+Open `http://localhost:3001`.
+
+## Scripts
+
+Run these in `apps/web/`, or from the repo root as `pnpm web <script>`. `pnpm dev` and `pnpm start` use port 3001.
 
 | Command                             | Description            |
 | ----------------------------------- | ---------------------- |
@@ -56,13 +91,51 @@ apps/web/
 | `pnpm test:watch`                   | Jest watch mode        |
 | `pnpm test:cov`                     | Jest with coverage     |
 
-For Clerk and other secrets, use `.env` (see `.env.example`). For environment variable details, email **tien.nguyen@asnet.com.vn**.
+## Folder Structure
 
----
+```text
+apps/web/
+├── src/
+│   ├── app/                    # App Router
+│   │   ├── (shop)/             # Shop, URL /: brew-guides, cart, checkout, contact, order-success, profile, roasts, subscriptions
+│   │   ├── dashboard/          # URL /dashboard: categories, favorites, inventory, orders, products, settings, users
+│   │   ├── sign-in/
+│   │   ├── sign-up/
+│   │   ├── layout.tsx
+│   │   ├── globals.css         # Theme + Tailwind @theme
+│   │   └── error.tsx, global-error.tsx, not-found.tsx
+│   ├── components/             # One folder per component (PascalCase)
+│   │   ├── ui/                 # shadcn primitives
+│   │   └── icon/               # SVG icon components
+│   ├── constants/
+│   ├── hooks/
+│   ├── layouts/
+│   ├── providers/
+│   ├── schemas/
+│   ├── sections/
+│   ├── services/               # API client, image upload, geocoding
+│   ├── store/
+│   ├── theme/
+│   ├── types/
+│   ├── utils/
+│   └── middleware.ts
+├── public/
+├── components.json
+├── eslint.config.mjs
+├── jest.config.ts
+├── jest.setup.ts
+├── next.config.ts
+├── package.json
+├── postcss.config.mjs
+├── prettier.config.mjs         # extends @repo/prettier-config (no semicolons)
+├── tailwind.config.ts
+├── tsconfig.json
+└── vercel.json
+```
 
-## DEPLOY
+## Deploy
 
-Web is deployed to Vercel (project `ai-training`) by GitHub Actions (`.github/workflows/ci.yml` calls the reusable `.github/workflows/deploy-web.yml`), only after the `quality` job (test + build) passes and only when `web` is affected (for PR previews: `web` or the API). The Vercel project is not connected to Git (`vercel.json` sets `git.deploymentEnabled: false`), so nothing else deploys it.
+Web is deployed to Vercel (project `ai-training`) by GitHub Actions.
 
 | Environment | Trigger                 | URL                                                                           | Vercel env |
 | ----------- | ----------------------- | ----------------------------------------------------------------------------- | ---------- |
@@ -70,8 +143,8 @@ Web is deployed to Vercel (project `ai-training`) by GitHub Actions (`.github/wo
 | Development | merge into `develop`    | https://ai-training-develop.vercel.app (alias to the latest build)            | Preview    |
 | Production  | `main` (not configured) | —                                                                             | Production |
 
-- `vercel.json` sets only the build command and turns off Git deploys, so these Vercel project settings must stay: Framework Preset Next.js, Root Directory `apps/web`, Node.js 24.x, Install Command not overridden (default `pnpm install` installs the whole workspace).
-- App env vars live in the Vercel project: Preview, shared by preview and development. Production is reserved for `main`.
-- GitHub holds only the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` and the variable `VERCEL_DEVELOP_ALIAS`.
-- The browser calls the API at `NEXT_PUBLIC_API_URL`. Development and web-only PRs use the develop API. A PR that changes the API gets its own API preview (Render service `ai-training-api-preview-pull-request-<n>`, usually `https://ai-training-api-preview-pull-request-<n>.onrender.com`; the PR comment shows the real URL, see the root `CLAUDE.md`), and its web preview is built against it (`deploy-web.yml` input `api_url`).
-- The API's `CORS_ORIGIN` lists the development alias and the wildcard `https://ai-training-*-tiennd0502gmailcoms-projects.vercel.app` for preview URLs; API previews copy it from develop.
+- **Vercel settings to keep:** Framework Preset Next.js, Root Directory `apps/web`, Node.js 24.x, default Install Command. `vercel.json` only sets the build command and turns off Git deploys.
+- **Env vars:** in the Vercel project, environment Preview (used by preview and development).
+- **GitHub:** secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`; variables `VERCEL_DEVELOP_ALIAS`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`.
+- **API:** a PR that changes the API gets its own API preview (URL in the PR comment) and its web preview calls it. Other PRs and development call the develop API.
+- **CORS:** the API's `CORS_ORIGIN` allows the development alias and the preview URLs.
