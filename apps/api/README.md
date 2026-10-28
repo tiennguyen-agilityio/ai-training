@@ -7,49 +7,156 @@ PostgreSQL via MikroORM.
 **Live:** [Website](https://ai-training-develop.vercel.app/) ·
 [API Swagger](https://ai-training-develop.onrender.com/api/docs)
 
+## Table of Contents
+
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Features](#features)
+- [Project Structure](#project-structure)
+- [Entity Relationship Diagram (ERD)](#entity-relationship-diagram-erd)
+- [API Endpoints](#api-endpoints)
+- [Database & Migrations](#database--migrations)
+- [Testing](#testing)
+- [Deploy](#deploy)
+
 ## Tech Stack
 
-| Layer             | Choice                                                                                               |
-| ----------------- | ---------------------------------------------------------------------------------------------------- |
-| Runtime           | [Node.js](https://nodejs.org) v24 (ESM)                                                              |
-| Language          | [TypeScript](https://www.typescriptlang.org) v6                                                      |
-| Framework         | [NestJS](https://nestjs.com) v12                                                                     |
-| Authentication    | [Clerk](https://clerk.com) (`@clerk/express` v2) + [Svix](https://www.svix.com) webhook verification |
-| Database          | [PostgreSQL](https://www.postgresql.org) v18                                                         |
-| ORM               | [MikroORM](https://mikro-orm.io) v7                                                                  |
-| Validation        | [Zod](https://zod.dev) v4 (request schemas) + class-validator (env)                                  |
-| Unit testing      | [Vitest](https://vitest.dev) v5                                                                      |
-| E2E testing       | [Vitest](https://vitest.dev) v5 + [Supertest](https://github.com/ladjs/supertest) v7                 |
-| API documentation | [Swagger / OpenAPI](https://swagger.io)                                                              |
-| Observability     | [`@nestjs/observe`](https://www.npmjs.com/package/@nestjs/observe) (non-production only)             |
-| Containerization  | [Docker](https://www.docker.com) + [Docker Compose](https://docs.docker.com/compose/)                |
+- [Node.js](https://nodejs.org) v24 (ESM)
+- [TypeScript](https://www.typescriptlang.org) v6
+- [NestJS](https://nestjs.com) v12
+- [Clerk](https://clerk.com) (`@clerk/express` v2)
+- [Svix](https://www.svix.com) v1
+- [PostgreSQL](https://www.postgresql.org) v18
+- [MikroORM](https://mikro-orm.io) v7
+- [Zod](https://zod.dev) v4
+- [class-validator](https://github.com/typestack/class-validator) v0.15
+- [`@repo/constants`](../../packages/constants) (workspace)
+- [Vitest](https://vitest.dev) v5
+- [Supertest](https://github.com/ladjs/supertest) v7
+- [Swagger](https://swagger.io) (`@nestjs/swagger` v12)
+- [`@nestjs/observe`](https://www.npmjs.com/package/@nestjs/observe) v0.3
+- [Docker](https://www.docker.com) + [Docker Compose](https://docs.docker.com/compose/)
+
+## Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org) >= 24
+- [pnpm](https://pnpm.io) 10.34.5 (pinned by `packageManager` in the root `package.json`)
+- [Docker](https://www.docker.com) + [Docker Compose](https://docs.docker.com/compose/) (for running PostgreSQL, or the whole stack, in containers)
+- A [Clerk](https://clerk.com) application (publishable key, secret key, webhook signing secret)
+
+### Installation
+
+1. Clone the repo and install the workspace at the root. This also builds `@repo/constants` and
+   installs the git hooks.
+
+   ```bash
+   git clone -b develop git@github.com:tiennguyen-agilityio/ai-training.git
+   cd ai-training && pnpm install
+   cd apps/api
+   ```
+
+2. Create `.env` and `.env.docker` (both are needed) and fill them in, see
+   [Environment Variables](#environment-variables).
+
+   ```bash
+   cp .env.example .env
+   cp .env.example .env.docker
+   ```
+
+3. Start PostgreSQL only (the dev override exposes its port); the app runs on the host.
+
+   ```bash
+   docker compose --env-file .env -f docker-compose.yml -f docker-compose.dev.yml up -d postgres
+   ```
+
+4. Apply the migrations.
+
+   ```bash
+   pnpm run migration:up
+   ```
+
+5. Start the API from the repo root (see [Running Locally](#running-locally)).
+
+   ```bash
+   pnpm dev:api
+   ```
+
+   The API listens on `http://localhost:<PORT>`; Swagger is at `/api/docs`.
+
+### Environment Variables
+
+`.env.example` lists every variable; the app checks them at startup
+(`src/configs/env.validation.ts`) and does not boot if one is missing or empty.
+
+- `APP_KEY` and `APP_SECRET` are optional: delete their lines instead of leaving them empty.
+- `.env`: `NODE_ENV=development`, `PORT=3000`, `CORS_ORIGIN=http://localhost:3001`,
+  `DB_HOST=localhost`, `DB_PORT=5432`.
+- `.env.docker`: the same values as `.env`, except `DB_HOST=postgres` and `DB_PORT=5432`.
+
+| Variable                | Description                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------ |
+| `NODE_ENV`              | `development` \| `test` \| `production`                                              |
+| `PORT`                  | HTTP port the API listens on                                                         |
+| `DB_HOST`               | PostgreSQL host                                                                      |
+| `DB_PORT`               | PostgreSQL port                                                                      |
+| `DB_NAME`               | PostgreSQL database name                                                             |
+| `DB_USER`               | PostgreSQL user                                                                      |
+| `DB_PASSWORD`           | PostgreSQL password                                                                  |
+| `CORS_ORIGIN`           | Allowed origins, comma-separated; `*` matches one run of lowercase letters or digits |
+| `THROTTLE_TTL`          | Rate-limit window, in milliseconds                                                   |
+| `THROTTLE_LIMIT`        | Max requests per IP per `THROTTLE_TTL` window                                        |
+| `CLERK_SECRET_KEY`      | Clerk backend secret key                                                             |
+| `CLERK_PUBLISHABLE_KEY` | Clerk publishable key                                                                |
+| `CLERK_WEBHOOK_SECRET`  | Clerk webhook signing secret                                                         |
+| `APP_KEY`               | Nest Observe app key                                                                 |
+| `APP_SECRET`            | Nest Observe app secret                                                              |
+
+### Running Locally
+
+From the repo root, `pnpm dev:api` is the recommended way: it runs `nest --watch` together with
+`tsc --watch` for `@repo/constants`, so changes to the shared package are rebuilt.
+
+From `apps/api/`:
+
+```bash
+pnpm run start          # run
+pnpm run start:dev      # watch mode (does not rebuild @repo/constants)
+pnpm run start:prod     # run compiled dist/main.js
+```
+
+### Running with Docker
+
+```bash
+pnpm run docker:dev        # app + PostgreSQL, hot reload
+pnpm run docker:dev:down
+
+pnpm run docker:prod       # app + PostgreSQL, detached
+pnpm run docker:prod:down
+```
 
 ## Features
 
 ### Auth & Authorization
 
-- **Authentication** — Clerk is the source of truth for identity (client uses Clerk's prebuilt
-  Sign In/Up components); the API verifies Clerk-issued session tokens on protected routes.
-- **User sync** — Clerk webhooks (`user.created` / `user.updated` / `user.deleted`,
-  signature-verified, idempotent) keep PostgreSQL in sync with Clerk.
-- **Authorization** — role-based access control with two roles: **Admin** (manager, full CRUD on
-  users/categories/products) and **User** (barista, read-only: own profile via `/users/me`;
-  catalog reads are public). Admin `role`/`status` changes are pushed to Clerk first and written
-  back to PostgreSQL by the `user.updated` webhook.
+- **Authentication** — Clerk sign-in; the API verifies Clerk session tokens.
+- **User sync** — Clerk webhooks keep PostgreSQL in sync with Clerk.
+- **Authorization** — two roles: **Admin** (full CRUD) and **User** (own profile, read-only
+  catalog). Catalog reads are public.
+
+> **Running locally:** a user exists in the database only after Clerk's webhook reaches
+> `POST /webhooks/clerk` (Svix signature), so Clerk needs a public URL that reaches your local
+> API; until then a signed-in user gets `401` from `/users/me`. The admin role comes from the
+> user's `public_metadata.role` on Clerk (without it the user is a regular User).
 
 ### Catalog Management
 
-- **User management** — CRUD with search by email/first name/last name, role and status
-  filters, and pagination; the list excludes the requesting admin.
-- **Category management** — CRUD, unique name with auto-generated slug, search by name/slug.
-- **Product management** — CRUD with up to 6 images per product, at most 1 primary (client
-  uploads to ImgBB, backend only stores/validates the resulting URL), managed on update via
-  `removeImageIds` / `updateImages` / `addImages`; one or more variants per product (SKU,
-  weight + unit, price, optional discount, `quantity`); filter by category, status, roast level
-  (one or more), and price range (matches if any variant falls in range), search by name/slug,
-  sort by name or price (each product's minimum variant price), pagination.
-- **Soft delete** — every entity has `deletedAt`; deleted rows are hidden by default and visible
-  to active admins. Deleting a product sets it to `ARCHIVED`; deleting a user sets it to `INACTIVE`.
+- **Users** — CRUD with search, role and status filters, pagination.
+- **Categories** — CRUD with unique name and auto-generated slug.
+- **Products** — CRUD with images (2 to 6 at create, one primary) and variants; filter, search, sort and
+  pagination.
+- **Soft delete** — deleted rows are hidden by default and visible to active admins.
 
 ### Cross-cutting
 
@@ -57,51 +164,51 @@ PostgreSQL via MikroORM.
 - CORS allow-list
 - Helmet security headers
 - Rate limiting
-- Consistent HTTP responses (`{ data }` / `{ data, meta }`) and errors
-  (`{ statusCode, message, errors[] }`)
-- Zod request validation with field-level error details (e.g. `variants.0.weight`)
+- Consistent HTTP responses and errors
+- Zod request validation
 - Swagger-documented API (disabled when `NODE_ENV=production`)
 
 ## Project Structure
 
-```
-src/
-  common/                   cross-cutting, reusable across ≥2 modules
-    entities/               shared base entities (BaseEntity: id/createdAt/updatedAt/deletedAt)
-    enums/                  shared enums (UserRole, UserStatus, ...)
-    constants/              non-secret default values (DEFAULT_PORT, ...) and ERROR_MESSAGES
-    guards/                 HTTP guards (AuthGuard, RolesGuard)
-    decorators/             AdminOnly, AuthUser, Roles, Swagger response decorators
-    middlewares/            ClerkAuthMiddleware, UserResolutionMiddleware
-    providers/              AuthProvider (abstract) + ClerkAuthProvider
-    interceptors/           TransformResponseInterceptor (wraps controller results in { data })
-    filters/                GlobalExceptionFilter (uniform error body)
-    exceptions/             DomainException subclasses (validation, not found, duplicate, ...)
-    repositories/           BaseRepository (the only MikroORM-aware layer: find, paginate, soft delete)
-    dto/                    shared schemas/DTOs (pagination, id param, error shape)
-    interfaces/             shared TS interfaces (repository options)
-    utils/                  small pure helpers (slug, pagination, validation-error mapping)
-  configs/                  env validation, mikro-orm, cors, rate-limit, swagger, validation-pipe,
-                            observe config
-  modules/<feature>/        feature modules (user, category, product, product-image,
-                            product-variant, webhook all implemented)
-    controllers/            HTTP layer (product-image/product-variant are managed via product)
-    services/               business logic, depends on the feature repository
-    repositories/           extends BaseRepository with feature queries
-    entities/               MikroORM entity for this feature
-    dto/                    Zod request schemas (*.schema.ts) + response DTOs
-    <feature>.module.ts     wires entity, repository, service, controller
-  migrations/               MikroORM migrations (mikro-orm migration:create/up/down)
-  app.module.ts             composition root: global guard, interceptor, filter, pipes, middlewares
-  main.ts                   bootstrap: Helmet, CORS, /api prefix, URI versioning, Swagger, listen
-test/
-  e2e/                      e2e specs: category, product, user, webhook, global exception filter
-  utils/                    test app bootstrap + API path helpers
-  setup-env.ts              loads .env.test before any app module is imported
-  reset-test-db.ts          truncates the test database before each e2e run
+```text
+apps/api/
+├── src/
+│   ├── common/                 # Shared code used by several modules
+│   │   ├── constants/          # Shared constants
+│   │   ├── decorators/         # Custom decorators
+│   │   ├── dto/                # Shared DTOs and schemas
+│   │   ├── entities/           # Base entities
+│   │   ├── exceptions/         # Domain exceptions
+│   │   ├── filters/            # Exception filters
+│   │   ├── guards/             # Auth and role guards
+│   │   ├── interceptors/       # Response interceptors
+│   │   ├── interfaces/         # Shared interfaces
+│   │   ├── middlewares/        # Request middlewares
+│   │   ├── providers/          # Auth provider
+│   │   ├── repositories/       # Base repository
+│   │   └── utils/              # Helper functions
+│   ├── configs/                # App and env configuration
+│   ├── migrations/             # Database migrations
+│   ├── modules/
+│   │   └── <feature>/          # One folder per feature
+│   │       ├── controllers/    # HTTP routes
+│   │       ├── dto/            # Request schemas and response DTOs
+│   │       ├── entities/       # Database entities
+│   │       ├── repositories/   # Data access
+│   │       ├── services/       # Business logic
+│   │       └── <feature>.module.ts
+│   ├── types/                  # TypeScript declarations
+│   ├── app.module.ts           # Root module
+│   └── main.ts                 # App bootstrap
+└── test/
+    ├── baseline/               # Response capture
+    ├── e2e/                    # End-to-end tests
+    ├── utils/                  # Test helpers
+    ├── setup-env.ts            # Loads .env.test
+    └── reset-test-db.ts        # Resets the test database
 ```
 
-## ENTITY RELATIONSHIP DIAGRAM(ERD)
+## Entity Relationship Diagram (ERD)
 
 ```mermaid
 erDiagram
@@ -179,9 +286,7 @@ erDiagram
     PRODUCT ||--o{ PRODUCT_VARIANT : "has"
 ```
 
----
-
-## API ENDPOINTS
+## API Endpoints
 
 > Base path: `/api/v1` - API docs `/api/docs` (non-production only).
 >
@@ -194,7 +299,6 @@ erDiagram
 | `GET`    | `/users/me`  | 🔒   | Get authenticated user profile                           |
 | `GET`    | `/users`     | 👑   | List users (search, role and status filters, pagination) |
 | `GET`    | `/users/:id` | 👑   | Get user by ID                                           |
-| `POST`   | `/users`     | 👑   | Create user                                              |
 | `PATCH`  | `/users/:id` | 👑   | Update user                                              |
 | `DELETE` | `/users/:id` | 👑   | Soft-delete user                                         |
 
@@ -215,7 +319,7 @@ erDiagram
 | :------- | :-------------- | :--- | :------------------------------------------------------------------------------------------------------- |
 | `GET`    | `/products`     | 🔓   | List products (filter by category/status/roastLevel/price range, sort by name/price, search, pagination) |
 | `GET`    | `/products/:id` | 🔓   | Get product by ID                                                                                        |
-| `POST`   | `/products`     | 👑   | Create product (optionally with images and variants)                                                     |
+| `POST`   | `/products`     | 👑   | Create product (2–6 images with one primary, at least one variant)                                       |
 | `PATCH`  | `/products/:id` | 👑   | Update product (add/update/remove images)                                                                |
 | `DELETE` | `/products/:id` | 👑   | Archive + soft-delete product                                                                            |
 
@@ -227,86 +331,7 @@ Not under `/api/v1` and excluded from Swagger.
 | :----- | :---------------- | :------------- | :--------------------------------------------------------------- |
 | `POST` | `/webhooks/clerk` | Svix signature | Sync `user.created` / `user.updated` / `user.deleted` from Clerk |
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js v24
-- pnpm (version pinned by the root `package.json` `packageManager`, pnpm 10.34.5)
-- Docker + Docker Compose (for running PostgreSQL, or the whole stack, in containers)
-- A [Clerk](https://clerk.com) application (publishable key, secret key, webhook signing secret)
-
-### Installation
-
-```bash
-git clone -b develop git@github.com:tiennguyen-agilityio/ai-training.git
-cd ai-training && pnpm install   # at the repo root
-cd apps/api
-
-cp .env.example .env   # then fill in real values
-
-# start PostgreSQL only (dev override exposes its port), app runs on the host
-docker compose --env-file .env -f docker-compose.yml -f docker-compose.dev.yml up -d postgres
-
-pnpm run migration:up
-
-pnpm run start:dev
-```
-
-### Environment Variables
-
-`.env.example` lists every variable (copy it to `.env`, and to `.env.docker` if running the app
-itself inside Docker) and fill in real values. All variables below are validated at startup
-(`src/configs/env.validation.ts`) — the app refuses to boot if any required one is missing.
-
-| Variable                | Description                                   |
-| ----------------------- | --------------------------------------------- |
-| `NODE_ENV`              | `development` \| `test` \| `production`       |
-| `PORT`                  | HTTP port the API listens on                  |
-| `DB_HOST`               | PostgreSQL host                               |
-| `DB_PORT`               | PostgreSQL port                               |
-| `DB_NAME`               | PostgreSQL database name                      |
-| `DB_USER`               | PostgreSQL user                               |
-| `DB_PASSWORD`           | PostgreSQL password                           |
-| `CORS_ORIGIN`           | Allow-listed origin(s) for CORS               |
-| `THROTTLE_TTL`          | Rate-limit window, in milliseconds            |
-| `THROTTLE_LIMIT`        | Max requests per IP per `THROTTLE_TTL` window |
-| `CLERK_SECRET_KEY`      | Clerk backend secret key                      |
-| `CLERK_PUBLISHABLE_KEY` | Clerk publishable key                         |
-| `CLERK_WEBHOOK_SECRET`  | Clerk webhook signing secret                  |
-| `APP_KEY`               | Nest Observe app key                          |
-| `APP_SECRET`            | Nest Observe app secret                       |
-
-### Running Locally
-
-```bash
-pnpm run start          # run
-pnpm run start:dev      # watch mode
-pnpm run start:prod     # run compiled dist/main.js
-```
-
-### Running with Docker
-
-`docker-compose.yml` is the production-ready default (app + PostgreSQL, `restart: unless-stopped`,
-healthchecks); `docker-compose.dev.yml` layers dev-only overrides on top (hot-reload volume mount,
-Postgres port exposed to the host, no auto-restart).
-
-The image builds from the repo root (`docker build -f apps/api/Dockerfile .`); compose sets `context: ../..`. The dev container mounts only `src/`, so rebuild it after a dependency change.
-
-```bash
-pnpm run docker:dev        # dev: docker compose --env-file .env.docker -f docker-compose.yml -f docker-compose.dev.yml up --build
-pnpm run docker:dev:down
-
-pnpm run docker:prod       # prod: docker compose --env-file .env.docker -f docker-compose.yml up -d --build
-pnpm run docker:prod:down
-```
-
 ## Database & Migrations
-
-MikroORM config is centralized in `src/configs/mikro-orm.config.ts` and entity paths are
-auto-discovered via glob (`src/**/*.entity.ts`, `dist/**/*.entity.js` when compiled) — no manual
-entity registration needed. Schema changes are managed exclusively through migrations; automatic
-schema synchronization is never used in production.
 
 ```bash
 pnpm run migration:create   # generate a new migration from entity changes
@@ -315,31 +340,6 @@ pnpm run migration:down     # revert the last migration
 pnpm run seeder:create      # scaffold a seeder in src/seeders
 pnpm run seeder:run         # run seeders
 ```
-
-All databases share one snapshot, `src/migrations/.snapshot-coffee_shop.json` (`snapshotName` in
-the config). Without it, MikroORM keeps a snapshot per `DB_NAME`, so `migration:create` diffs against
-a different baseline depending on which `.env` is loaded.
-
-The migration history was squashed into a single baseline, `Migration20261020093328`. A new or empty
-database just runs `pnpm run migration:up`. A database built by the earlier chain
-(`Migration20260824081651`, `Migration20260825181322`, `Migration20260825200222`) already has the
-tables, so bring its columns in line and record the baseline as executed instead of running it:
-
-```sql
-begin;
-alter table "products" alter column "description" type text, alter column "description" set not null,
-  alter column "roast_level" set not null, alter column "tasting_notes" type text,
-  alter column "origin" type text, alter column "origin" set not null,
-  alter column "processing_method" type text, alter column "processing_method" set not null;
-alter table "product_variants" alter column "weight" type numeric(10,2);
-alter table "product_images" alter column "url" type text;
-delete from mikro_orm_migrations;
-insert into mikro_orm_migrations (name, executed_at) values ('Migration20261020093328', now());
-commit;
-```
-
-Then `pnpm run migration:check` and `pnpm exec mikro-orm schema:update --dump` should both report no
-changes. The `set not null` steps fail if a product still has nulls in those columns; fill them first.
 
 ## Testing
 
@@ -350,20 +350,19 @@ pnpm run test:cov
 pnpm run test:e2e      # e2e tests (requires a reachable PostgreSQL — e.g. `pnpm run docker:dev`)
 ```
 
-`test:e2e` boots the full app, so it needs its own database, separate from the one `start:dev`
-uses — otherwise e2e runs would create/soft-delete real-looking rows in your dev database.
-Its `pretest:e2e` hook (`test/reset-test-db.ts`) truncates every table in that database except
-the migrations table before each run.
-`test/setup-env.ts` (wired in via `vitest.config.e2e.ts`'s `setupFiles`) loads `.env.test` before
-any application module is imported, so by the time `src/configs/mikro-orm.config.ts`'s own
-`dotenv/config` runs, the DB/Clerk variables are already set and it's a no-op for those keys
-(`dotenv` never overrides an already-set variable) — `src/` itself stays unaware that a "test env"
-concept even exists. Create your own local `.env.test` (not committed — same shape as `.env`) with
-a distinct `DB_NAME` and placeholder Clerk keys — Clerk calls made during e2e (e.g. the webhook
-module's role-sync) are expected to fail against these placeholders; the code already logs and
-swallows that failure. Create and migrate the test database once before running e2e locally:
+## Deploy
 
-```bash
-createdb coffee_shop_test        # one-time, matches your .env.test's DB_NAME
-set -a && source .env.test && set +a && pnpm run migration:up
-```
+The API is deployed by GitHub Actions: `.github/workflows/ci.yml` calls the reusable
+`.github/workflows/deploy-api.yml` after the `quality` and `build-and-scan` jobs pass. It builds
+`apps/api/Dockerfile` (target `production`), pushes the image to GHCR, then deploys it on Render.
+
+| Trigger                                      | Image tag               | Render service                                                              |
+| -------------------------------------------- | ----------------------- | --------------------------------------------------------------------------- |
+| Push to `develop`                            | `:develop` and `:<sha>` | develop service ([live](https://ai-training-develop.onrender.com/api/docs)) |
+| Same-repo PR into `develop` that changes API | `:pull-request-<n>`     | preview `ai-training-api-preview-pull-request-<n>` (URL in the PR comment)  |
+
+- A web-only PR gets no API preview; its web preview uses the develop API.
+- Previews use the develop database, and CI never runs migrations. The PR comment warns when
+  `src/migrations/` changes.
+- `.github/workflows/preview-cleanup.yml` deletes a PR's API preview when the PR closes.
+- `:develop` only ever holds merged code. No production deploy is configured.
