@@ -7,6 +7,7 @@ import {
   ProductUnit,
   RoastLevel,
 } from '@repo/constants'
+import { DISCOUNT_PERCENT_MESSAGE, isDiscountPercentValid } from '@repo/schemas'
 import { ERROR_MESSAGES } from '@/constants/messages'
 import { formatNumberThousands } from '@/utils/number'
 
@@ -102,15 +103,11 @@ export const createProductFormSchema = z
     processingMethod: processingMethodSchema,
   })
   .superRefine((data, ctx) => {
-    // API requires discountValue strictly < PERCENT_MAX (100), not <=.
-    if (
-      data.discountType === DiscountType.PERCENT &&
-      data.discountValue >= DISCOUNT.PERCENT_MAX
-    ) {
+    if (!isDiscountPercentValid(data)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['discountValue'],
-        message: ERROR_MESSAGES.DISCOUNT_PERCENT_MAX,
+        message: DISCOUNT_PERCENT_MESSAGE,
       })
     }
 

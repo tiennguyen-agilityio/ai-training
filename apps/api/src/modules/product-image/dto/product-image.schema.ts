@@ -1,14 +1,6 @@
 import { z } from 'zod';
-import { VALIDATION_RULES } from '@repo/constants';
+import { createProductImageSchema } from '@repo/schemas';
 
-export const createProductImageSchema = z.object({
-  url: z.url({ protocol: /^https?$/, hostname: z.regexes.domain }),
-  isPrimary: z.boolean().optional(),
-  sortOrder: z
-    .int()
-    .min(VALIDATION_RULES.IMAGE.MIN_SORT_ORDER)
-    .max(VALIDATION_RULES.IMAGE.MAX_SORT_ORDER)
-    .optional(),
-});
+export { createProductImageSchema };
 
 export type CreateProductImageInput = z.infer<typeof createProductImageSchema>;

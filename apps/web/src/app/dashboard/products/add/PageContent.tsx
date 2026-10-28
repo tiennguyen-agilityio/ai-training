@@ -8,11 +8,11 @@ import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
 // Types
+import type { ProductFormValues } from '@/types/product'
 import type {
-  ProductFormValues,
-  ProductImagePayload,
-  ProductPayload,
-} from '@/types/product'
+  CreateProductImagePayload,
+  CreateProductPayload,
+} from '@repo/schemas'
 import {
   DiscountType,
   ProductStatus,
@@ -236,7 +236,7 @@ const PageContent = () => {
   }: {
     avatarUrl: string | null
     galleryUrls: string[]
-  }): ProductImagePayload[] => {
+  }): CreateProductImagePayload[] => {
     if (!avatarUrl && galleryUrls.length === 0) {
       return [
         {
@@ -247,7 +247,7 @@ const PageContent = () => {
       ]
     }
 
-    const payload: ProductImagePayload[] = []
+    const payload: CreateProductImagePayload[] = []
 
     if (avatarUrl) {
       payload.push({
@@ -325,7 +325,7 @@ const PageContent = () => {
       return
     }
 
-    const payload: ProductPayload = {
+    const payload: CreateProductPayload = {
       categoryId: data.categoryId,
       name: data.name.trim(),
       description: data.description.trim(),

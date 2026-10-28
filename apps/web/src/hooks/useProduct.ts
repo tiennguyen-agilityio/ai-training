@@ -21,11 +21,8 @@ import {
   type ProductOptions,
 } from '@/services/product'
 import type { ResponseMeta } from '@/types/api'
-import type {
-  Product,
-  ProductPayload,
-  ProductUpdatePayload,
-} from '@/types/product'
+import type { CreateProductPayload, UpdateProductPayload } from '@repo/schemas'
+import type { Product } from '@/types/product'
 import { getQueryErrorMessage, throwIfServiceFailed } from '@/utils/query'
 
 export interface UseProductsResult {
@@ -102,7 +99,7 @@ export function useCreateProduct() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (body: ProductPayload) => {
+    mutationFn: async (body: CreateProductPayload) => {
       const result = await createProduct(body)
       if (!result.ok) throwIfServiceFailed(result)
       return result.product
@@ -182,7 +179,7 @@ export function useUpdateProduct() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (input: { id: string; body: ProductUpdatePayload }) => {
+    mutationFn: async (input: { id: string; body: UpdateProductPayload }) => {
       const result = await updateProduct(input.id, input.body)
       if (!result.ok) throwIfServiceFailed(result)
       return result.product

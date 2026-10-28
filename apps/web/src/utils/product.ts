@@ -7,9 +7,11 @@ import {
   type Product,
   type ProductFormValues,
   type ProductImage,
-  type ProductImagePayload,
-  type ProductImageUpdatePayload,
 } from '@/types/product'
+import type {
+  CreateProductImagePayload,
+  UpdateProductImagePayload,
+} from '@repo/schemas'
 import { getPrimaryVariantQuantity } from '@/utils/inventory'
 
 export const LOW_STOCK_THRESHOLD = 10
@@ -161,9 +163,9 @@ function normalizeImageUrl(url: string): string {
 }
 
 export interface ProductUpdateImageDiff {
-  addImages: ProductImagePayload[]
+  addImages: CreateProductImagePayload[]
   removeImageIds: string[]
-  updateImages: ProductImageUpdatePayload[]
+  updateImages: UpdateProductImagePayload[]
 }
 
 /**
@@ -176,8 +178,8 @@ export function buildProductImagesPayload({
 }: {
   avatarUrl: string | null
   galleryUrls: string[]
-}): ProductImagePayload[] {
-  const payload: ProductImagePayload[] = []
+}): CreateProductImagePayload[] {
+  const payload: CreateProductImagePayload[] = []
   if (avatarUrl) {
     payload.push({ url: avatarUrl, isPrimary: true, sortOrder: 0 })
   }
@@ -197,7 +199,7 @@ export function buildProductImagesPayload({
  */
 export function buildProductUpdateImageDiff(
   initialImages: ProductImage[],
-  finalImages: ProductImagePayload[],
+  finalImages: CreateProductImagePayload[],
 ): ProductUpdateImageDiff {
   const available = new Map<string, ProductImage[]>()
   for (const img of initialImages) {
@@ -205,8 +207,8 @@ export function buildProductUpdateImageDiff(
     available.set(url, [...(available.get(url) ?? []), img])
   }
 
-  const addImages: ProductImagePayload[] = []
-  const updateImages: ProductImageUpdatePayload[] = []
+  const addImages: CreateProductImagePayload[] = []
+  const updateImages: UpdateProductImagePayload[] = []
 
   for (const fin of finalImages) {
     const url = normalizeImageUrl(fin.url)

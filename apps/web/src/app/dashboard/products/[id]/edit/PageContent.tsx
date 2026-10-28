@@ -7,7 +7,8 @@ import { BadgeCheck, Leaf, Plus, X } from 'lucide-react'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
-import type { Product, ProductUpdatePayload } from '@/types/product'
+import type { Product } from '@/types/product'
+import type { UpdateProductPayload } from '@repo/schemas'
 import { ProductStatus, RoastLevel } from '@repo/constants'
 
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
@@ -330,7 +331,7 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
       nextStatus = ProductStatus.INACTIVE
     }
 
-    const updatePayload: ProductUpdatePayload = {
+    const updatePayload: UpdateProductPayload = {
       categoryId: data.categoryId,
       name: data.name.trim(),
       description: data.description.trim(),

@@ -9,35 +9,12 @@ import {
   RoastLevel,
   ProductSortBy,
 } from '@repo/constants';
+import { productBodySchema, updateProductSchema } from '@repo/schemas';
 import { ERROR_MESSAGES } from '../../../common/constants/message.constant.js';
 import { ERROR_CODES } from '../../../common/constants/error-code.constant.js';
-import { createProductImageSchema } from '../../product-image/dto/product-image.schema.js';
-import { createProductVariantSchema } from '../../product-variant/dto/product-variant.schema.js';
 
-const productObjectSchema = z.object({
-  categoryId: z.uuid(),
-  name: z
-    .string()
-    .min(VALIDATION_RULES.NAME.MIN_LENGTH)
-    .max(VALIDATION_RULES.NAME.MAX_LENGTH),
-  description: z.string().min(VALIDATION_RULES.NAME.MIN_LENGTH),
-  roastLevel: z.enum(RoastLevel),
-  isOrganic: z.boolean().optional(),
-  isFairTrade: z.boolean().optional(),
-  status: z.enum(ProductStatus).optional(),
-  tastingNotes: z.string().nullish(),
-  origin: z.string().min(VALIDATION_RULES.NAME.MIN_LENGTH),
-  processingMethod: z.string().min(VALIDATION_RULES.NAME.MIN_LENGTH),
-  images: z
-    .array(createProductImageSchema)
-    .min(VALIDATION_RULES.IMAGE.MIN_COUNT)
-    .max(VALIDATION_RULES.IMAGE.MAX_COUNT),
-  variants: z
-    .array(createProductVariantSchema)
-    .min(VALIDATION_RULES.VARIANT.MIN_COUNT),
-});
-
-export const createProductSchema = productObjectSchema.refine(
+// The shared body plus the API's rule: exactly one primary image.
+export const createProductSchema = productBodySchema.refine(
   (data) => data.images.filter((image) => image.isPrimary).length === 1,
   {
     message: ERROR_MESSAGES.PRODUCT.PRIMARY_IMAGE_REQUIRED,
@@ -48,16 +25,7 @@ export const createProductSchema = productObjectSchema.refine(
 
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 
-export const updateProductSchema = productObjectSchema
-  .omit({ images: true, variants: true })
-  .partial()
-  .extend({
-    removeImageIds: z.array(z.uuid()).optional(),
-    updateImages: z
-      .array(createProductImageSchema.partial().extend({ id: z.uuid() }))
-      .optional(),
-    addImages: z.array(createProductImageSchema).optional(),
-  });
+export { updateProductSchema };
 
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 

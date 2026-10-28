@@ -21,7 +21,11 @@ import {
   updateCategory,
   type CategoryOptions,
 } from '@/services/category'
-import type { Category, CategoryPayload } from '@/types/category'
+import type {
+  CreateCategoryPayload,
+  UpdateCategoryPayload,
+} from '@repo/schemas'
+import type { Category } from '@/types/category'
 import type { ResponseMeta } from '@/types/api'
 import { getQueryErrorMessage, throwIfServiceFailed } from '@/utils/query'
 
@@ -100,7 +104,7 @@ export function useCreateCategory() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (body: CategoryPayload) => {
+    mutationFn: async (body: CreateCategoryPayload) => {
       const result = await createCategory(body)
       if (!result.ok) throwIfServiceFailed(result)
       return result.category
@@ -180,7 +184,7 @@ export function useUpdateCategory() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (input: { id: string; body: CategoryPayload }) => {
+    mutationFn: async (input: { id: string; body: UpdateCategoryPayload }) => {
       const result = await updateCategory(input.id, input.body)
       if (!result.ok) throwIfServiceFailed(result)
       return result.category

@@ -22,8 +22,9 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 FROM deps AS development
 ARG PORT
 COPY --from=pruner /app/out/full/ .
-# deps installs with --ignore-scripts, so the shared package's prepare build never ran.
-RUN pnpm --filter @repo/constants build
+# deps installs with --ignore-scripts, so the shared packages' prepare builds never ran.
+# "@repo/schemas..." builds it and what it depends on (@repo/constants), in order.
+RUN pnpm --filter "@repo/schemas..." build
 WORKDIR /app/apps/api
 EXPOSE ${PORT}
 CMD ["pnpm", "run", "start:dev"]
@@ -36,10 +37,13 @@ FROM base AS production
 ARG PORT
 ENV NODE_ENV=production
 COPY --from=pruner /app/out/json/ .
-RUN pnpm --filter api install --frozen-lockfile --prod --ignore-scripts \
+# "api..." also installs the dependencies of the workspace packages api imports
+# (e.g. zod and @repo/constants for @repo/schemas).
+RUN pnpm --filter "api..." install --frozen-lockfile --prod --ignore-scripts \
   && rm -rf /root/.cache /pnpm/store /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/packages/constants/dist ./packages/constants/dist
+COPY --from=build /app/packages/schemas/dist ./packages/schemas/dist
 WORKDIR /app/apps/api
 USER node
 EXPOSE ${PORT}

@@ -12,6 +12,12 @@ export default defineConfig({
           new URL('../../packages/constants/src/index.ts', import.meta.url),
         ),
       },
+      {
+        find: /^@repo\/schemas$/,
+        replacement: fileURLToPath(
+          new URL('../../packages/schemas/src/index.ts', import.meta.url),
+        ),
+      },
     ],
   },
   test: {

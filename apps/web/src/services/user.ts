@@ -1,5 +1,6 @@
 import type { User } from '@/types/user'
 import { UserRole, UserStatus } from '@repo/constants'
+import type { UpdateUserPayload } from '@repo/schemas'
 import type { Response, ResponseMeta } from '@/types/api'
 
 import { API_FALLBACK_ERRORS, ERROR_MESSAGES } from '@/constants/messages'
@@ -210,14 +211,6 @@ export async function fetchUsers(
     .filter((u): u is User => u !== null)
 
   return { ok: true, users, meta }
-}
-
-export interface UpdateUserPayload {
-  role?: UserRole
-  status?: UserStatus
-  firstName?: string
-  lastName?: string
-  avatarUrl?: string
 }
 
 export async function updateUserById(

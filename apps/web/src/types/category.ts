@@ -1,7 +1,3 @@
-export interface CategoryPayload {
-  name: string
-}
-
 export interface Category {
   id: string
   createdBy: string | null

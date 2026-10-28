@@ -1,6 +1,10 @@
 import { API_FALLBACK_ERRORS } from '@/constants/messages'
 import { API_ROUTES } from '@/constants/routes'
-import type { Category, CategoryPayload } from '@/types/category'
+import type {
+  CreateCategoryPayload,
+  UpdateCategoryPayload,
+} from '@repo/schemas'
+import type { Category } from '@/types/category'
 import type { Response as ApiResponse, ResponseMeta } from '@/types/api'
 import { apiClient } from '@/services/api'
 
@@ -12,7 +16,7 @@ export interface CategoryOptions {
 }
 
 export async function createCategory(
-  body: CategoryPayload,
+  body: CreateCategoryPayload,
   options: Pick<CategoryOptions, 'getToken'> = {},
 ): Promise<
   | { ok: true; category: Category }
@@ -108,7 +112,7 @@ export async function fetchCategoryById(
 
 export async function updateCategory(
   id: string,
-  body: CategoryPayload,
+  body: UpdateCategoryPayload,
   options: Pick<CategoryOptions, 'getToken'> = {},
 ): Promise<
   | { ok: true; category: Category }
@@ -138,7 +142,7 @@ export async function updateCategory(
     ok: true,
     category: {
       id: trimmed,
-      name: body.name,
+      name: body.name ?? '',
       slug: '',
       createdBy: null,
       updatedBy: null,

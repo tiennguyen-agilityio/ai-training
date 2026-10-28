@@ -30,6 +30,7 @@ The layering and conventions the code actually follows. Plans, code reviews and 
   - `@Query({ schema: paginationQuerySchema })`
   - `@Param({ schema: idParamSchema })`
 - Types come from `z.infer`.
+- Request body schemas come from `@repo/schemas` (shared with web for its payload types), never rewritten here. A module's `dto/*.schema.ts` imports them, adds only server-only refines (ones that need `ERROR_CODES`, `ERROR_MESSAGES`, the database or other server logic) and exports the `z.infer` types. Query and param schemas stay in the API. Schemas set no custom message on a built-in check: `description` is the raw Zod message.
 
 **Errors are `DomainException` subclasses** from `src/common/exceptions/base.exception.ts`.
 
@@ -40,11 +41,12 @@ The layering and conventions the code actually follows. Plans, code reviews and 
 
 **Message and code strings are centralized.**
 
-| File                                          | Contents                                                         |
-| --------------------------------------------- | ---------------------------------------------------------------- |
-| `src/common/constants/message.constant.ts`    | `ERROR_MESSAGES`, `ERROR_DESCRIPTIONS`                           |
-| `src/common/constants/error-code.constant.ts` | `ERROR_CODES`                                                    |
-| `@repo/constants` (`packages/constants`)      | `VALIDATION_RULES` (bounds), `VALIDATION_MESSAGES`, shared enums |
+| File                                          | Contents                                                                     |
+| --------------------------------------------- | ---------------------------------------------------------------------------- |
+| `src/common/constants/message.constant.ts`    | `ERROR_MESSAGES`, `ERROR_DESCRIPTIONS`                                       |
+| `src/common/constants/error-code.constant.ts` | `ERROR_CODES`                                                                |
+| `@repo/constants` (`packages/constants`)      | `VALIDATION_RULES` (bounds), `VALIDATION_MESSAGES`, shared enums             |
+| `@repo/schemas` (`packages/schemas`)          | Request body schemas, field rules, `DISCOUNT_PERCENT_MESSAGE`, payload types |
 
 Controllers reuse the same constants in their `@ApiErrorResponse` docs — so **a new error needs an entry in all three places** (`ERROR_MESSAGES`, `ERROR_DESCRIPTIONS`, `ERROR_CODES`).
 

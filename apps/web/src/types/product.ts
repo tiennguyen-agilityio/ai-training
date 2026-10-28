@@ -5,7 +5,8 @@ import type {
   RoastLevel,
 } from '@repo/constants'
 
-export interface ProductVariantPayload {
+// A variant as the product response lists it.
+export interface ProductVariantSummary {
   id?: string
   sku?: string
   weight: number
@@ -29,44 +30,11 @@ export interface ProductVariant {
   quantity: number
 }
 
-export interface ProductImagePayload {
+export interface ProductImage {
+  id?: string
   url: string
   isPrimary: boolean
   sortOrder: number
-}
-
-export interface ProductImage extends ProductImagePayload {
-  id?: string
-}
-
-export interface ProductImageUpdatePayload {
-  id: string
-  sortOrder: number
-  isPrimary: boolean
-}
-
-export interface ProductPayload {
-  categoryId: string
-  name: string
-  description: string
-  roastLevel: RoastLevel
-  isOrganic: boolean
-  isFairTrade: boolean
-  status: ProductStatus
-  tastingNotes: string
-  origin: string
-  processingMethod: string
-  variants: ProductVariantPayload[]
-  images: ProductImagePayload[]
-}
-
-export interface ProductUpdatePayload extends Omit<
-  ProductPayload,
-  'images' | 'variants'
-> {
-  addImages?: ProductImagePayload[]
-  removeImageIds?: string[]
-  updateImages?: ProductImageUpdatePayload[]
 }
 
 export interface Product {
@@ -81,7 +49,7 @@ export interface Product {
   tastingNotes: string
   origin: string
   processingMethod: string
-  variants: ProductVariantPayload[]
+  variants: ProductVariantSummary[]
   images: ProductImage[]
   createdAt: string | null
   updatedAt: string | null
