@@ -8,6 +8,7 @@ import {
 import { RoastLevel } from '@repo/constants'
 
 const ROAST_LEVEL_SET = new Set<string>(Object.values(RoastLevel))
+const ROAST_SORT_VALUES: readonly string[] = Object.values(ROAST_SORT_VALUE)
 
 export function parseOptionalQueryParam(value: string | null): string | null {
   const v = value?.trim() ?? ''
@@ -78,18 +79,13 @@ export function parseRoastLevelsParam(value: string | null): RoastLevel[] {
   return out
 }
 
+function isRoastSortValue(value: string): value is RoastSortValue {
+  return ROAST_SORT_VALUES.includes(value)
+}
+
 export function parseRoastSortParam(value: string | null): RoastSortValue {
   const v = value?.trim() ?? ''
-  if (
-    v === ROAST_SORT_VALUE.CURATED ||
-    v === ROAST_SORT_VALUE.PRICE_ASC ||
-    v === ROAST_SORT_VALUE.PRICE_DESC ||
-    v === ROAST_SORT_VALUE.NAME_ASC ||
-    v === ROAST_SORT_VALUE.NAME_DESC
-  ) {
-    return v
-  }
-  return ROAST_SORT_VALUE.CURATED
+  return isRoastSortValue(v) ? v : ROAST_SORT_VALUE.CURATED
 }
 
 /** Shop /roasts: list + filters in query string (real API + shareable state). */

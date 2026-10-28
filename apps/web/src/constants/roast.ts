@@ -35,13 +35,18 @@ export const ROAST_LEVEL_SPECTRUM_PERCENT: Record<RoastLevel, number> = {
   [RoastLevel.DARK]: 85,
 }
 
-export const ROAST_SORT_OPTIONS: OptionItem[] = [
-  { value: ROAST_SORT_VALUE.CURATED, label: 'Curated Selection' },
-  { value: ROAST_SORT_VALUE.PRICE_ASC, label: 'Price: Low to High' },
-  { value: ROAST_SORT_VALUE.PRICE_DESC, label: 'Price: High to Low' },
-  { value: ROAST_SORT_VALUE.NAME_ASC, label: 'Name: A to Z' },
-  { value: ROAST_SORT_VALUE.NAME_DESC, label: 'Name: Z to A' },
-]
+// A Record, so tsc flags a new ProductSortBy value that has no label yet.
+export const ROAST_SORT_LABELS: Record<RoastSortValue, string> = {
+  [ROAST_SORT_VALUE.CURATED]: 'Curated Selection',
+  [ROAST_SORT_VALUE.PRICE_ASC]: 'Price: Low to High',
+  [ROAST_SORT_VALUE.PRICE_DESC]: 'Price: High to Low',
+  [ROAST_SORT_VALUE.NAME_ASC]: 'Name: A to Z',
+  [ROAST_SORT_VALUE.NAME_DESC]: 'Name: Z to A',
+}
+
+export const ROAST_SORT_OPTIONS: OptionItem[] = Object.entries(
+  ROAST_SORT_LABELS,
+).map(([value, label]) => ({ value, label }))
 
 export interface RoastCollection {
   id: string
