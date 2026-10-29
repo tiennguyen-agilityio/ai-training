@@ -15,6 +15,8 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
 
+jest.mock('@clerk/nextjs', () => ({ useAuth: jest.fn() }))
+
 const mockUsePathname = jest.mocked(usePathname)
 
 const mockCategory: Category = {

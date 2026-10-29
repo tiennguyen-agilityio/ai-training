@@ -76,7 +76,7 @@ export const DIALOG_MESSAGES = {
     DELETE: {
       ACTION: 'Remove',
       DESCRIPTION: (name: string, slug: string) =>
-        `This will remove ${name} (${slug}). It may still appear in this list with the Removed badge.`,
+        `This will remove ${name} (${slug}).`,
     },
   },
   PRODUCT: {
