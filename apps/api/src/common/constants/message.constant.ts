@@ -1,3 +1,8 @@
+import {
+  DISCOUNT_FIXED_MESSAGE,
+  DISCOUNT_PERCENT_MESSAGE,
+} from '@repo/schemas';
+
 export const ERROR_MESSAGES = {
   USER: {
     EMAIL_EXISTS: 'Email already exists',
@@ -27,6 +32,9 @@ export const ERROR_MESSAGES = {
   PRODUCT_VARIANT: {
     NOT_FOUND: 'Product variant not found',
     SKU_EXISTS: 'SKU already exists',
+    MAX_FIXED_DISCOUNT_VALUE: DISCOUNT_FIXED_MESSAGE,
+    MAX_PERCENT_DISCOUNT_VALUE: DISCOUNT_PERCENT_MESSAGE,
+    DUPLICATE_IDS: 'Each variant may appear only once in updateVariants',
   },
   PRODUCT: {
     NOT_FOUND: 'Product not found',
@@ -75,6 +83,12 @@ export const ERROR_DESCRIPTIONS = {
     SKU_EXISTS:
       'A variant with this SKU already exists. Please choose a different SKU.',
     NOT_FOUND: 'The variant might have been deleted, or the id is incorrect.',
+    MAX_FIXED_DISCOUNT_VALUE:
+      'A fixed discount must leave a selling price above 0. Lower the discount or raise the price.',
+    MAX_PERCENT_DISCOUNT_VALUE:
+      'A percent discount must be below 100. Lower the discount value.',
+    DUPLICATE_IDS:
+      'The same variant id is listed more than once. Send each variant once.',
   },
   PRODUCT_IMAGE: {
     NOT_FOUND: 'The image might have been deleted, or the id is incorrect.',

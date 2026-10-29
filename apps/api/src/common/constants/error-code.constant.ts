@@ -26,6 +26,9 @@ export const ERROR_CODES = {
   PRODUCT_VARIANT: {
     SKU_EXISTS: 'productVariantSkuExists',
     NOT_FOUND: 'productVariantNotFound',
+    MAX_FIXED_DISCOUNT_VALUE: 'maxFixedDiscountValue',
+    MAX_PERCENT_DISCOUNT_VALUE: 'maxPercentDiscountValue',
+    DUPLICATE_IDS: 'duplicateProductVariantIds',
   },
   PRODUCT_IMAGE: {
     NOT_FOUND: 'productImageNotFound',

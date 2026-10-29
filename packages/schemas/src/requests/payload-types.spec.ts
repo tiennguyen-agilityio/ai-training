@@ -3,6 +3,8 @@ import type {
   CreateCategoryPayload,
   CreateProductPayload,
   CreateProductVariantPayload,
+  UpdateProductPayload,
+  UpdateProductVariantPayload,
   UpdateUserPayload,
 } from '../index.js';
 
@@ -43,6 +45,31 @@ describe('payload types', () => {
     // @ts-expect-error name is a string
     const numericName: CreateCategoryPayload = { name: 1 };
 
-    expect([product, objectPrice, noSku, badRole, numericName]).toHaveLength(5);
+    const update = {
+      updateVariants: [
+        { id: '7d5b1c1e-1d2f-4c6a-9b1e-2f3a4b5c6d7e', price: 120 },
+      ],
+    } satisfies UpdateProductPayload;
+    const nullType: CreateProductVariantPayload = {
+      ...variant,
+      // @ts-expect-error discountType is not nullable
+      discountType: null,
+    };
+    const nullUpdateType: UpdateProductVariantPayload = {
+      id: '7d5b1c1e-1d2f-4c6a-9b1e-2f3a4b5c6d7e',
+      // @ts-expect-error discountType is not nullable
+      discountType: null,
+    };
+
+    expect([
+      product,
+      objectPrice,
+      noSku,
+      badRole,
+      numericName,
+      update,
+      nullType,
+      nullUpdateType,
+    ]).toHaveLength(8);
   });
 });

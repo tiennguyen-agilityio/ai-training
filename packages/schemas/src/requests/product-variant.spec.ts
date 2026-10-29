@@ -1,6 +1,8 @@
 import { DiscountType, ProductUnit } from '@repo/constants';
-import { DISCOUNT_PERCENT_MESSAGE } from '../fields/discount.js';
-import { createProductVariantSchema } from './product-variant.js';
+import {
+  createProductVariantSchema,
+  updateProductVariantSchema,
+} from './product-variant.js';
 
 const variant = {
   sku: 'SKU-001',
@@ -20,15 +22,42 @@ describe('createProductVariantSchema', () => {
     });
   });
 
-  it('rejects a percent discount of 100 with the shared message', () => {
+  it('leaves the percent rule to the API', () => {
+    expect(
+      createProductVariantSchema.safeParse({ ...variant, discountValue: 100 })
+        .success,
+    ).toBe(true);
+  });
+
+  it('rejects a null discountValue', () => {
     const result = createProductVariantSchema.safeParse({
       ...variant,
-      discountValue: 100,
+      discountValue: null,
     });
 
+    expect(result.error?.issues.map(({ path }) => path)).toEqual([
+      ['discountValue'],
+    ]);
+  });
+
+  it('rejects a null discountType', () => {
+    const result = createProductVariantSchema.safeParse({
+      ...variant,
+      discountType: null,
+    });
+
+    expect(result.error?.issues.map(({ path }) => path)).toEqual([
+      ['discountType'],
+    ]);
+  });
+
+  it('accepts a variant without discount fields', () => {
+    const { sku, weight, unit, price } = variant;
+
     expect(
-      result.error?.issues.map(({ path, message }) => ({ path, message })),
-    ).toEqual([{ path: ['discountValue'], message: DISCOUNT_PERCENT_MESSAGE }]);
+      createProductVariantSchema.safeParse({ sku, weight, unit, price })
+        .success,
+    ).toBe(true);
   });
 
   it('rejects a non-numeric price', () => {
@@ -38,5 +67,54 @@ describe('createProductVariantSchema', () => {
     });
 
     expect(result.error?.issues.map(({ path }) => path)).toEqual([['price']]);
+  });
+});
+
+describe('updateProductVariantSchema', () => {
+  const id = '7d5b1c1e-1d2f-4c6a-9b1e-2f3a4b5c6d7e';
+
+  it('accepts an id with only quantity', () => {
+    expect(updateProductVariantSchema.parse({ id, quantity: 50 })).toEqual({
+      id,
+      quantity: 50,
+    });
+  });
+
+  it('rejects a null discountType', () => {
+    const result = updateProductVariantSchema.safeParse({
+      id,
+      discountType: null,
+    });
+
+    expect(result.error?.issues.map(({ path }) => path)).toEqual([
+      ['discountType'],
+    ]);
+  });
+
+  it('rejects a null discountValue', () => {
+    const result = updateProductVariantSchema.safeParse({
+      id,
+      discountValue: null,
+    });
+
+    expect(result.error?.issues.map(({ path }) => path)).toEqual([
+      ['discountValue'],
+    ]);
+  });
+
+  it('coerces string numbers', () => {
+    expect(
+      updateProductVariantSchema.parse({
+        id,
+        price: '120',
+        discountValue: '12.5',
+      }),
+    ).toMatchObject({ price: '120', discountValue: '12.5' });
+  });
+
+  it('rejects a missing id', () => {
+    const result = updateProductVariantSchema.safeParse({ quantity: 50 });
+
+    expect(result.error?.issues.map(({ path }) => path)).toEqual([['id']]);
   });
 });

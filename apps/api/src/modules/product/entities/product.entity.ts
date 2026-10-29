@@ -1,4 +1,4 @@
-import { Collection, Opt } from '@mikro-orm/core';
+import { Collection, Opt, QueryOrder } from '@mikro-orm/core';
 import {
   Entity,
   Enum,
@@ -52,6 +52,9 @@ export class Product extends BaseEntity {
   @OneToMany(() => ProductImage, (image) => image.product)
   images = new Collection<ProductImage>(this);
 
-  @OneToMany(() => ProductVariant, (variant) => variant.product)
+  // Oldest first, so variants[0] is the product's first variant everywhere.
+  @OneToMany(() => ProductVariant, (variant) => variant.product, {
+    orderBy: { createdAt: QueryOrder.ASC },
+  })
   variants = new Collection<ProductVariant>(this);
 }

@@ -1,6 +1,10 @@
 import { API_FALLBACK_ERRORS } from '@/constants/messages'
 import { API_ROUTES } from '@/constants/routes'
-import type { Response as ApiResponse, ResponseMeta } from '@/types/api'
+import type {
+  ApiErrorResponse,
+  Response as ApiResponse,
+  ResponseMeta,
+} from '@/types/api'
 import { apiClient } from '@/services/api'
 import { ProductStatus, RoastLevel } from '@repo/constants'
 import type {
@@ -200,7 +204,13 @@ export async function updateProduct(
   body: CreateProductPayload | UpdateProductPayload,
   options: Pick<ProductOptions, 'getToken'> = {},
 ): Promise<
-  { ok: true; product: Product } | { ok: false; error: string; status?: number }
+  | { ok: true; product: Product }
+  | {
+      ok: false
+      error: string
+      status?: number
+      errorResponse?: ApiErrorResponse
+    }
 > {
   const trimmed = id.trim()
   const url = `${API_ROUTES.PRODUCTS}/${encodeURIComponent(trimmed)}`

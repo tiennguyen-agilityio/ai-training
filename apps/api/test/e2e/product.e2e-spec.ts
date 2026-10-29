@@ -24,6 +24,7 @@ import { initTestApp } from './../utils/init-test-app.util.js';
 import type { User } from './../../src/modules/user/entities/user.entity.js';
 import type { Category } from './../../src/modules/category/entities/category.entity.js';
 import type { Product } from './../../src/modules/product/entities/product.entity.js';
+import { ProductVariant } from './../../src/modules/product-variant/entities/product-variant.entity.js';
 import { ERROR_CODES } from './../../src/common/constants/error-code.constant.js';
 import { slugFrom } from './../../src/common/utils/slug.util.js';
 
@@ -139,6 +140,59 @@ describe('ProductController (e2e)', () => {
     (getAuth as Mock).mockReturnValue({ userId: clerkId });
   };
 
+  type VariantBody = {
+    id: string;
+    price: number;
+    discountType: DiscountType;
+    discountValue: number;
+    quantity: number;
+  };
+
+  // A product with one variant priced 100, PERCENT 10, quantity 30, created
+  // through the service (no session needed).
+  const createPricedProduct = async (
+    variant: {
+      price?: string;
+      discountType?: DiscountType;
+      discountValue?: string;
+    } = {},
+  ): Promise<{ productId: string; variantId: string }> => {
+    const category = await createTestCategory();
+    const product = await RequestContext.create(orm.em, () =>
+      productService.create({
+        categoryId: category.id,
+        name: uniqueName('Priced Product E2E'),
+        ...requiredProductFields(),
+        images: [],
+        variants: [
+          {
+            sku: uniqueName('SKU-PRICED'),
+            weight: '250',
+            unit: ProductUnit.G,
+            price: '100',
+            discountType: DiscountType.PERCENT,
+            discountValue: '10',
+            quantity: 30,
+            ...variant,
+          },
+        ],
+      }),
+    );
+    createdProductIds.push(product.id);
+    return {
+      productId: product.id,
+      variantId: product.variants.getItems()[0].id,
+    };
+  };
+
+  const getVariants = async (productId: string): Promise<VariantBody[]> => {
+    const response = await request(app.getHttpServer())
+      .get(`${API_BASE_PATH}/products/${productId}`)
+      .expect(200);
+    return (response.body as { data: { variants: VariantBody[] } }).data
+      .variants;
+  };
+
   describe('public GET routes', () => {
     it('GET /products responds 200 with the paginated envelope, no session required', async () => {
       const response = await request(app.getHttpServer())
@@ -178,6 +232,93 @@ describe('ProductController (e2e)', () => {
       });
       expect(body.data.images).toEqual([]);
       expect(body.data.variants).toEqual([]);
+    });
+
+    const createProductWithVariant = async (): Promise<Product> => {
+      const category = await createTestCategory();
+      const product = await RequestContext.create(orm.em, () =>
+        productService.create({
+          categoryId: category.id,
+          name: uniqueName('Variant Read E2E'),
+          ...requiredProductFields(),
+          images: [],
+          variants: [
+            {
+              sku: uniqueName('SKU-READ'),
+              weight: '250',
+              unit: ProductUnit.G,
+              price: '120',
+              quantity: 30,
+            },
+          ],
+        }),
+      );
+      createdProductIds.push(product.id);
+      return product;
+    };
+
+    // Writes columns the API itself no longer writes (null discounts, an older
+    // createdAt), as data stored before this change would have them.
+    const setVariantColumns = (
+      id: string,
+      data: Partial<
+        Pick<ProductVariant, 'discountType' | 'discountValue' | 'createdAt'>
+      >,
+    ): Promise<number> =>
+      orm.em.fork().nativeUpdate(ProductVariant, { id }, data);
+
+    it('GET /products/:id reads a stored null/null discount as PERCENT 0', async () => {
+      const product = await createProductWithVariant();
+      const [variant] = product.variants.getItems();
+      await setVariantColumns(variant.id, {
+        discountType: null,
+        discountValue: null,
+      });
+
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/products/${product.id}`)
+        .expect(200);
+
+      const body = response.body as {
+        data: {
+          variants: Array<{
+            discountType: string;
+            discountValue: number;
+            quantity: number;
+          }>;
+        };
+      };
+      expect(body.data.variants[0]).toMatchObject({
+        discountType: DiscountType.PERCENT,
+        discountValue: 0,
+        quantity: 30,
+      });
+    });
+
+    it('GET /products/:id lists variants oldest first', async () => {
+      const product = await createProductWithVariant();
+      const [first] = product.variants.getItems();
+      const older = await RequestContext.create(orm.em, () =>
+        productVariantService.create({
+          productId: product.id,
+          sku: uniqueName('SKU-OLDER'),
+          weight: '500',
+          unit: ProductUnit.G,
+          price: '200',
+        }),
+      );
+      await setVariantColumns(older.id, {
+        createdAt: new Date(first.createdAt.getTime() - 60_000),
+      });
+
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/products/${product.id}`)
+        .expect(200);
+
+      const body = response.body as {
+        data: { variants: Array<{ id: string }> };
+      };
+      expect(body.data.variants.map((v) => v.id)).toEqual([older.id, first.id]);
     });
 
     it('GET /products/:id responds 404 for a missing product', async () => {
@@ -588,6 +729,19 @@ describe('ProductController (e2e)', () => {
   });
 
   describe('mutating routes with an authenticated non-ADMIN user', () => {
+    it('PATCH /products/:id with updateVariants responds 403 for a non-admin and leaves the variant unchanged', async () => {
+      const user = await createTestUser(UserRole.USER);
+      const { productId, variantId } = await createPricedProduct();
+      mockSessionFor(user.clerkId);
+
+      await request(app.getHttpServer())
+        .patch(`${API_BASE_PATH}/products/${productId}`)
+        .send({ updateVariants: [{ id: variantId, price: 120 }] })
+        .expect(403);
+
+      expect((await getVariants(productId))[0].price).toBe(100);
+    });
+
     it('POST /products responds 403', async () => {
       const user = await createTestUser(UserRole.USER);
       const category = await createTestCategory();
@@ -809,12 +963,12 @@ describe('ProductController (e2e)', () => {
         .expect(400);
     });
 
-    it('POST /products responds 400 for a PERCENT discount of 100 or more', async () => {
+    it('POST /products responds 400 maxPercentDiscountValue for PERCENT 100', async () => {
       const admin = await createTestUser(UserRole.ADMIN);
       const category = await createTestCategory();
       mockSessionFor(admin.clerkId);
 
-      await request(app.getHttpServer())
+      const response = await request(app.getHttpServer())
         .post(`${API_BASE_PATH}/products`)
         .send({
           categoryId: category.id,
@@ -833,9 +987,116 @@ describe('ProductController (e2e)', () => {
           ],
         })
         .expect(400);
+
+      expect(response.body).toMatchObject({
+        message: 'Validation failed',
+        errors: [
+          {
+            errCode: ERROR_CODES.PRODUCT_VARIANT.MAX_PERCENT_DISCOUNT_VALUE,
+            field: 'variants.0.discountValue',
+            message:
+              'DiscountValue must be less than 100 when DiscountType is PERCENT',
+          },
+        ],
+      });
     });
 
-    it('POST /products responds 201 for a FIXED discount above 100', async () => {
+    it('POST /products responds 400 maxPercentDiscountValue for a value of 150 without a type', async () => {
+      const admin = await createTestUser(UserRole.ADMIN);
+      const category = await createTestCategory();
+      mockSessionFor(admin.clerkId);
+
+      const response = await request(app.getHttpServer())
+        .post(`${API_BASE_PATH}/products`)
+        .send({
+          categoryId: category.id,
+          name: uniqueName('Untyped Discount E2E'),
+          ...requiredProductFields(),
+          images: validImages(),
+          variants: [{ ...validVariant('SKU-UNTYPED'), discountValue: 150 }],
+        })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        errors: [
+          {
+            errCode: ERROR_CODES.PRODUCT_VARIANT.MAX_PERCENT_DISCOUNT_VALUE,
+            field: 'variants.0.discountValue',
+          },
+        ],
+      });
+    });
+
+    it('POST /products responds 400 maxFixedDiscountValue for price 120 with FIXED 150', async () => {
+      const admin = await createTestUser(UserRole.ADMIN);
+      const category = await createTestCategory();
+      mockSessionFor(admin.clerkId);
+      const name = uniqueName('Fixed Above Price E2E');
+
+      const response = await request(app.getHttpServer())
+        .post(`${API_BASE_PATH}/products`)
+        .send({
+          categoryId: category.id,
+          name,
+          ...requiredProductFields(),
+          images: validImages(),
+          variants: [
+            {
+              ...validVariant('SKU-FIX-ABOVE'),
+              price: 120,
+              discountType: DiscountType.FIXED,
+              discountValue: 150,
+            },
+          ],
+        })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        message: 'Validation failed',
+        errors: [
+          {
+            errCode: ERROR_CODES.PRODUCT_VARIANT.MAX_FIXED_DISCOUNT_VALUE,
+            field: 'variants.0.discountValue',
+            message: 'Fixed discount must be less than base price',
+          },
+        ],
+      });
+
+      const list = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/products`)
+        .query({ search: name })
+        .expect(200);
+      expect((list.body as { data: unknown[] }).data).toHaveLength(0);
+    });
+
+    it('POST /products without a discount stores PERCENT 0', async () => {
+      const admin = await createTestUser(UserRole.ADMIN);
+      const category = await createTestCategory();
+      mockSessionFor(admin.clerkId);
+
+      const response = await request(app.getHttpServer())
+        .post(`${API_BASE_PATH}/products`)
+        .send({
+          categoryId: category.id,
+          name: uniqueName('No Discount E2E'),
+          ...requiredProductFields(),
+          images: validImages(),
+          variants: [validVariant('SKU-NODISC')],
+        })
+        .expect(201);
+
+      const body = response.body as {
+        data: { id: string; variants: Array<{ id: string }> };
+      };
+      createdProductIds.push(body.data.id);
+      const stored = await orm.em
+        .fork()
+        .findOneOrFail(ProductVariant, { id: body.data.variants[0].id });
+      expect(stored.discountType).toBe(DiscountType.PERCENT);
+      expect(Number(stored.discountValue)).toBe(0);
+    });
+
+    it('POST /products responds 201 for a FIXED discount above 100 below the price', async () => {
       const admin = await createTestUser(UserRole.ADMIN);
       const category = await createTestCategory();
       mockSessionFor(admin.clerkId);
@@ -852,7 +1113,7 @@ describe('ProductController (e2e)', () => {
               sku: uniqueName('SKU-FIX'),
               weight: 1,
               unit: ProductUnit.G,
-              price: 500,
+              price: 600,
               discountType: DiscountType.FIXED,
               discountValue: 500,
             },
@@ -862,6 +1123,31 @@ describe('ProductController (e2e)', () => {
 
       const body = response.body as { data: { id: string } };
       createdProductIds.push(body.data.id);
+    });
+
+    it('PATCH /products/:id responds 400 duplicateProductVariantIds for the same variant id twice', async () => {
+      const admin = await createTestUser(UserRole.ADMIN);
+      mockSessionFor(admin.clerkId);
+      const variantId = '7d5b1c1e-1d2f-4c6a-9b1e-2f3a4b5c6d7e';
+
+      const response = await request(app.getHttpServer())
+        .patch(`${API_BASE_PATH}/products/7d5b1c1e-1d2f-4c6a-9b1e-2f3a4b5c6d70`)
+        .send({
+          updateVariants: [
+            { id: variantId, price: 10 },
+            { id: variantId, quantity: 1 },
+          ],
+        })
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        errors: [
+          {
+            errCode: ERROR_CODES.PRODUCT_VARIANT.DUPLICATE_IDS,
+            field: 'updateVariants',
+          },
+        ],
+      });
     });
 
     it('POST /products responds 400 when an image sortOrder exceeds the max bound', async () => {
@@ -960,6 +1246,189 @@ describe('ProductController (e2e)', () => {
           ['min', 'variants.0.weight'],
         ],
       );
+    });
+
+    describe('PATCH /products/:id updateVariants', () => {
+      const patch = async (productId: string, body: object) => {
+        const admin = await createTestUser(UserRole.ADMIN);
+        mockSessionFor(admin.clerkId);
+        return request(app.getHttpServer())
+          .patch(`${API_BASE_PATH}/products/${productId}`)
+          .send(body);
+      };
+
+      it("PATCH /products/:id updates the first variant's price and GET returns it", async () => {
+        const { productId, variantId } = await createPricedProduct();
+
+        await patch(productId, {
+          updateVariants: [{ id: variantId, price: 120 }],
+        }).then((response) => expect(response.status).toBe(200));
+
+        mockSessionFor(null);
+        expect((await getVariants(productId))[0]).toMatchObject({
+          id: variantId,
+          price: 120,
+        });
+      });
+
+      it('PATCH /products/:id with only quantity keeps price and discount', async () => {
+        const { productId, variantId } = await createPricedProduct();
+
+        await patch(productId, {
+          updateVariants: [{ id: variantId, quantity: 50 }],
+        }).then((response) => expect(response.status).toBe(200));
+
+        expect((await getVariants(productId))[0]).toMatchObject({
+          price: 100,
+          discountType: DiscountType.PERCENT,
+          discountValue: 10,
+          quantity: 50,
+        });
+      });
+
+      it('PATCH /products/:id responds 400 maxFixedDiscountValue for FIXED 150 on a price of 120', async () => {
+        const { productId, variantId } = await createPricedProduct({
+          price: '120',
+        });
+
+        const response = await patch(productId, {
+          name: uniqueName('Should Not Rename'),
+          updateVariants: [
+            {
+              id: variantId,
+              discountType: DiscountType.FIXED,
+              discountValue: 150,
+            },
+          ],
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toMatchObject({
+          message: 'Validation failed',
+          errors: [
+            {
+              errCode: ERROR_CODES.PRODUCT_VARIANT.MAX_FIXED_DISCOUNT_VALUE,
+              field: 'updateVariants.0.discountValue',
+              message: 'Fixed discount must be less than base price',
+            },
+          ],
+        });
+        const product = await request(app.getHttpServer())
+          .get(`${API_BASE_PATH}/products/${productId}`)
+          .expect(200);
+        const body = product.body as {
+          data: { name: string; variants: VariantBody[] };
+        };
+        expect(body.data.name).not.toMatch(/^Should Not Rename/);
+        expect(body.data.variants[0]).toMatchObject({
+          price: 120,
+          discountType: DiscountType.PERCENT,
+          discountValue: 10,
+        });
+      });
+
+      it('PATCH /products/:id responds 400 maxPercentDiscountValue for PERCENT 100', async () => {
+        const { productId, variantId } = await createPricedProduct();
+
+        const response = await patch(productId, {
+          updateVariants: [
+            {
+              id: variantId,
+              discountType: DiscountType.PERCENT,
+              discountValue: 100,
+            },
+          ],
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toMatchObject({
+          errors: [
+            {
+              errCode: ERROR_CODES.PRODUCT_VARIANT.MAX_PERCENT_DISCOUNT_VALUE,
+              field: 'updateVariants.0.discountValue',
+              message:
+                'DiscountValue must be less than 100 when DiscountType is PERCENT',
+            },
+          ],
+        });
+        expect((await getVariants(productId))[0].discountValue).toBe(10);
+      });
+
+      it("PATCH /products/:id responds 404 productVariantNotFound for another product's variant", async () => {
+        const { productId } = await createPricedProduct();
+        const other = await createPricedProduct();
+
+        const response = await patch(productId, {
+          updateVariants: [{ id: other.variantId, price: 90 }],
+        });
+
+        expect(response.status).toBe(404);
+        expect(response.body).toMatchObject({
+          message: 'Item not found',
+          errors: [
+            {
+              errCode: ERROR_CODES.PRODUCT_VARIANT.NOT_FOUND,
+              message: 'Product variant not found',
+            },
+          ],
+        });
+        expect((await getVariants(other.productId))[0].price).toBe(100);
+      });
+
+      it('PATCH /products/:id responds 400 on updateVariants.0.discountType for null', async () => {
+        const { productId, variantId } = await createPricedProduct();
+
+        const response = await patch(productId, {
+          updateVariants: [{ id: variantId, discountType: null }],
+        });
+
+        expect(response.status).toBe(400);
+        expect(
+          (response.body as { errors: Array<{ field: string }> }).errors.map(
+            (error) => error.field,
+          ),
+        ).toEqual(['updateVariants.0.discountType']);
+        expect((await getVariants(productId))[0].discountType).toBe(
+          DiscountType.PERCENT,
+        );
+      });
+
+      it('PATCH /products/:id responds 400 on updateVariants.0.discountValue for null', async () => {
+        const { productId, variantId } = await createPricedProduct();
+
+        const response = await patch(productId, {
+          updateVariants: [{ id: variantId, discountValue: null }],
+        });
+
+        expect(response.status).toBe(400);
+        expect(
+          (response.body as { errors: Array<{ field: string }> }).errors.map(
+            (error) => error.field,
+          ),
+        ).toEqual(['updateVariants.0.discountValue']);
+        expect((await getVariants(productId))[0].discountValue).toBe(10);
+      });
+
+      it('PATCH /products/:id updates the second variant only', async () => {
+        const { productId, variantId } = await createPricedProduct();
+        const second = await RequestContext.create(orm.em, () =>
+          productVariantService.create({
+            productId,
+            sku: uniqueName('SKU-SECOND'),
+            weight: '500',
+            unit: ProductUnit.G,
+            price: '200',
+          }),
+        );
+
+        await patch(productId, {
+          updateVariants: [{ id: second.id, price: 90 }],
+        }).then((response) => expect(response.status).toBe(200));
+
+        const variants = await getVariants(productId);
+        expect(variants.find((v) => v.id === second.id)?.price).toBe(90);
+        expect(variants.find((v) => v.id === variantId)?.price).toBe(100);
+      });
     });
 
     it('PATCH /products/:id responds 200 and updates the product', async () => {

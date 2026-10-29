@@ -55,6 +55,7 @@ import BrainIcon from '@/components/icon/BrainIcon'
 import { normalizeNumericInput } from '@/utils/number'
 import { cn } from '@/utils/styles'
 import { getCategoryOptions, renderProductSku } from '@/utils/common'
+import { toCreateVariantPayload } from '@/utils/product'
 
 const { PRICE } = VALIDATION_RULES
 
@@ -337,20 +338,10 @@ const PageContent = () => {
       origin: data.origin.trim(),
       processingMethod: data.processingMethod.trim(),
       variants: [
-        {
-          sku: renderProductSku({
-            weight: Number(data.weight),
-            unit: data.unit,
-          }),
-          weight: Number(data.weight),
-          unit: data.unit,
-          price: Number(data.price),
-          discountType:
-            Number(data.discountValue) > 0 ? data.discountType : null,
-          discountValue:
-            Number(data.discountValue) > 0 ? Number(data.discountValue) : null,
-          quantity: Number(data.quantity),
-        },
+        toCreateVariantPayload(
+          { ...data, unit: data.unit, quantity: data.quantity },
+          renderProductSku({ weight: Number(data.weight), unit: data.unit }),
+        ),
       ],
       images: buildImagesPayload({
         avatarUrl: uploadedImages.avatarUrl,

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Product } from '../entities/product.entity.js';
-import { ProductStatus, VALIDATION_RULES } from '@repo/constants';
+import { DiscountType, ProductStatus, VALIDATION_RULES } from '@repo/constants';
 import {
   type CreateProductInput,
   type UpdateProductInput,
@@ -16,6 +16,7 @@ import { ERROR_CODES } from '../../../common/constants/error-code.constant.js';
 import {
   DuplicateResourceException,
   ItemNotFoundException,
+  ValidationException,
 } from '../../../common/exceptions/base.exception.js';
 import { PaginatedResult } from '../../../common/dto/pagination.dto.js';
 import { QueryParams } from '../../../common/dto/query-params.dto.js';
@@ -24,7 +25,11 @@ import { assignDefinedFields } from '../../../common/utils/object.util.js';
 import { CategoryService } from '../../category/services/category.service.js';
 import { ProductImage } from '../../product-image/entities/product-image.entity.js';
 import { ProductImageService } from '../../product-image/services/product-image.service.js';
+import type { ProductVariant } from '../../product-variant/entities/product-variant.entity.js';
 import { ProductVariantService } from '../../product-variant/services/product-variant.service.js';
+import { findDiscountRuleViolation } from '../../product-variant/utils/discount-rule.util.js';
+
+type VariantPatch = NonNullable<UpdateProductInput['updateVariants']>[number];
 
 @Injectable()
 export class ProductService {
@@ -123,12 +128,23 @@ export class ProductService {
         }
       }
 
-      const { categoryId, removeImageIds, updateImages, addImages, ...rest } =
-        data;
+      const {
+        categoryId,
+        removeImageIds,
+        updateImages,
+        addImages,
+        updateVariants,
+        ...rest
+      } = data;
 
       if (categoryId !== undefined && categoryId !== product.category.id) {
         product.category = await this.categoryService.findOne(categoryId);
       }
+
+      const applyVariantChanges = this.checkVariantChanges(
+        product,
+        updateVariants,
+      );
 
       this.applyImageChanges(product, {
         removeImageIds,
@@ -136,6 +152,7 @@ export class ProductService {
         addImages,
       });
 
+      applyVariantChanges();
       assignDefinedFields(product, rest);
       if (rest.name !== undefined) {
         product.slug = slugFrom(rest.name);
@@ -151,6 +168,66 @@ export class ProductService {
     const product = await this.findOne(id);
     product.status = ProductStatus.ARCHIVED;
     await this.productRepository.softDelete(product);
+  }
+
+  /**
+   * Checks each variant patch against the product: the variant must be one of
+   * its variants, and the values it would end up with (stored values, with a
+   * stored null discount read as PERCENT / 0, overlaid with the patch) must
+   * pass both discount rules, even when the patch leaves the discount alone.
+   * Returns the step that applies the patches, so the caller changes nothing
+   * until every check, images included, has passed. The resolved discount is
+   * written too, so a variant stored without one is saved as PERCENT 0.
+   */
+  private checkVariantChanges(
+    product: Product,
+    updateVariants: VariantPatch[] = [],
+  ): () => void {
+    if (!updateVariants.length) return () => undefined;
+
+    const variantById = new Map(
+      product.variants.getItems().map((variant) => [variant.id, variant]),
+    );
+
+    const changes = updateVariants.map((patch, index) => {
+      const variant = variantById.get(patch.id);
+      if (!variant) {
+        throw new ItemNotFoundException({
+          errCode: ERROR_CODES.PRODUCT_VARIANT.NOT_FOUND,
+          field: `updateVariants.${index}.id`,
+          message: ERROR_MESSAGES.PRODUCT_VARIANT.NOT_FOUND,
+          description: ERROR_DESCRIPTIONS.PRODUCT_VARIANT.NOT_FOUND,
+        });
+      }
+
+      const next = {
+        price: patch.price ?? variant.price,
+        discountType:
+          patch.discountType ?? variant.discountType ?? DiscountType.PERCENT,
+        discountValue: patch.discountValue ?? variant.discountValue ?? '0',
+        quantity: patch.quantity ?? variant.quantity,
+      };
+
+      const violation = findDiscountRuleViolation(next);
+      if (violation) {
+        throw new ValidationException([
+          {
+            errCode: violation.errCode,
+            field: `updateVariants.${index}.discountValue`,
+            message: violation.message,
+            description: violation.description,
+          },
+        ]);
+      }
+
+      return { variant, next };
+    });
+
+    return () => {
+      for (const { variant, next } of changes) {
+        Object.assign<ProductVariant, typeof next>(variant, next);
+      }
+    };
   }
 
   /**

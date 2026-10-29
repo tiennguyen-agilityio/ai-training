@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { type ComponentProps, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { BadgeCheck, Leaf, Plus, X } from 'lucide-react'
@@ -9,10 +9,11 @@ import { toast } from 'sonner'
 
 import type { Product } from '@/types/product'
 import type { UpdateProductPayload } from '@repo/schemas'
-import { ProductStatus, RoastLevel } from '@repo/constants'
+import { DiscountType, ProductStatus, RoastLevel } from '@repo/constants'
 
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { CATEGORY_QUERY_OPTIONS } from '@/constants/category'
+import { DISCOUNT_TYPE_OPTIONS } from '@/constants/product'
 import { ROUTES, dashboardProductEditPath } from '@/constants/routes'
 
 import { useCategories } from '@/hooks/useCategory'
@@ -38,16 +39,21 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import PublishIcon from '@/components/icon/PublishIcon'
 import BrainIcon from '@/components/icon/BrainIcon'
+import DollarIcon from '@/components/icon/DollarIcon'
 import { Spinner } from '@/components/ui/spinner'
 
+import { normalizeNumericInput } from '@/utils/number'
+import { ServiceError } from '@/utils/query'
 import { cn } from '@/utils/styles'
 import { getCategoryOptions } from '@/utils/common'
 import {
   buildProductImagesPayload,
   buildProductUpdateImageDiff,
+  buildVariantUpdates,
   mapProductToEditFormValues,
   parseTastingNotesString,
   splitProductImagesForGallery,
+  variantFieldErrors,
 } from '@/utils/product'
 
 interface LocalImage {
@@ -74,8 +80,61 @@ const EDIT_FORM_DEFAULTS: EditProductFormValues = {
   roastLevel: RoastLevel.LIGHT,
   isOrganic: true,
   isFairTrade: false,
+  price: 0,
+  discountType: DiscountType.PERCENT,
+  discountValue: 0,
+  quantity: 0,
   origin: '',
   processingMethod: '',
+}
+
+const parseFormNumber = (value: string): number | undefined => {
+  const normalized = normalizeNumericInput(value)
+  if (!normalized) return undefined
+
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+const toInputText = (value: number | '' | undefined) =>
+  value === undefined || value === '' ? '' : String(value)
+
+type NumericFieldProps = Omit<
+  ComponentProps<typeof Input>,
+  'value' | 'onChange'
+> & {
+  value: number | '' | undefined
+  onValueChange: (value: number | '') => void
+}
+
+// A numeric form field that keeps the text being typed ("12." stays "12.")
+// and follows the form value when it changes from outside (reset). The shared
+// Input reads defaultValue only once, so the form value is passed as value.
+// An empty input is '' (undefined would make the form fall back to its
+// default value); the form schema reports it as required.
+const NumericField = ({
+  value,
+  onValueChange,
+  ...props
+}: NumericFieldProps) => {
+  const [text, setText] = useState(() => toInputText(value))
+
+  useEffect(() => {
+    setText((current) =>
+      (parseFormNumber(current) ?? '') === value ? current : toInputText(value),
+    )
+  }, [value])
+
+  return (
+    <Input
+      {...props}
+      value={text}
+      onChange={(event) => {
+        setText(event.target.value)
+        onValueChange(parseFormNumber(event.target.value) ?? '')
+      }}
+    />
+  )
 }
 
 const ETHICS_TOGGLE_CLASSES =
@@ -121,6 +180,8 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
     control,
     handleSubmit,
     clearErrors,
+    setError,
+    trigger,
     reset,
     setValue,
     watch,
@@ -148,6 +209,8 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
   const roastLevel = watch('roastLevel')
   const isOrganic = watch('isOrganic')
   const isFairTrade = watch('isFairTrade')
+  const discountType = watch('discountType')
+  const isPercentDiscount = discountType === DiscountType.PERCENT
   const isSubmitting = isUpdatePending || isUploadingImages
   const initialTastingNotes = parseTastingNotesString(
     product?.tastingNotes ?? '',
@@ -346,6 +409,8 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
       ...(Boolean(removeImageIds?.length) && { removeImageIds }),
       ...(Boolean(updateImages?.length) && { updateImages }),
     }
+    const updateVariants = buildVariantUpdates(product, data)
+    if (updateVariants.length) updatePayload.updateVariants = updateVariants
 
     const finish = () => setIsUploadingImages(false)
 
@@ -359,6 +424,17 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
           router.push(ROUTES.DASHBOARD_PRODUCTS)
         },
         onError: (error) => {
+          const fieldErrors =
+            error instanceof ServiceError
+              ? variantFieldErrors(error.errors)
+              : []
+          if (fieldErrors.length) {
+            for (const { field, message } of fieldErrors) {
+              setError(field, { type: 'server', message })
+            }
+            finish()
+            return
+          }
           toast.error(
             error instanceof Error
               ? error.message
@@ -557,6 +633,117 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
                     </div>
                   </div>
                 </div>
+              </div>
+            </article>
+
+            <article className="rounded-4xl border border-outline-variant/30 bg-surface-container-low p-6">
+              <h2 className="text-xl leading-none font-medium text-on-surface-variant">
+                Inventory &amp; Value
+              </h2>
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <Controller
+                  control={control}
+                  name="price"
+                  render={({ field }) => (
+                    <NumericField
+                      className="h-14"
+                      label="Base Price"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="e.g. 24.95"
+                      startIcon={<DollarIcon className="size-4" />}
+                      maxDecimalPlaces={2}
+                      disabled={isSubmitting}
+                      errorMessage={errors.price?.message}
+                      name={field.name}
+                      onBlur={field.onBlur}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <NumericField
+                      className="h-14"
+                      label="Quantity"
+                      type="number"
+                      min={0}
+                      step={1}
+                      maxDecimalPlaces={0}
+                      disabled={isSubmitting}
+                      errorMessage={errors.quantity?.message}
+                      name={field.name}
+                      onBlur={field.onBlur}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="discountType"
+                  render={({ field }) => (
+                    <div className="min-w-0 space-y-2">
+                      <Label>Discount Type</Label>
+                      <div className="grid min-h-14 grid-cols-2 items-center gap-3 rounded-xs">
+                        {DISCOUNT_TYPE_OPTIONS.map((option) => {
+                          const isActive = field.value === option.value
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              aria-pressed={isActive}
+                              className={cn(
+                                'inline-flex h-11 min-w-0 cursor-pointer items-center justify-center truncate rounded-full border px-3 text-xs font-semibold uppercase tracking-wider transition-colors',
+                                isActive
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-outline-variant/70 text-on-surface-variant',
+                              )}
+                              onClick={() => {
+                                field.onChange(option.value)
+                                void trigger('discountValue')
+                              }}
+                              disabled={isSubmitting}
+                            >
+                              {option.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="discountValue"
+                  render={({ field }) => (
+                    <NumericField
+                      className="h-14"
+                      label={
+                        isPercentDiscount ? 'Discount (%)' : 'Discount Amount'
+                      }
+                      type="number"
+                      min={0}
+                      max={isPercentDiscount ? 100 : undefined}
+                      step={0.01}
+                      maxDecimalPlaces={2}
+                      endIcon={
+                        isPercentDiscount ? (
+                          <span className="text-sm">%</span>
+                        ) : undefined
+                      }
+                      disabled={isSubmitting}
+                      errorMessage={errors.discountValue?.message}
+                      name={field.name}
+                      onBlur={field.onBlur}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    />
+                  )}
+                />
               </div>
             </article>
           </div>
