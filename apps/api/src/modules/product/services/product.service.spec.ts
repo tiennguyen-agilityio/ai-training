@@ -3,15 +3,22 @@ import { BadRequestException } from '@nestjs/common';
 import { ProductService } from './product.service.js';
 import { Product } from '../entities/product.entity.js';
 import { ProductImage } from '../../product-image/entities/product-image.entity.js';
+import type { ProductVariant } from '../../product-variant/entities/product-variant.entity.js';
 import { ProductRepository } from '../repositories/product.repository.js';
 import { CategoryService } from '../../category/services/category.service.js';
 import { ProductImageService } from '../../product-image/services/product-image.service.js';
 import { ProductVariantService } from '../../product-variant/services/product-variant.service.js';
-import { ProductUnit, ProductStatus, RoastLevel } from '@repo/constants';
+import {
+  DiscountType,
+  ProductUnit,
+  ProductStatus,
+  RoastLevel,
+} from '@repo/constants';
 import type { CreateProductInput } from '../dto/product.schema.js';
 import {
   DuplicateResourceException,
   ItemNotFoundException,
+  ValidationException,
 } from '../../../common/exceptions/base.exception.js';
 import { ERROR_CODES } from '../../../common/constants/error-code.constant.js';
 import {
@@ -668,6 +675,277 @@ describe('ProductService', () => {
 
         expect(add).not.toHaveBeenCalled();
         expect(images[0].deletedAt).toBeNull();
+      });
+    });
+
+    describe('variants', () => {
+      const idA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+      const idB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+      const otherId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+
+      const buildVariant = (
+        id: string,
+        overrides: Partial<ProductVariant> = {},
+      ): ProductVariant =>
+        ({
+          id,
+          price: '100.00',
+          discountType: DiscountType.PERCENT,
+          discountValue: '10.00',
+          quantity: 30,
+          ...overrides,
+        }) as ProductVariant;
+
+      const productWithVariants = (variants: ProductVariant[]) => {
+        const images: ProductImage[] = [];
+        const product = buildProduct({
+          images: { getItems: () => images, add: vi.fn() } as never,
+          variants: { getItems: () => variants } as never,
+        });
+        productRepository.findById.mockResolvedValue(product);
+        return { product, variants };
+      };
+
+      const rejection = async (
+        promise: Promise<unknown>,
+      ): Promise<ValidationException> => {
+        const error = await promise.catch((caught: unknown) => caught);
+        expect(error).toBeInstanceOf(ValidationException);
+        return error as ValidationException;
+      };
+
+      it('keeps price and discount on a quantity-only update', async () => {
+        const { variants } = productWithVariants([buildVariant(idA)]);
+
+        await service.update('product-id-1', {
+          updateVariants: [{ id: idA, quantity: 50 }],
+        });
+
+        expect(variants[0]).toMatchObject({
+          price: '100.00',
+          discountType: DiscountType.PERCENT,
+          discountValue: '10.00',
+          quantity: 50,
+        });
+        expect(productRepository.save).toHaveBeenCalledTimes(1);
+      });
+
+      it('rejects a FIXED discount above the stored price without changing anything', async () => {
+        const { variants } = productWithVariants([
+          buildVariant(idA, { price: '120.00' }),
+        ]);
+
+        const error = await rejection(
+          service.update('product-id-1', {
+            name: 'Renamed',
+            updateVariants: [
+              {
+                id: idA,
+                discountType: DiscountType.FIXED,
+                discountValue: '150',
+              },
+            ],
+          }),
+        );
+
+        expect(error.getStatus()).toBe(400);
+        expect(error.getErrors()).toEqual([
+          {
+            errCode: ERROR_CODES.PRODUCT_VARIANT.MAX_FIXED_DISCOUNT_VALUE,
+            field: 'updateVariants.0.discountValue',
+            message: 'Fixed discount must be less than base price',
+            description:
+              ERROR_DESCRIPTIONS.PRODUCT_VARIANT.MAX_FIXED_DISCOUNT_VALUE,
+          },
+        ]);
+        expect(productRepository.save).not.toHaveBeenCalled();
+        expect(variants[0]).toMatchObject({
+          price: '120.00',
+          discountType: DiscountType.PERCENT,
+          discountValue: '10.00',
+        });
+      });
+
+      it('rejects a PERCENT discount of 100', async () => {
+        productWithVariants([buildVariant(idA)]);
+
+        const error = await rejection(
+          service.update('product-id-1', {
+            updateVariants: [
+              {
+                id: idA,
+                discountType: DiscountType.PERCENT,
+                discountValue: '100',
+              },
+            ],
+          }),
+        );
+
+        expect(error.getErrors()[0]).toMatchObject({
+          errCode: ERROR_CODES.PRODUCT_VARIANT.MAX_PERCENT_DISCOUNT_VALUE,
+          field: 'updateVariants.0.discountValue',
+          message:
+            'DiscountValue must be less than 100 when DiscountType is PERCENT',
+          description:
+            ERROR_DESCRIPTIONS.PRODUCT_VARIANT.MAX_PERCENT_DISCOUNT_VALUE,
+        });
+      });
+
+      it('rejects a price below the stored FIXED discount', async () => {
+        const { variants } = productWithVariants([
+          buildVariant(idA, {
+            price: '120.00',
+            discountType: DiscountType.FIXED,
+            discountValue: '50.00',
+          }),
+        ]);
+
+        const error = await rejection(
+          service.update('product-id-1', {
+            updateVariants: [{ id: idA, price: '40' }],
+          }),
+        );
+
+        expect(error.getErrors()[0]).toMatchObject({
+          errCode: ERROR_CODES.PRODUCT_VARIANT.MAX_FIXED_DISCOUNT_VALUE,
+          field: 'updateVariants.0.discountValue',
+        });
+        expect(variants[0].price).toBe('120.00');
+      });
+
+      it('rejects a quantity-only update while the stored FIXED discount exceeds the price', async () => {
+        const { variants } = productWithVariants([
+          buildVariant(idA, {
+            price: '120.00',
+            discountType: DiscountType.FIXED,
+            discountValue: '150.00',
+          }),
+        ]);
+
+        const error = await rejection(
+          service.update('product-id-1', {
+            updateVariants: [{ id: idA, quantity: 50 }],
+          }),
+        );
+
+        expect(error.getErrors()[0]).toMatchObject({
+          errCode: ERROR_CODES.PRODUCT_VARIANT.MAX_FIXED_DISCOUNT_VALUE,
+          field: 'updateVariants.0.discountValue',
+        });
+        expect(variants[0].quantity).toBe(30);
+      });
+
+      it('rejects a discount value of 150 on a stored PERCENT discount', async () => {
+        productWithVariants([buildVariant(idA)]);
+
+        const error = await rejection(
+          service.update('product-id-1', {
+            updateVariants: [{ id: idA, discountValue: '150' }],
+          }),
+        );
+
+        expect(error.getErrors()[0].errCode).toBe(
+          ERROR_CODES.PRODUCT_VARIANT.MAX_PERCENT_DISCOUNT_VALUE,
+        );
+      });
+
+      it('stores PERCENT 0 when updating a variant stored with a null discount', async () => {
+        const { variants } = productWithVariants([
+          buildVariant(idA, { discountType: null, discountValue: null }),
+        ]);
+
+        await service.update('product-id-1', {
+          updateVariants: [{ id: idA, quantity: 50 }],
+        });
+
+        expect(variants[0]).toMatchObject({
+          discountType: DiscountType.PERCENT,
+          discountValue: '0',
+          quantity: 50,
+        });
+      });
+
+      it('stores FIXED 0', async () => {
+        const { variants } = productWithVariants([buildVariant(idA)]);
+
+        await service.update('product-id-1', {
+          updateVariants: [
+            { id: idA, discountType: DiscountType.FIXED, discountValue: '0' },
+          ],
+        });
+
+        expect(variants[0]).toMatchObject({
+          discountType: DiscountType.FIXED,
+          discountValue: '0',
+        });
+      });
+
+      it('updates a variant that is not first and leaves the others', async () => {
+        const { variants } = productWithVariants([
+          buildVariant(idA),
+          buildVariant(idB),
+        ]);
+
+        await service.update('product-id-1', {
+          updateVariants: [{ id: idB, price: '90' }],
+        });
+
+        expect(variants[1].price).toBe('90');
+        expect(variants[0].price).toBe('100.00');
+      });
+
+      it('throws productVariantNotFound for a variant of another product', async () => {
+        productWithVariants([buildVariant(idA)]);
+
+        const error = await service
+          .update('product-id-1', {
+            updateVariants: [{ id: otherId, price: '90' }],
+          })
+          .catch((caught: unknown) => caught);
+
+        expect(error).toBeInstanceOf(ItemNotFoundException);
+        expect((error as ItemNotFoundException).getErrors()[0]).toMatchObject({
+          errCode: ERROR_CODES.PRODUCT_VARIANT.NOT_FOUND,
+          field: 'updateVariants.0.id',
+          message: ERROR_MESSAGES.PRODUCT_VARIANT.NOT_FOUND,
+        });
+        expect(productRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('accepts price and FIXED discount changed together', async () => {
+        const { variants } = productWithVariants([
+          buildVariant(idA, { price: '120.00' }),
+        ]);
+
+        await service.update('product-id-1', {
+          updateVariants: [
+            {
+              id: idA,
+              price: '200',
+              discountType: DiscountType.FIXED,
+              discountValue: '150',
+            },
+          ],
+        });
+
+        expect(variants[0]).toMatchObject({
+          price: '200',
+          discountType: DiscountType.FIXED,
+          discountValue: '150',
+        });
+      });
+
+      it('ignores an empty updateVariants', async () => {
+        const { product, variants } = productWithVariants([buildVariant(idA)]);
+
+        await service.update('product-id-1', {
+          name: 'Renamed',
+          updateVariants: [],
+        });
+
+        expect(product.name).toBe('Renamed');
+        expect(variants[0]).toMatchObject({ price: '100.00', quantity: 30 });
+        expect(productRepository.save).toHaveBeenCalledTimes(1);
       });
     });
   });

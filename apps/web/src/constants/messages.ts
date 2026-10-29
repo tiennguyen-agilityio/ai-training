@@ -12,8 +12,6 @@ export const ERROR_MESSAGES = {
   UNEXPECTED_PROFILE_RESPONSE: 'Unexpected profile response',
   NETWORK_ERROR: 'Network error',
   FIELD_REQUIRED: 'This field is required',
-  DISCOUNT_FIXED_MUST_BE_LESS_THAN_PRICE:
-    'Fixed discount must be less than base price',
   IMAGE_UPLOAD_NOT_CONFIGURED: 'Image upload is not configured',
   PRODUCT_AVATAR_REQUIRED: 'Main hero image is required',
   PRODUCT_GALLERY_REQUIRED: 'At least one gallery image is required',

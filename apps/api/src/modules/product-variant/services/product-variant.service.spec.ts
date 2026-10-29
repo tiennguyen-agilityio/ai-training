@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProductVariantService } from './product-variant.service.js';
 import { ProductVariant } from '../entities/product-variant.entity.js';
 import { ProductVariantRepository } from '../repositories/product-variant.repository.js';
-import { ProductUnit } from '@repo/constants';
+import { DiscountType, ProductUnit } from '@repo/constants';
 import {
   DuplicateResourceException,
   ItemNotFoundException,
@@ -86,9 +86,43 @@ describe('ProductVariantService', () => {
       expect(productVariantRepository.findBySku).toHaveBeenCalledWith('SKU-1');
       expect(productVariantRepository.create).toHaveBeenCalledWith({
         ...createData,
+        discountType: DiscountType.PERCENT,
+        discountValue: '0',
         name: '250.000G',
       });
       expect(result).toBe(created);
+    });
+
+    it('create stores PERCENT 0 when the discount is omitted', async () => {
+      productVariantRepository.findBySku.mockResolvedValue(null);
+      productVariantRepository.create.mockResolvedValue(buildVariant());
+
+      await service.create(createData);
+
+      expect(productVariantRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          discountType: DiscountType.PERCENT,
+          discountValue: '0',
+        }),
+      );
+    });
+
+    it('create keeps a discount that is sent', async () => {
+      productVariantRepository.findBySku.mockResolvedValue(null);
+      productVariantRepository.create.mockResolvedValue(buildVariant());
+
+      await service.create({
+        ...createData,
+        discountType: DiscountType.FIXED,
+        discountValue: '2',
+      });
+
+      expect(productVariantRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          discountType: DiscountType.FIXED,
+          discountValue: '2',
+        }),
+      );
     });
 
     it('throws DuplicateResourceException on a duplicate SKU', async () => {

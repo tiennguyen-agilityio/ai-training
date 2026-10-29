@@ -1,7 +1,10 @@
 import { DiscountType, ProductUnit, RoastLevel } from '@repo/constants'
-import { DISCOUNT_PERCENT_MESSAGE } from '@repo/schemas'
+import { DISCOUNT_FIXED_MESSAGE, DISCOUNT_PERCENT_MESSAGE } from '@repo/schemas'
 
-import { createProductFormSchema } from '@/schemas/product'
+import {
+  createProductFormSchema,
+  editProductFormSchema,
+} from '@/schemas/product'
 
 const valid = {
   categoryId: 'category-1',
@@ -74,6 +77,74 @@ describe('createProductFormSchema', () => {
         discountType: DiscountType.PERCENT,
         discountValue: 99,
       }).success,
+    ).toBe(true)
+  })
+
+  it('uses the shared message for a fixed discount equal to the price', () => {
+    expect(
+      messagesFor(
+        { ...valid, discountType: DiscountType.FIXED, discountValue: 10 },
+        'discountValue',
+      ),
+    ).toEqual([DISCOUNT_FIXED_MESSAGE])
+  })
+})
+
+describe('editProductFormSchema', () => {
+  const validEdit = {
+    categoryId: 'category-1',
+    name: 'Single Origin',
+    description: 'Bright and floral',
+    roastLevel: RoastLevel.LIGHT,
+    isOrganic: false,
+    isFairTrade: false,
+    origin: 'Ethiopia',
+    processingMethod: 'Washed',
+    price: 120,
+    discountType: DiscountType.PERCENT,
+    discountValue: 10,
+    quantity: 30,
+  }
+
+  function editMessagesFor(input: Record<string, unknown>, field: string) {
+    const result = editProductFormSchema.safeParse(input)
+    if (result.success) return []
+    return result.error.issues
+      .filter((issue) => issue.path[0] === field)
+      .map((issue) => issue.message)
+  }
+
+  it('accepts a valid edit', () => {
+    expect(editProductFormSchema.safeParse(validEdit).success).toBe(true)
+  })
+
+  it('rejects a percent discount of 100 with the shared message', () => {
+    expect(
+      editMessagesFor({ ...validEdit, discountValue: 100 }, 'discountValue'),
+    ).toEqual([
+      'DiscountValue must be less than 100 when DiscountType is PERCENT',
+    ])
+  })
+
+  it('rejects a fixed discount equal to the price with the shared message', () => {
+    expect(
+      editMessagesFor(
+        { ...validEdit, discountType: DiscountType.FIXED, discountValue: 120 },
+        'discountValue',
+      ),
+    ).toEqual(['Fixed discount must be less than base price'])
+  })
+
+  it('rejects quantity -1 with the API min message', () => {
+    expect(editMessagesFor({ ...validEdit, quantity: -1 }, 'quantity')).toEqual(
+      ['Quantity must not be less than 0'],
+    )
+  })
+
+  it('accepts a percent discount of 12.5', () => {
+    expect(
+      editProductFormSchema.safeParse({ ...validEdit, discountValue: 12.5 })
+        .success,
     ).toBe(true)
   })
 })

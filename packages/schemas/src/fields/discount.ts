@@ -4,9 +4,16 @@ const { DISCOUNT } = VALIDATION_RULES;
 
 export const DISCOUNT_PERCENT_MESSAGE = `DiscountValue must be less than ${DISCOUNT.PERCENT_MAX} when DiscountType is ${DiscountType.PERCENT}`;
 
+export const DISCOUNT_FIXED_MESSAGE =
+  'Fixed discount must be less than base price';
+
 interface DiscountFields {
   discountType?: DiscountType | null;
   discountValue?: number | string | null;
+}
+
+interface FixedDiscountFields extends DiscountFields {
+  price?: number | string | null;
 }
 
 // A percent discount must stay strictly below PERCENT_MAX. discountValue is a
@@ -20,10 +27,16 @@ export const isDiscountPercentValid = ({
   discountValue === null ||
   Number(discountValue) < DISCOUNT.PERCENT_MAX;
 
-// Refinement params: `.refine(isDiscountPercentValid, discountPercentIssue())`.
-// A new object per call: Zod rewrites the params it is given (message ->
-// error) and prefixes issue paths in place, so a shared object would change.
-export const discountPercentIssue = () => ({
-  message: DISCOUNT_PERCENT_MESSAGE,
-  path: ['discountValue'],
-});
+// A fixed discount must stay strictly below the price, so the selling price
+// stays above 0. Values may be strings once the API has transformed them.
+export const isDiscountFixedValid = ({
+  discountType,
+  discountValue,
+  price,
+}: FixedDiscountFields): boolean =>
+  discountType !== DiscountType.FIXED ||
+  discountValue === undefined ||
+  discountValue === null ||
+  price === undefined ||
+  price === null ||
+  Number(discountValue) < Number(price);

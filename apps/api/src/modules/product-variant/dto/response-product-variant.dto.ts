@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { ProductVariant } from '../entities/product-variant.entity.js';
 import { DiscountType, ProductUnit } from '@repo/constants';
 
@@ -14,11 +14,10 @@ export class ResponseProductVariantDto {
   name!: string;
   price!: number;
 
-  @ApiPropertyOptional({ enum: DiscountType, nullable: true })
-  discountType: DiscountType | null = null;
+  @ApiProperty({ enum: DiscountType })
+  discountType!: DiscountType;
 
-  @ApiPropertyOptional({ nullable: true, type: Number })
-  discountValue: number | null = null;
+  discountValue!: number;
 
   quantity!: number;
 
@@ -30,9 +29,10 @@ export class ResponseProductVariantDto {
     dto.unit = variant.unit;
     dto.name = variant.name;
     dto.price = Number(variant.price);
-    dto.discountType = variant.discountType;
-    dto.discountValue =
-      variant.discountValue === null ? null : Number(variant.discountValue);
+    // A variant stored before discounts were required may hold nulls; they
+    // read field by field as no discount (PERCENT, 0).
+    dto.discountType = variant.discountType ?? DiscountType.PERCENT;
+    dto.discountValue = Number(variant.discountValue ?? 0);
     dto.quantity = variant.quantity;
     return dto;
   }

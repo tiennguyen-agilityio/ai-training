@@ -5,7 +5,10 @@ import {
   createProductImageSchema,
   updateProductImageSchema,
 } from './product-image.js';
-import { createProductVariantSchema } from './product-variant.js';
+import {
+  createProductVariantSchema,
+  updateProductVariantSchema,
+} from './product-variant.js';
 
 // A product create body without the API's primary-image rule, which the API
 // adds on top; unrefined so updateProductSchema can still omit from it.
@@ -36,6 +39,7 @@ export const updateProductSchema = productBodySchema
     removeImageIds: z.array(z.uuid()).optional(),
     updateImages: z.array(updateProductImageSchema).optional(),
     addImages: z.array(createProductImageSchema).optional(),
+    updateVariants: z.array(updateProductVariantSchema).optional(),
   });
 
 export type CreateProductPayload = z.input<typeof productBodySchema>;

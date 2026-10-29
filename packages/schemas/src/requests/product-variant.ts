@@ -1,10 +1,6 @@
 import { z } from 'zod';
 import { DiscountType, ProductUnit } from '@repo/constants';
 import {
-  discountPercentIssue,
-  isDiscountPercentValid,
-} from '../fields/discount.js';
-import {
   discountValueField,
   priceField,
   quantityField,
@@ -13,22 +9,39 @@ import {
 import { skuField } from '../fields/text.js';
 
 // Request bodies may send numbers as strings; decimals are stored as strings.
-// `<number>` types the input as a number for payloads; parsing is unchanged.
+// Only strings are converted: `z.coerce.number()` would turn null into 0, and
+// null must be rejected. `<number>` types the input as a number for payloads.
 const decimal = (field: z.ZodNumber) =>
-  z.coerce.number<number>().pipe(field).transform(String);
+  z
+    .preprocess<unknown, z.ZodNumber, number>(
+      (value) => (typeof value === 'string' ? Number(value) : value),
+      field,
+    )
+    .transform(String);
 
-export const createProductVariantSchema = z
-  .object({
-    sku: skuField,
-    weight: decimal(weightField),
-    unit: z.enum(ProductUnit),
-    price: decimal(priceField),
-    discountType: z.enum(DiscountType).nullable().optional(),
-    discountValue: decimal(discountValueField).nullable().optional(),
-    quantity: quantityField.optional(),
-  })
-  .refine(isDiscountPercentValid, discountPercentIssue());
+// The discount rules need the API's error codes, so the API adds them.
+export const createProductVariantSchema = z.object({
+  sku: skuField,
+  weight: decimal(weightField),
+  unit: z.enum(ProductUnit),
+  price: decimal(priceField),
+  discountType: z.enum(DiscountType).optional(),
+  discountValue: decimal(discountValueField).optional(),
+  quantity: quantityField.optional(),
+});
+
+// An existing variant in a product update: its id, plus any field to change.
+export const updateProductVariantSchema = z.object({
+  id: z.uuid(),
+  price: decimal(priceField).optional(),
+  discountType: z.enum(DiscountType).optional(),
+  discountValue: decimal(discountValueField).optional(),
+  quantity: quantityField.optional(),
+});
 
 export type CreateProductVariantPayload = z.input<
   typeof createProductVariantSchema
+>;
+export type UpdateProductVariantPayload = z.input<
+  typeof updateProductVariantSchema
 >;
