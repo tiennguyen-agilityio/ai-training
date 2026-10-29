@@ -197,18 +197,20 @@ describe('EditProductForm pricing', () => {
     expect(field('Discount (%)')).toHaveValue('12.34')
   })
 
-  it('blocks a percent discount of 100 without sending', async () => {
+  it('does not accept a percent discount above 99.99', async () => {
     renderPage()
 
     await replaceValue('Discount (%)', '100')
-    await save()
 
-    expect(
-      await screen.findByText(
-        'DiscountValue must be less than 100 when DiscountType is PERCENT',
-      ),
-    ).toBeInTheDocument()
-    expect(mockMutate).not.toHaveBeenCalled()
+    expect(field('Discount (%)')).toHaveValue('10')
+  })
+
+  it('accepts a quantity above 500, since the API has no maximum', async () => {
+    renderPage()
+
+    await replaceValue('Quantity', '501')
+
+    expect(field('Quantity')).toHaveValue('501')
   })
 
   it('blocks a fixed discount equal to the price without sending', async () => {
@@ -220,7 +222,7 @@ describe('EditProductForm pricing', () => {
     await save()
 
     expect(
-      await screen.findByText('Fixed discount must be less than base price'),
+      await screen.findByText('Discount must be less than the base price'),
     ).toBeInTheDocument()
     expect(mockMutate).not.toHaveBeenCalled()
   })

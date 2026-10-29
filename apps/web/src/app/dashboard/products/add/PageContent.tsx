@@ -23,7 +23,12 @@ import {
 // Constants
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { EMPTY_IMAGE } from '@/constants/images'
-import { DISCOUNT_TYPE_OPTIONS, UNIT_OPTIONS } from '@/constants/product'
+import {
+  DISCOUNT_TYPE_OPTIONS,
+  PERCENT_DISCOUNT_INPUT_MAX,
+  QUANTITY_MAX,
+  UNIT_OPTIONS,
+} from '@/constants/product'
 
 // Hooks
 import { useCategories } from '@/hooks/useCategory'
@@ -614,6 +619,7 @@ const PageContent = () => {
                   label="Initial Quantity"
                   type="number"
                   min={0}
+                  max={QUANTITY_MAX}
                   step={1}
                   maxDecimalPlaces={0}
                   disabled={isSubmitting}
@@ -660,9 +666,11 @@ const PageContent = () => {
                     }
                     type="number"
                     min={0}
-                    max={isPercentDiscount ? 100 : undefined}
-                    step={isPercentDiscount ? 1 : 0.01}
-                    maxDecimalPlaces={isPercentDiscount ? 0 : 2}
+                    max={
+                      isPercentDiscount ? PERCENT_DISCOUNT_INPUT_MAX : undefined
+                    }
+                    step={0.01}
+                    maxDecimalPlaces={2}
                     endIcon={
                       isPercentDiscount ? (
                         <span className="text-sm">%</span>

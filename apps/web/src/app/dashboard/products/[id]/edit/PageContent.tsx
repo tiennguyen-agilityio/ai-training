@@ -13,7 +13,10 @@ import { DiscountType, ProductStatus, RoastLevel } from '@repo/constants'
 
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { CATEGORY_QUERY_OPTIONS } from '@/constants/category'
-import { DISCOUNT_TYPE_OPTIONS } from '@/constants/product'
+import {
+  DISCOUNT_TYPE_OPTIONS,
+  PERCENT_DISCOUNT_INPUT_MAX,
+} from '@/constants/product'
 import { ROUTES, dashboardProductEditPath } from '@/constants/routes'
 
 import { useCategories } from '@/hooks/useCategory'
@@ -720,7 +723,11 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
                       }
                       type="number"
                       min={0}
-                      max={isPercentDiscount ? 100 : undefined}
+                      max={
+                        isPercentDiscount
+                          ? PERCENT_DISCOUNT_INPUT_MAX
+                          : undefined
+                      }
                       step={0.01}
                       maxDecimalPlaces={2}
                       endIcon={

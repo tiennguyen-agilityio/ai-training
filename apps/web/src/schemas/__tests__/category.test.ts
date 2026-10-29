@@ -1,8 +1,5 @@
-import { VALIDATION_MESSAGES, VALIDATION_RULES } from '@repo/constants'
 import { ERROR_MESSAGES } from '@/constants/messages'
 import { parseCreateCategoryForm } from '@/schemas/category'
-
-const { NAME } = VALIDATION_RULES
 
 function formFrom(entries: Record<string, string>): FormData {
   const fd = new FormData()
@@ -36,7 +33,7 @@ describe('parseCreateCategoryForm', () => {
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.error.flatten().fieldErrors.name?.[0]).toBe(
-        VALIDATION_MESSAGES.maxLength('Name', NAME.MAX_LENGTH),
+        'Category name must be at most 120 characters',
       )
     }
   })
@@ -46,7 +43,7 @@ describe('parseCreateCategoryForm', () => {
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.error.flatten().fieldErrors.name?.[0]).toBe(
-        VALIDATION_MESSAGES.minLength('Name', NAME.MIN_LENGTH),
+        'Category name must be at least 2 characters',
       )
     }
   })

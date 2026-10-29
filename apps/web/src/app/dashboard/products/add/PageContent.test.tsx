@@ -81,7 +81,9 @@ const category: Category = {
 
 const image = (name: string) => new File(['x'], name, { type: 'image/png' })
 
-const submitValidForm = async () => {
+const submitValidForm = async (
+  beforeSubmit?: (user: ReturnType<typeof userEvent.setup>) => Promise<void>,
+) => {
   const user = userEvent.setup()
   const { container } = render(<PageContent />)
 
@@ -105,6 +107,7 @@ const submitValidForm = async () => {
   await fill('Initial Quantity', '5')
   await fill('Origin', 'Ethiopia')
   await fill('Processing Method', 'Washed')
+  await beforeSubmit?.(user)
 
   await user.click(screen.getByRole('button', { name: /publish product/i }))
   await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
@@ -212,5 +215,26 @@ describe('Add product API errors', () => {
     expect(toast.error).toHaveBeenCalledWith(
       'Product must have exactly one primary image',
     )
+  })
+
+  it('accepts a 12.5 percent discount', async () => {
+    await submitValidForm(async (user) => {
+      await user.clear(screen.getByLabelText('Discount (%)'))
+      await user.type(screen.getByLabelText('Discount (%)'), '12.5')
+    })
+
+    const [payload] = mockMutate.mock.calls[0] as [
+      { variants: { discountValue: number }[] },
+    ]
+    expect(payload.variants[0]?.discountValue).toBe(12.5)
+  })
+
+  it('does not accept a quantity above 500', async () => {
+    const user = userEvent.setup()
+    render(<PageContent />)
+
+    await user.type(screen.getByLabelText('Initial Quantity'), '501')
+
+    expect(screen.getByLabelText('Initial Quantity')).toHaveValue('50')
   })
 })
