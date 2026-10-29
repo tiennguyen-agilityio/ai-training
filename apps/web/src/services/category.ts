@@ -13,6 +13,7 @@ export interface CategoryOptions {
   page?: number
   limit?: number
   search?: string
+  includeDeleted?: boolean
 }
 
 export async function createCategory(
@@ -78,11 +79,14 @@ export async function fetchCategories(
   | { ok: true; categories: Category[]; meta?: ResponseMeta }
   | { ok: false; error: string; status?: number }
 > {
-  const { page, limit, search } = options
+  const { getToken, page, limit, search, includeDeleted } = options
+  // The API returns deleted rows only to an active admin, so only a list that
+  // wants them sends the token.
   const result = await apiClient.get<ApiResponse<Category[]>>(
     API_ROUTES.CATEGORIES,
     {
-      skipAuth: true,
+      getToken,
+      skipAuth: !includeDeleted,
       query: { page, limit, search: search?.trim() },
       fallbackError: API_FALLBACK_ERRORS.CATEGORIES_LOAD,
     },

@@ -16,6 +16,8 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
 
+jest.mock('@clerk/nextjs', () => ({ useAuth: jest.fn() }))
+
 jest.mock('sonner', () => ({
   toast: { success: jest.fn(), error: jest.fn() },
 }))

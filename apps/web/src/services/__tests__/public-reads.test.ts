@@ -53,6 +53,22 @@ describe('public reads never carry the session token', () => {
     expect(authorizationOf(fetchMock)).toBeNull()
   })
 
+  it('fetchCategories with includeDeleted sends the session token', async () => {
+    const fetchMock = mockJson({ data: [] })
+
+    await fetchCategories({ includeDeleted: true })
+
+    expect(authorizationOf(fetchMock)).toBe('Bearer session-token')
+  })
+
+  it('fetchCategories with includeDeleted false sends no Authorization header', async () => {
+    const fetchMock = mockJson({ data: [] })
+
+    await fetchCategories({ includeDeleted: false })
+
+    expect(authorizationOf(fetchMock)).toBeNull()
+  })
+
   it('still authenticates reads the API protects', async () => {
     const fetchMock = mockJson({ data: [] })
 
