@@ -1,6 +1,10 @@
 import { API_FALLBACK_ERRORS } from '@/constants/messages'
 import { API_ROUTES } from '@/constants/routes'
-import { fetchCategoryById, updateCategory } from '@/services/category'
+import {
+  fetchCategoryById,
+  restoreCategory,
+  updateCategory,
+} from '@/services/category'
 
 describe('category service update flows', () => {
   const originalFetch = globalThis.fetch
@@ -92,6 +96,75 @@ describe('category service update flows', () => {
     expect(result).toEqual({
       ok: false,
       error: `${API_FALLBACK_ERRORS.CATEGORY_UPDATE} (500)`,
+      status: 500,
+    })
+  })
+
+  it('restoreCategory sends PATCH to the restore route', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          id: 'cat-1',
+          name: 'Coffee',
+          slug: 'coffee',
+          createdBy: null,
+          updatedBy: null,
+          deletedBy: null,
+          createdAt: null,
+          updatedAt: null,
+          deletedAt: null,
+        },
+      }),
+    })
+    globalThis.fetch = fetchMock as typeof fetch
+
+    const result = await restoreCategory('cat-1')
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${API_ROUTES.CATEGORIES}/cat-1/restore`,
+      expect.objectContaining({
+        method: 'PATCH',
+      }),
+    )
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.category.id).toBe('cat-1')
+      expect(result.category.deletedAt).toBeNull()
+    }
+  })
+
+  it('restoreCategory encodes the id', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { id: 'a/b', deletedAt: null } }),
+    })
+    globalThis.fetch = fetchMock as typeof fetch
+
+    await restoreCategory(' a/b ')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${API_ROUTES.CATEGORIES}/a%2Fb/restore`,
+      expect.any(Object),
+    )
+  })
+
+  it('restoreCategory returns the API fallback error for a failed response', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ message: '' }),
+    })
+    globalThis.fetch = fetchMock as typeof fetch
+
+    const result = await restoreCategory('cat-1')
+
+    expect(result).toEqual({
+      ok: false,
+      error: `${API_FALLBACK_ERRORS.CATEGORY_RESTORE} (500)`,
       status: 500,
     })
   })

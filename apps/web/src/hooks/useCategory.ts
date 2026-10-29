@@ -20,6 +20,7 @@ import {
   deleteCategory,
   fetchCategoryById,
   fetchCategories,
+  restoreCategory,
   updateCategory,
   type CategoryOptions,
 } from '@/services/category'
@@ -176,6 +177,33 @@ export function useDeleteCategory() {
               }
             : null
           return { categories, meta }
+        },
+      )
+      await invalidateCategoryLists(queryClient)
+    },
+  })
+}
+
+export function useRestoreCategory() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const result = await restoreCategory(id)
+      if (!result.ok) throwIfServiceFailed(result)
+      return result.category
+    },
+    onSuccess: async (_category, restoredId) => {
+      // Lists that include deleted rows show the row as live again right away.
+      queryClient.setQueriesData<CategoriesListCache>(
+        { queryKey: ['categories', 'list', true] },
+        (old) => {
+          if (!old) return old
+          if (!old.categories.some((c) => c.id === restoredId)) return old
+          const categories = old.categories.map((c) =>
+            c.id === restoredId ? { ...c, deletedAt: null } : c,
+          )
+          return { ...old, categories }
         },
       )
       await invalidateCategoryLists(queryClient)

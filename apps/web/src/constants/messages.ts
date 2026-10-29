@@ -36,6 +36,7 @@ export const API_FALLBACK_ERRORS = {
   CATEGORY_DELETE: 'Could not delete category',
   CATEGORY_LOAD: 'Could not load category',
   CATEGORY_UPDATE: 'Could not update category',
+  CATEGORY_RESTORE: 'Could not restore category. Please try later',
   CATEGORIES_LOAD: 'Could not load categories',
   PRODUCT_CREATE: 'Could not create product',
   PRODUCT_DELETE: 'Could not delete product',
@@ -59,6 +60,7 @@ export const SUCCESS_MESSAGES = {
   CATEGORY_CREATED: 'Category created',
   CATEGORY_UPDATED: 'Category updated',
   CATEGORY_DELETED: 'Category removed',
+  CATEGORY_RESTORED: 'Category restored',
   PRODUCT_CREATED: 'Product created',
   PRODUCT_UPDATED: 'Product updated',
   PRODUCT_DELETED: 'Product removed',
@@ -75,8 +77,7 @@ export const DIALOG_MESSAGES = {
   CATEGORY: {
     DELETE: {
       ACTION: 'Remove',
-      DESCRIPTION: (name: string, slug: string) =>
-        `This will remove ${name} (${slug}).`,
+      DESCRIPTION: (name: string) => `This will remove ${name}.`,
     },
   },
   PRODUCT: {

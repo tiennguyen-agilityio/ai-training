@@ -1,6 +1,6 @@
 'use client'
 
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -21,11 +21,13 @@ function formatTs(value: string | null): string {
 export interface CategoryTableRowProps {
   category: Category
   onRequestDelete?: (category: Category) => void
+  onRequestRestore?: (category: Category) => void
 }
 
 export function CategoryTableRow({
   category,
   onRequestDelete,
+  onRequestRestore,
 }: CategoryTableRowProps) {
   const isDeleted = Boolean(category.deletedAt)
 
@@ -62,40 +64,58 @@ export function CategoryTableRow({
       </td>
       <td data-label="Actions" className="min-w-0 px-6 py-4 align-middle">
         <div className="flex justify-end gap-1">
-          {!isDeleted && category.id ? (
-            <Link
-              href={dashboardCategoryEditRoute(category.id)}
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
-                'inline-flex',
-              )}
-              aria-label={`Edit ${category.name}`}
-            >
-              <Pencil className="size-4" aria-hidden />
-            </Link>
-          ) : (
+          {!isDeleted &&
+            (category.id ? (
+              <Link
+                href={dashboardCategoryEditRoute(category.id)}
+                className={cn(
+                  buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
+                  'inline-flex',
+                )}
+                aria-label={`Edit ${category.name}`}
+              >
+                <Pencil className="size-4" aria-hidden />
+              </Link>
+            ) : (
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                aria-label={`Edit ${category.name}`}
+                disabled
+              >
+                <Pencil className="size-4" aria-hidden />
+              </Button>
+            ))}
+          {/* Restore and Remove share this slot, so the button keeps focus when the row flips. */}
+          {isDeleted ? (
             <Button
+              type="button"
               size="icon-xs"
               variant="ghost"
-              aria-label={`Edit ${category.name}`}
-              disabled
+              aria-label={`Restore ${category.name}`}
+              disabled={!category.id}
+              onClick={() => {
+                if (!category.id) return
+                onRequestRestore?.(category)
+              }}
             >
-              <Pencil className="size-4" aria-hidden />
+              <RotateCcw className="size-4" aria-hidden />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              size="icon-xs"
+              variant="ghost"
+              aria-label={`Remove ${category.name}`}
+              disabled={!category.id}
+              onClick={() => {
+                if (!category.id) return
+                onRequestDelete?.(category)
+              }}
+            >
+              <Trash2 className="size-4" aria-hidden />
             </Button>
           )}
-          <Button
-            type="button"
-            size="icon-xs"
-            variant="ghost"
-            aria-label={`Remove ${category.name}`}
-            disabled={isDeleted || !category.id}
-            onClick={() => {
-              if (!category.id || isDeleted) return
-              onRequestDelete?.(category)
-            }}
-          >
-            <Trash2 className="size-4" aria-hidden />
-          </Button>
         </div>
       </td>
     </>
