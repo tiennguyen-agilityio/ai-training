@@ -55,7 +55,12 @@ import BrainIcon from '@/components/icon/BrainIcon'
 import { normalizeNumericInput } from '@/utils/number'
 import { cn } from '@/utils/styles'
 import { getCategoryOptions, renderProductSku } from '@/utils/common'
-import { toCreateVariantPayload } from '@/utils/product'
+import { mapServerErrors, setServerFieldErrors } from '@/utils/form'
+import {
+  createProductErrorTarget,
+  splitImageErrors,
+  toCreateVariantPayload,
+} from '@/utils/product'
 
 const { PRICE } = VALIDATION_RULES
 
@@ -145,6 +150,7 @@ const PageContent = () => {
     control,
     handleSubmit,
     clearErrors,
+    setError,
     reset,
     setValue,
     watch,
@@ -364,9 +370,14 @@ const PageContent = () => {
         router.push(ROUTES.DASHBOARD_PRODUCTS)
       },
       onError: (error) => {
-        const message =
-          error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR
-        toast.error(message)
+        const { fieldErrors, unmatched } = mapServerErrors(error, (field) =>
+          createProductErrorTarget(field, payload),
+        )
+        const { imageErrors: serverImageErrors, formErrors } =
+          splitImageErrors(fieldErrors)
+        setImageErrors((prev) => ({ ...prev, ...serverImageErrors }))
+        setServerFieldErrors(setError, formErrors)
+        unmatched.forEach((message) => toast.error(message))
         setIsUploadingImages(false)
       },
     })

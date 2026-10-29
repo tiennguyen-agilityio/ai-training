@@ -42,8 +42,8 @@ import BrainIcon from '@/components/icon/BrainIcon'
 import DollarIcon from '@/components/icon/DollarIcon'
 import { Spinner } from '@/components/ui/spinner'
 
+import { mapServerErrors, setServerFieldErrors } from '@/utils/form'
 import { normalizeNumericInput } from '@/utils/number'
-import { ServiceError } from '@/utils/query'
 import { cn } from '@/utils/styles'
 import { getCategoryOptions } from '@/utils/common'
 import {
@@ -52,8 +52,9 @@ import {
   buildVariantUpdates,
   mapProductToEditFormValues,
   parseTastingNotesString,
+  splitImageErrors,
   splitProductImagesForGallery,
-  variantFieldErrors,
+  updateProductErrorTarget,
 } from '@/utils/product'
 
 interface LocalImage {
@@ -424,22 +425,14 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
           router.push(ROUTES.DASHBOARD_PRODUCTS)
         },
         onError: (error) => {
-          const fieldErrors =
-            error instanceof ServiceError
-              ? variantFieldErrors(error.errors)
-              : []
-          if (fieldErrors.length) {
-            for (const { field, message } of fieldErrors) {
-              setError(field, { type: 'server', message })
-            }
-            finish()
-            return
-          }
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : ERROR_MESSAGES.NETWORK_ERROR,
+          const { fieldErrors, unmatched } = mapServerErrors(error, (field) =>
+            updateProductErrorTarget(field, updatePayload),
           )
+          const { imageErrors: serverImageErrors, formErrors } =
+            splitImageErrors(fieldErrors)
+          setImageErrors((prev) => ({ ...prev, ...serverImageErrors }))
+          setServerFieldErrors(setError, formErrors)
+          unmatched.forEach((message) => toast.error(message))
           finish()
         },
       },

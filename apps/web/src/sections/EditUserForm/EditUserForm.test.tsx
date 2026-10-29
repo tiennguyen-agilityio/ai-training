@@ -7,6 +7,7 @@ import { useUpdateUserInfo } from '@/hooks/useUser'
 import { uploadImageToImgBB } from '@/services/image'
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { UserRole, UserStatus } from '@repo/constants'
+import { ServiceError } from '@/utils/query'
 
 jest.mock('@/hooks/useUser', () => ({
   useUpdateUserInfo: jest.fn(),
@@ -257,6 +258,53 @@ describe('EditUserForm', () => {
 
     expect(await screen.findByText('Could not update user')).toBeInTheDocument()
     expect(onOpenChangeMock).not.toHaveBeenCalledWith(false)
+  })
+
+  it('shows an API firstName error under First name', async () => {
+    const user = userEvent.setup()
+    render(<EditUserForm {...defaultProps} />)
+
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    const [, callbacks] = mutateMock.mock.calls[0] as [
+      unknown,
+      { onError: (error: unknown) => void },
+    ]
+    act(() =>
+      callbacks.onError(
+        new ServiceError('FirstName too short', [
+          { errCode: 'E', field: 'firstName', message: 'FirstName too short' },
+        ]),
+      ),
+    )
+
+    expect(await screen.findByText('FirstName too short')).toBeInTheDocument()
+    expect(screen.getAllByText('FirstName too short')).toHaveLength(1)
+    expect(screen.getByText('First Name').parentElement).toHaveTextContent(
+      'FirstName too short',
+    )
+  })
+
+  it('shows unmatched API errors in the form banner', async () => {
+    const user = userEvent.setup()
+    render(<EditUserForm {...defaultProps} />)
+
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    const [, callbacks] = mutateMock.mock.calls[0] as [
+      unknown,
+      { onError: (error: unknown) => void },
+    ]
+    act(() =>
+      callbacks.onError(
+        new ServiceError('A', [
+          { errCode: 'E', field: '', message: 'A' },
+          { errCode: 'E', field: '', message: 'B' },
+        ]),
+      ),
+    )
+
+    expect(await screen.findByText('A B')).toBeInTheDocument()
   })
 
   it('closes without submitting on cancel', async () => {

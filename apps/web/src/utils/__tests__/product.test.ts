@@ -5,13 +5,16 @@ import {
   RoastLevel,
 } from '@repo/constants'
 
+import type { CreateProductPayload, UpdateProductPayload } from '@repo/schemas'
+
 import type { EditProductFormValues } from '@/schemas/product'
 import type { Product, ProductVariantSummary } from '@/types/product'
 import {
   buildVariantUpdates,
+  createProductErrorTarget,
   mapProductToEditFormValues,
   toCreateVariantPayload,
-  variantFieldErrors,
+  updateProductErrorTarget,
 } from '@/utils/product'
 
 const variant = (
@@ -158,27 +161,105 @@ describe('toCreateVariantPayload', () => {
   })
 })
 
-describe('variantFieldErrors', () => {
-  it('maps updateVariants.0.discountValue to discountValue and ignores other fields', () => {
-    expect(
-      variantFieldErrors([
-        {
-          errCode: 'maxFixedDiscountValue',
-          field: 'updateVariants.0.discountValue',
-          message: 'Fixed discount must be less than base price',
-        },
-        { errCode: 'productNameExists', field: 'name', message: 'Taken' },
-        {
-          errCode: 'min',
-          field: 'updateVariants.1.price',
-          message: 'Price must not be less than 1',
-        },
-      ]),
-    ).toEqual([
-      {
-        field: 'discountValue',
-        message: 'Fixed discount must be less than base price',
-      },
-    ])
+// Top-level fields both product forms render an API error for.
+const SHOWN_PRODUCT_FIELDS = [
+  'categoryId',
+  'name',
+  'description',
+  'origin',
+  'processingMethod',
+] as const
+
+describe('updateProductErrorTarget', () => {
+  const target = (field: string, payload: UpdateProductPayload = {}) =>
+    updateProductErrorTarget(field, payload)
+
+  it('maps updateVariants.0 fields', () => {
+    expect(target('updateVariants.0.discountValue')).toBe('discountValue')
+    expect(target('updateVariants.0.quantity')).toBe('quantity')
+    expect(target('updateVariants.0.id')).toBeUndefined()
+  })
+
+  it('maps top-level fields by name', () => {
+    for (const name of SHOWN_PRODUCT_FIELDS) {
+      expect(target(name)).toBe(name)
+    }
+    expect(target('roastLevel')).toBeUndefined()
+    expect(target('isOrganic')).toBeUndefined()
+    expect(target('isFairTrade')).toBeUndefined()
+  })
+
+  it('leaves updateVariants.0.discountType to the fallback', () => {
+    expect(target('updateVariants.0.discountType')).toBeUndefined()
+  })
+
+  it('maps addImages.N by its isPrimary', () => {
+    const payload: UpdateProductPayload = {
+      addImages: [
+        { url: 'https://example.com/a.jpg', isPrimary: true, sortOrder: 0 },
+        { url: 'https://example.com/b.jpg', isPrimary: false, sortOrder: 1 },
+      ],
+    }
+
+    expect(target('addImages.0.url', payload)).toBe('avatar')
+    expect(target('addImages.1.url', payload)).toBe('gallery')
+  })
+
+  it('maps updateImages and removeImageIds to gallery unless the entry is primary', () => {
+    const payload: UpdateProductPayload = {
+      updateImages: [
+        { id: '6f1c1f9e-1a4b-4c7e-9a43-6b0f2a1d2e3f', isPrimary: true },
+      ],
+    }
+
+    expect(target('updateImages.0.url', payload)).toBe('avatar')
+    expect(target('removeImageIds.0', payload)).toBe('gallery')
+  })
+})
+
+describe('createProductErrorTarget', () => {
+  const payload = {
+    images: [
+      { url: 'https://example.com/a.jpg', isPrimary: true, sortOrder: 0 },
+      { url: 'https://example.com/b.jpg', isPrimary: false, sortOrder: 1 },
+    ],
+  } as CreateProductPayload
+
+  const target = (field: string) => createProductErrorTarget(field, payload)
+
+  it('maps top-level fields by name', () => {
+    for (const name of SHOWN_PRODUCT_FIELDS) {
+      expect(target(name)).toBe(name)
+    }
+    expect(target('status')).toBeUndefined()
+    expect(target('tastingNotes')).toBeUndefined()
+  })
+
+  it('maps variants.0 fields', () => {
+    expect(target('variants.0.price')).toBe('price')
+    expect(target('variants.0.unit')).toBe('unit')
+    expect(target('variants.1.price')).toBeUndefined()
+  })
+
+  it('leaves fields the form shows no error for to the fallback', () => {
+    expect(target('roastLevel')).toBeUndefined()
+    expect(target('isOrganic')).toBeUndefined()
+    expect(target('isFairTrade')).toBeUndefined()
+    expect(target('variants.0.discountType')).toBeUndefined()
+  })
+
+  it('maps a duplicate SKU to weight', () => {
+    expect(target('sku')).toBe('weight')
+    expect(target('variants.0.sku')).toBe('weight')
+  })
+
+  it('maps images.N to avatar only when that entry is primary', () => {
+    expect(target('images.0.url')).toBe('avatar')
+    expect(target('images.1.url')).toBe('gallery')
+  })
+
+  it('maps the images array and an unknown image index to gallery', () => {
+    expect(target('images')).toBe('gallery')
+    expect(target('images.9.url')).toBe('gallery')
   })
 })

@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { usePathname } from 'next/navigation'
+import { toast } from 'sonner'
 
 import AddCategoryPage from './page'
 import { ROUTES } from '@/constants/routes'
@@ -15,7 +16,21 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
 
+jest.mock('sonner', () => ({
+  toast: { success: jest.fn(), error: jest.fn() },
+}))
+
 const mockUsePathname = jest.mocked(usePathname)
+
+const apiErrorResponse = (field: string, message: string) => ({
+  ok: false,
+  status: 409,
+  json: async () => ({
+    statusCode: 409,
+    message: 'Conflict',
+    errors: [{ errCode: 'CATEGORY_NAME_EXISTS', field, message }],
+  }),
+})
 
 const mockCategory: Category = {
   id: 'new-cat-1',
@@ -41,6 +56,7 @@ function renderWithQueryClient(ui: ReactElement) {
 
 describe('AddCategoryPage', () => {
   beforeEach(() => {
+    jest.clearAllMocks()
     mockUsePathname.mockReturnValue(ROUTES.DASHBOARD_CATEGORIES_ADD)
     global.fetch = jest.fn()
   })
@@ -103,5 +119,42 @@ describe('AddCategoryPage', () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith(ROUTES.DASHBOARD_CATEGORIES)
     })
+  })
+
+  it('shows a duplicate-name API error under Category name', async () => {
+    const user = userEvent.setup()
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      apiErrorResponse('name', 'Category name already exists'),
+    )
+
+    renderWithQueryClient(<AddCategoryPage />)
+    const input = screen.getByRole('textbox', { name: /category name/i })
+    await user.type(input, 'Test Cat')
+    await user.click(screen.getByRole('button', { name: /create category/i }))
+
+    expect(
+      await screen.findByText('Category name already exists'),
+    ).toBeInTheDocument()
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('shows a non-name API error as a toast, not under Name', async () => {
+    const user = userEvent.setup()
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      apiErrorResponse('', 'Something failed'),
+    )
+
+    renderWithQueryClient(<AddCategoryPage />)
+    await user.type(
+      screen.getByRole('textbox', { name: /category name/i }),
+      'Test Cat',
+    )
+    await user.click(screen.getByRole('button', { name: /create category/i }))
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Something failed'),
+    )
+    expect(screen.queryByText('Something failed')).not.toBeInTheDocument()
   })
 })

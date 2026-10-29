@@ -20,12 +20,18 @@ import { updateUserFormSchema, type UpdateUserFormValues } from '@/schemas/user'
 import { uploadImageToImgBB } from '@/services/image'
 import { UserRole, UserStatus } from '@repo/constants'
 import { type User } from '@/types/user'
+import { mapServerErrors, setServerFieldErrors } from '@/utils/form'
 
 interface EditUserFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   user: User | null
 }
+
+const USER_FORM_FIELDS = ['firstName', 'lastName', 'role', 'status'] as const
+
+const userErrorField = (apiField: string) =>
+  USER_FORM_FIELDS.find((field) => field === apiField)
 
 export function EditUserForm({ open, onOpenChange, user }: EditUserFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -40,6 +46,7 @@ export function EditUserForm({ open, onOpenChange, user }: EditUserFormProps) {
     handleSubmit,
     reset,
     control,
+    setError,
     formState: { errors },
   } = useForm<UpdateUserFormValues>({
     resolver: zodResolver(updateUserFormSchema),
@@ -115,11 +122,12 @@ export function EditUserForm({ open, onOpenChange, user }: EditUserFormProps) {
           onOpenChange(false)
         },
         onError: (error) => {
-          setFormError(
-            error instanceof Error
-              ? error.message
-              : ERROR_MESSAGES.NETWORK_ERROR,
+          const { fieldErrors, unmatched } = mapServerErrors(
+            error,
+            userErrorField,
           )
+          setServerFieldErrors(setError, fieldErrors)
+          setFormError(unmatched.length ? unmatched.join(' ') : null)
         },
       },
     )

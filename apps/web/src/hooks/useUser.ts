@@ -23,7 +23,7 @@ import type { UpdateUserPayload } from '@repo/schemas'
 import type { UserRole } from '@repo/constants'
 import type { User } from '@/types/user'
 import { type ResponseMeta } from '@/types/api'
-import { getQueryErrorMessage } from '@/utils/query'
+import { getQueryErrorMessage, throwIfServiceFailed } from '@/utils/query'
 
 export type UseUsersParams = FetchUsersOptions
 
@@ -39,9 +39,7 @@ export function useUpdateUserRole() {
   return useMutation({
     mutationFn: async (input: { id: string; role: UserRole }) => {
       const result = await updateUserById(input.id, { role: input.role })
-      if (!result.ok) {
-        throw new Error(result.error)
-      }
+      if (!result.ok) throwIfServiceFailed(result)
       return result.user
     },
     onSuccess: () => {
@@ -56,9 +54,7 @@ export function useUpdateUserInfo() {
   return useMutation({
     mutationFn: async (input: { id: string; payload: UpdateUserPayload }) => {
       const result = await updateUserById(input.id, input.payload)
-      if (!result.ok) {
-        throw new Error(result.error)
-      }
+      if (!result.ok) throwIfServiceFailed(result)
       return result.user
     },
     onSuccess: () => {
@@ -78,9 +74,7 @@ export function useDeleteUser() {
   return useMutation({
     mutationFn: async (id: string) => {
       const result = await deleteUserById(id)
-      if (!result.ok) {
-        throw new Error(result.error)
-      }
+      if (!result.ok) throwIfServiceFailed(result)
       return result
     },
     onSuccess: async (_result, deletedId) => {
@@ -136,9 +130,7 @@ export const useUsers = (params: UseUsersParams = {}): UseUserResult => {
     queryKey: usersListQueryKey(params),
     queryFn: async () => {
       const result = await fetchUsers(params)
-      if (!result.ok) {
-        throw new Error(result.error)
-      }
+      if (!result.ok) throwIfServiceFailed(result)
       return {
         users: result.users,
         meta: result.meta ?? null,
