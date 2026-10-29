@@ -50,4 +50,14 @@ describe('updateProductSchema', () => {
       false,
     );
   });
+
+  it('accepts updateVariants', () => {
+    expect(
+      updateProductSchema.safeParse({
+        updateVariants: [
+          { id: '7d5b1c1e-1d2f-4c6a-9b1e-2f3a4b5c6d7e', price: 120 },
+        ],
+      }).success,
+    ).toBe(true);
+  });
 });

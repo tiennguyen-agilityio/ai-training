@@ -1,8 +1,8 @@
-import { z } from 'zod';
 import { DiscountType } from '@repo/constants';
 import {
+  DISCOUNT_FIXED_MESSAGE,
   DISCOUNT_PERCENT_MESSAGE,
-  discountPercentIssue,
+  isDiscountFixedValid,
   isDiscountPercentValid,
 } from './discount.js';
 
@@ -23,42 +23,42 @@ describe('discount percent rule', () => {
   ])('isDiscountPercentValid(%o) is %s', (fields, expected) => {
     expect(isDiscountPercentValid(fields)).toBe(expected);
   });
+});
 
-  it('gives each caller fresh params, which Zod cannot change for the next caller', () => {
-    const schema = z
-      .object({ items: z.array(z.object({ discountValue: z.number() })) })
-      .superRefine((_data, ctx) => {
-        ctx.addIssue({ code: 'custom', ...discountPercentIssue() });
-      });
-    z.object({}).refine(() => true, discountPercentIssue());
-    schema.safeParse({ items: [] });
-
-    expect(discountPercentIssue()).toEqual({
-      message: DISCOUNT_PERCENT_MESSAGE,
-      path: ['discountValue'],
-    });
-    expect(discountPercentIssue().path).not.toBe(discountPercentIssue().path);
+describe('discount fixed rule', () => {
+  it('reads as the API message', () => {
+    expect(DISCOUNT_FIXED_MESSAGE).toBe(
+      'Fixed discount must be less than base price',
+    );
   });
 
-  it('puts the issue on discountValue when used as a refinement', () => {
-    const schema = z
-      .object({
-        discountType: z.enum(DiscountType),
-        discountValue: z.number(),
-      })
-      .refine(isDiscountPercentValid, discountPercentIssue());
-
-    expect(
-      schema.safeParse({
-        discountType: DiscountType.PERCENT,
-        discountValue: 100,
-      }).error?.issues,
-    ).toEqual([
-      expect.objectContaining({
-        code: 'custom',
-        path: ['discountValue'],
-        message: DISCOUNT_PERCENT_MESSAGE,
-      }),
-    ]);
+  it.each([
+    [
+      { discountType: DiscountType.FIXED, discountValue: 120, price: 120 },
+      false,
+    ],
+    [
+      { discountType: DiscountType.FIXED, discountValue: 119.99, price: 120 },
+      true,
+    ],
+    [
+      { discountType: DiscountType.PERCENT, discountValue: 150, price: 120 },
+      true,
+    ],
+    [
+      {
+        discountType: DiscountType.FIXED,
+        discountValue: undefined,
+        price: 120,
+      },
+      true,
+    ],
+    [
+      { discountType: DiscountType.FIXED, discountValue: '150', price: '120' },
+      false,
+    ],
+    [{ discountType: DiscountType.FIXED, discountValue: 0, price: 120 }, true],
+  ])('isDiscountFixedValid(%o) is %s', (fields, expected) => {
+    expect(isDiscountFixedValid(fields)).toBe(expected);
   });
 });

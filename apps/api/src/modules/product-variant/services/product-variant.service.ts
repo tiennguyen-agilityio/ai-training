@@ -7,7 +7,7 @@ import {
   ERROR_DESCRIPTIONS,
 } from '../../../common/constants/message.constant.js';
 import { ERROR_CODES } from '../../../common/constants/error-code.constant.js';
-import type { ProductUnit } from '@repo/constants';
+import { DiscountType, type ProductUnit } from '@repo/constants';
 import { assignDefinedFields } from '../../../common/utils/object.util.js';
 import {
   DuplicateResourceException,
@@ -38,6 +38,8 @@ export class ProductVariantService {
 
     return this.productVariantRepository.create({
       ...data,
+      discountType: data.discountType ?? DiscountType.PERCENT,
+      discountValue: data.discountValue ?? '0',
       name: variantNameFrom(data.weight, data.unit),
     });
   }

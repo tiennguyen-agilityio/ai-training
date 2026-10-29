@@ -2,7 +2,8 @@ import type { UploadImageGalleryItem } from '@/components/UploadImage/Gallery'
 import { OUT_OF_STOCK_LABEL } from '@/constants/order'
 import { type RoastCollection } from '@/constants/roast'
 import type { EditProductFormValues } from '@/schemas/product'
-import { DiscountType, RoastLevel } from '@repo/constants'
+import { DiscountType, type ProductUnit, RoastLevel } from '@repo/constants'
+import type { ErrorDetail } from '@/types/api'
 import {
   type Product,
   type ProductFormValues,
@@ -10,7 +11,9 @@ import {
 } from '@/types/product'
 import type {
   CreateProductImagePayload,
+  CreateProductVariantPayload,
   UpdateProductImagePayload,
+  UpdateProductVariantPayload,
 } from '@repo/schemas'
 import { getPrimaryVariantQuantity } from '@/utils/inventory'
 
@@ -88,6 +91,8 @@ export function parseTastingNotesString(notes = ''): string[] {
 export function mapProductToEditFormValues(
   product: Product,
 ): EditProductFormValues {
+  const variant = product.variants[0]
+
   return {
     categoryId: product.categoryId,
     name: product.name,
@@ -95,9 +100,79 @@ export function mapProductToEditFormValues(
     roastLevel: product.roastLevel,
     isOrganic: product.isOrganic,
     isFairTrade: product.isFairTrade,
+    price: variant?.price ?? 0,
+    discountType: variant?.discountType ?? DiscountType.PERCENT,
+    discountValue: variant?.discountValue ?? 0,
+    quantity: variant?.quantity ?? 0,
     origin: product.origin,
     processingMethod: product.processingMethod,
   }
+}
+
+/**
+ * The Edit page edits the product's first variant only: one update entry with
+ * every pricing field, so an unchanged value is sent as it is. None when the
+ * product has no variant.
+ */
+export function buildVariantUpdates(
+  product: Product,
+  values: EditProductFormValues,
+): UpdateProductVariantPayload[] {
+  const id = product.variants[0]?.id
+  if (!id) return []
+
+  return [
+    {
+      id,
+      price: values.price,
+      discountType: values.discountType,
+      discountValue: values.discountValue,
+      ...(values.quantity !== '' && { quantity: values.quantity }),
+    },
+  ]
+}
+
+/** A Create form variant; the discount is always sent, 0 included. */
+export function toCreateVariantPayload(
+  values: Pick<
+    ProductFormValues,
+    'weight' | 'price' | 'discountType' | 'discountValue'
+  > & { unit: ProductUnit; quantity: number },
+  sku: string,
+): CreateProductVariantPayload {
+  return {
+    sku,
+    weight: Number(values.weight),
+    unit: values.unit,
+    price: Number(values.price),
+    discountType: values.discountType,
+    discountValue: Number(values.discountValue),
+    quantity: Number(values.quantity),
+  }
+}
+
+const VARIANT_FORM_FIELDS = [
+  'price',
+  'discountType',
+  'discountValue',
+  'quantity',
+] as const
+
+type VariantFormField = (typeof VARIANT_FORM_FIELDS)[number]
+
+/**
+ * API errors on the first variant's update (`updateVariants.0.<field>`), as
+ * the Edit form field they belong to.
+ */
+export function variantFieldErrors(
+  errors: ErrorDetail[],
+): { field: VariantFormField; message: string }[] {
+  return errors.flatMap((error) => {
+    const field = VARIANT_FORM_FIELDS.find(
+      (name) => error.field === `updateVariants.0.${name}`,
+    )
+    return field ? [{ field, message: error.message }] : []
+  })
 }
 
 export function mapProductToFormValues(product: Product): ProductFormValues {

@@ -7,7 +7,12 @@ import {
   ProductUnit,
   RoastLevel,
 } from '@repo/constants'
-import { DISCOUNT_PERCENT_MESSAGE, isDiscountPercentValid } from '@repo/schemas'
+import {
+  DISCOUNT_FIXED_MESSAGE,
+  DISCOUNT_PERCENT_MESSAGE,
+  isDiscountFixedValid,
+  isDiscountPercentValid,
+} from '@repo/schemas'
 import { ERROR_MESSAGES } from '@/constants/messages'
 import { formatNumberThousands } from '@/utils/number'
 
@@ -61,6 +66,51 @@ const processingMethodSchema = textFieldSchema(
   NAME.MIN_LENGTH,
 )
 
+// Price, discount and quantity of a product's (first) variant, shared by the
+// Create and Edit forms, with both discount rules on discountValue.
+const pricingFields = {
+  price: numberInRange('Price', PRICE.MIN, PRICE.MAX),
+  discountType: z.nativeEnum(DiscountType),
+  discountValue: numberInRange('DiscountValue', DISCOUNT.MIN, DISCOUNT.MAX),
+  quantity: z
+    .union(
+      [
+        z.literal(''),
+        z
+          .number()
+          .int({ message: VALIDATION_MESSAGES.isInt('Quantity') })
+          .min(QUANTITY.MIN, {
+            message: VALIDATION_MESSAGES.min('Quantity', QUANTITY.MIN),
+          }),
+      ],
+      { error: ERROR_MESSAGES.FIELD_REQUIRED },
+    )
+    .refine((value) => value !== '', {
+      message: ERROR_MESSAGES.FIELD_REQUIRED,
+    }),
+}
+
+const refinePricing = (
+  data: { price: number; discountType: DiscountType; discountValue: number },
+  ctx: z.RefinementCtx,
+) => {
+  if (!isDiscountPercentValid(data)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['discountValue'],
+      message: DISCOUNT_PERCENT_MESSAGE,
+    })
+  }
+
+  if (!isDiscountFixedValid(data)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['discountValue'],
+      message: DISCOUNT_FIXED_MESSAGE,
+    })
+  }
+}
+
 export const createProductFormSchema = z
   .object({
     categoryId: z
@@ -80,63 +130,30 @@ export const createProductFormSchema = z
       .refine((value) => value !== '', {
         message: ERROR_MESSAGES.FIELD_REQUIRED,
       }),
-    price: numberInRange('Price', PRICE.MIN, PRICE.MAX),
-    discountType: z.nativeEnum(DiscountType),
-    discountValue: numberInRange('DiscountValue', DISCOUNT.MIN, DISCOUNT.MAX),
-    quantity: z
-      .union(
-        [
-          z.literal(''),
-          z
-            .number()
-            .int({ message: VALIDATION_MESSAGES.isInt('Quantity') })
-            .min(QUANTITY.MIN, {
-              message: VALIDATION_MESSAGES.min('Quantity', QUANTITY.MIN),
-            }),
-        ],
-        { error: ERROR_MESSAGES.FIELD_REQUIRED },
-      )
-      .refine((value) => value !== '', {
-        message: ERROR_MESSAGES.FIELD_REQUIRED,
-      }),
+    ...pricingFields,
     origin: originSchema,
     processingMethod: processingMethodSchema,
   })
-  .superRefine((data, ctx) => {
-    if (!isDiscountPercentValid(data)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['discountValue'],
-        message: DISCOUNT_PERCENT_MESSAGE,
-      })
-    }
-
-    if (
-      data.discountType === DiscountType.FIXED &&
-      data.discountValue >= data.price
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['discountValue'],
-        message: ERROR_MESSAGES.DISCOUNT_FIXED_MUST_BE_LESS_THAN_PRICE,
-      })
-    }
-  })
+  .superRefine(refinePricing)
 
 export type CreateProductFormValues = z.infer<typeof createProductFormSchema>
 
-export const editProductFormSchema = z.object({
-  categoryId: z
-    .string()
-    .trim()
-    .min(1, { message: ERROR_MESSAGES.FIELD_REQUIRED }),
-  name: nameSchema,
-  description: descriptionSchema,
-  roastLevel: z.nativeEnum(RoastLevel),
-  isOrganic: z.boolean(),
-  isFairTrade: z.boolean(),
-  origin: originSchema,
-  processingMethod: processingMethodSchema,
-})
+export const editProductFormSchema = z
+  .object({
+    categoryId: z
+      .string()
+      .trim()
+      .min(1, { message: ERROR_MESSAGES.FIELD_REQUIRED }),
+    name: nameSchema,
+    description: descriptionSchema,
+    roastLevel: z.nativeEnum(RoastLevel),
+    isOrganic: z.boolean(),
+    isFairTrade: z.boolean(),
+    ...pricingFields,
+    origin: originSchema,
+    processingMethod: processingMethodSchema,
+  })
+  .superRefine(refinePricing)
 
-export type EditProductFormValues = z.infer<typeof editProductFormSchema>
+// Form values as the inputs hold them: an empty Quantity is ''.
+export type EditProductFormValues = z.input<typeof editProductFormSchema>
