@@ -282,6 +282,17 @@ describe('Dashboard products page', () => {
     expect(screen.queryByText('Midnight Blend')).not.toBeInTheDocument()
   })
 
+  it('requests categories without deleted rows', () => {
+    mockUseCategories.mockClear()
+
+    renderProductsPage()
+
+    expect(mockUseCategories).toHaveBeenCalled()
+    for (const [params] of mockUseCategories.mock.calls) {
+      expect(params?.includeDeleted).toBeFalsy()
+    }
+  })
+
   it('filters products by keyword via URL params and API params', async () => {
     const view = renderProductsPage()
 

@@ -7,8 +7,10 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query'
+import { useAuth } from '@clerk/nextjs'
 
 import {
+  CLERK_SESSION_TEMPLATE,
   LIST_QUERY_GC_MS,
   LIST_QUERY_STALE_MS,
   PAGE_SIZE,
@@ -39,13 +41,19 @@ export interface UseCategoriesResult {
   refetch: () => Promise<void>
 }
 
-export function categoriesListQueryKey(params: CategoryOptions) {
+export function categoriesListQueryKey(
+  params: CategoryOptions,
+  userId: string | null = null,
+) {
   return [
     'categories',
     'list',
+    params.includeDeleted ?? false,
     params.page ?? 1,
     params.limit ?? PAGE_SIZE,
     params.search ?? '',
+    // Deleted rows depend on who asks, so those lists are cached per user.
+    params.includeDeleted ? userId : null,
   ] as const
 }
 
@@ -73,10 +81,22 @@ function invalidateCategoryLists(queryClient: QueryClient) {
 export const useCategories = (
   params: CategoryOptions = {},
 ): UseCategoriesResult => {
+  const { isLoaded, userId, getToken } = useAuth()
+  const { includeDeleted } = params
+
   const query = useQuery({
-    queryKey: categoriesListQueryKey(params),
+    queryKey: categoriesListQueryKey(params, userId ?? null),
     queryFn: async () => {
-      const result = await fetchCategories(params)
+      // Without the token the API answers 200 with live rows only, so a list
+      // with deleted rows must not run before Clerk can sign the request.
+      const result = await fetchCategories(
+        includeDeleted
+          ? {
+              ...params,
+              getToken: () => getToken({ template: CLERK_SESSION_TEMPLATE }),
+            }
+          : params,
+      )
       if (!result.ok) throwIfServiceFailed(result)
 
       return {
@@ -84,6 +104,7 @@ export const useCategories = (
         meta: result.meta ?? null,
       }
     },
+    enabled: !includeDeleted || isLoaded,
     ...listQueryOptions,
   })
 
@@ -129,8 +150,21 @@ export function useDeleteCategory() {
       if (!result.ok) throwIfServiceFailed(result)
     },
     onSuccess: async (_result, deletedId) => {
+      // Lists that include deleted rows keep the row, now marked deleted.
       queryClient.setQueriesData<CategoriesListCache>(
-        { queryKey: ['categories', 'list'] },
+        { queryKey: ['categories', 'list', true] },
+        (old) => {
+          if (!old) return old
+          if (!old.categories.some((c) => c.id === deletedId)) return old
+          const deletedAt = new Date().toISOString()
+          const categories = old.categories.map((c) =>
+            c.id === deletedId ? { ...c, deletedAt } : c,
+          )
+          return { ...old, categories }
+        },
+      )
+      queryClient.setQueriesData<CategoriesListCache>(
+        { queryKey: ['categories', 'list', false] },
         (old) => {
           if (!old) return old
           const categories = old.categories.filter((c) => c.id !== deletedId)

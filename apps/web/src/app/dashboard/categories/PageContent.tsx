@@ -54,6 +54,7 @@ export const PageContent = () => {
       page,
       limit,
       search: search.trim(),
+      includeDeleted: true,
     })
 
   const totalPages = Math.max(1, meta?.pageCount ?? 1)
@@ -87,8 +88,7 @@ export const PageContent = () => {
         description={
           <p>
             This will remove <b>{pendingDelete?.name}</b> (
-            <b>{pendingDelete?.slug}</b>). It may still appear in this list with
-            the Removed badge.
+            <b>{pendingDelete?.slug}</b>).
           </p>
         }
         textAction="Delete"

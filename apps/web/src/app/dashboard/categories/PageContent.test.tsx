@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { PageContent } from '@/app/dashboard/categories/PageContent'
+import { DIALOG_MESSAGES } from '@/constants/messages'
 import { ROUTES } from '@/constants/routes'
 import { useCategories, useDeleteCategory } from '@/hooks/useCategory'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -73,6 +74,67 @@ describe('Categories PageContent', () => {
     expect(screen.getByRole('link', { name: /add category/i })).toHaveAttribute(
       'href',
       ROUTES.DASHBOARD_CATEGORIES_ADD,
+    )
+  })
+
+  it('requests the list with deleted categories', () => {
+    render(<PageContent />)
+
+    expect(mockUseCategories).toHaveBeenCalledWith(
+      expect.objectContaining({ includeDeleted: true }),
+    )
+  })
+
+  it('renders a deleted category with Edit and Remove disabled', () => {
+    mockUseCategories.mockReturnValue({
+      categories: [{ ...listCategory, deletedAt: '2026-02-01T00:00:00.000Z' }],
+      meta: {
+        limit: 10,
+        currentPage: 1,
+        pageCount: 1,
+        totalCount: 1,
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      errorMessage: null,
+      refetch: jest.fn(),
+    })
+
+    render(<PageContent />)
+
+    expect(screen.getByText('Hello')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /edit hello/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /remove hello/i })).toBeDisabled()
+  })
+
+  it('delete dialog does not mention a Removed badge', async () => {
+    const user = userEvent.setup()
+    mockUseCategories.mockReturnValue({
+      categories: [listCategory],
+      meta: {
+        limit: 10,
+        currentPage: 1,
+        pageCount: 1,
+        totalCount: 1,
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      errorMessage: null,
+      refetch: jest.fn(),
+    })
+
+    render(<PageContent />)
+
+    await user.click(screen.getByRole('button', { name: /remove hello/i }))
+    expect(await screen.findByText('Remove this category?')).toBeInTheDocument()
+    expect(screen.queryByText(/removed badge/i)).not.toBeInTheDocument()
+  })
+
+  it('delete dialog description constant has no Removed badge sentence', () => {
+    expect(DIALOG_MESSAGES.CATEGORY.DELETE.DESCRIPTION('Hello', 'hello')).toBe(
+      'This will remove Hello (hello).',
     )
   })
 
