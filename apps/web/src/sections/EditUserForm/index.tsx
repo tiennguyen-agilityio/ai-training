@@ -47,6 +47,7 @@ export function EditUserForm({ open, onOpenChange, user }: EditUserFormProps) {
     reset,
     control,
     setError,
+    setFocus,
     formState: { errors },
   } = useForm<UpdateUserFormValues>({
     resolver: zodResolver(updateUserFormSchema),
@@ -126,7 +127,7 @@ export function EditUserForm({ open, onOpenChange, user }: EditUserFormProps) {
             error,
             userErrorField,
           )
-          setServerFieldErrors(setError, fieldErrors)
+          setServerFieldErrors(setError, fieldErrors, setFocus)
           setFormError(unmatched.length ? unmatched.join(' ') : null)
         },
       },

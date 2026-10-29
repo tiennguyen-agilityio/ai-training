@@ -1,4 +1,9 @@
-import type { FieldValues, Path, UseFormSetError } from 'react-hook-form'
+import type {
+  FieldValues,
+  Path,
+  UseFormSetError,
+  UseFormSetFocus,
+} from 'react-hook-form'
 
 import { ERROR_MESSAGES } from '@/constants/messages'
 import { ServiceError } from '@/utils/query'
@@ -48,12 +53,19 @@ export function mapServerErrors<K extends string>(
   return { fieldErrors, unmatched }
 }
 
-/** Shows API errors under their react-hook-form fields, focusing the first. */
+/**
+ * Shows API errors under their react-hook-form fields, focusing the first.
+ * The inputs are usually still disabled while the request settles, so with
+ * `setFocus` the first field is focused again on the next tick, once enabled.
+ */
 export function setServerFieldErrors<T extends FieldValues>(
   setError: UseFormSetError<T>,
   fieldErrors: ServerFieldError<Path<T>>[],
+  setFocus?: UseFormSetFocus<T>,
 ): void {
   fieldErrors.forEach(({ field, message }, index) => {
     setError(field, { type: 'server', message }, { shouldFocus: index === 0 })
   })
+  const first = fieldErrors[0]
+  if (first && setFocus) setTimeout(() => setFocus(first.field))
 }

@@ -134,4 +134,23 @@ describe('setServerFieldErrors', () => {
       ['price', { type: 'server', message: 'B' }, { shouldFocus: false }],
     ])
   })
+
+  it('focuses the first field again on the next tick when setFocus is given', () => {
+    jest.useFakeTimers()
+    const setFocus = jest.fn()
+
+    setServerFieldErrors(
+      jest.fn(),
+      [
+        { field: 'name', message: 'A' },
+        { field: 'price', message: 'B' },
+      ],
+      setFocus,
+    )
+    expect(setFocus).not.toHaveBeenCalled()
+    jest.runAllTimers()
+
+    expect(setFocus.mock.calls).toEqual([['name']])
+    jest.useRealTimers()
+  })
 })

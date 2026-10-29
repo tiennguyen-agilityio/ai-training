@@ -311,4 +311,55 @@ describe('EditProductForm pricing', () => {
       'A product can have at most 10 images',
     )
   })
+
+  it('updates the Product Name error while typing after the first blur', async () => {
+    renderPage()
+
+    await userEvent.clear(field('Product Name'))
+    await userEvent.tab()
+    expect(
+      await screen.findByText('This field is required'),
+    ).toBeInTheDocument()
+
+    await userEvent.type(field('Product Name'), 'a')
+
+    expect(
+      await screen.findByText('Product name must be at least 2 characters'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('This field is required')).not.toBeInTheDocument()
+  })
+
+  it('focuses Product Name after a server name error', async () => {
+    // The response arrives after a render, while the form is still disabled.
+    mockMutate.mockImplementation((_input, options: MutateOptions) => {
+      setTimeout(() =>
+        options.onError?.(
+          new ServiceError('Product name already exists', [
+            {
+              errCode: 'productNameExists',
+              field: 'name',
+              message: 'Product name already exists',
+            },
+          ]),
+        ),
+      )
+    })
+    renderPage()
+
+    await replaceValue('Product Name', 'coldbrew')
+    await save()
+
+    expect(
+      await screen.findByText('Product name already exists'),
+    ).toBeInTheDocument()
+    await waitFor(() => expect(field('Product Name')).toHaveFocus())
+  })
+
+  it('does not accept a base price above 99,999,999.99', async () => {
+    renderPage()
+
+    await replaceValue('Base Price', '100000000')
+
+    expect(field('Base Price')).toHaveValue('10,000,000')
+  })
 })

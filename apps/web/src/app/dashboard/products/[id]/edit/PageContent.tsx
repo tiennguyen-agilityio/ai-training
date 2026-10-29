@@ -9,7 +9,12 @@ import { toast } from 'sonner'
 
 import type { Product } from '@/types/product'
 import type { UpdateProductPayload } from '@repo/schemas'
-import { DiscountType, ProductStatus, RoastLevel } from '@repo/constants'
+import {
+  DiscountType,
+  ProductStatus,
+  RoastLevel,
+  VALIDATION_RULES,
+} from '@repo/constants'
 
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { CATEGORY_QUERY_OPTIONS } from '@/constants/category'
@@ -185,6 +190,7 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
     handleSubmit,
     clearErrors,
     setError,
+    setFocus,
     trigger,
     reset,
     setValue,
@@ -193,7 +199,7 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
   } = useForm<EditProductFormValues>({
     resolver: zodResolver(editProductFormSchema),
     defaultValues: EDIT_FORM_DEFAULTS,
-    mode: 'onBlur',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
   })
 
@@ -434,7 +440,7 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
           const { imageErrors: serverImageErrors, formErrors } =
             splitImageErrors(fieldErrors)
           setImageErrors((prev) => ({ ...prev, ...serverImageErrors }))
-          setServerFieldErrors(setError, formErrors)
+          setServerFieldErrors(setError, formErrors, setFocus)
           unmatched.forEach((message) => toast.error(message))
           finish()
         },
@@ -648,6 +654,8 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
                       inputMode="decimal"
                       placeholder="e.g. 24.95"
                       startIcon={<DollarIcon className="size-4" />}
+                      min={VALIDATION_RULES.PRICE.MIN}
+                      max={VALIDATION_RULES.PRICE.MAX}
                       maxDecimalPlaces={2}
                       disabled={isSubmitting}
                       errorMessage={errors.price?.message}

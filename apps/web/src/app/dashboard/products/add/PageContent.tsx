@@ -156,6 +156,7 @@ const PageContent = () => {
     handleSubmit,
     clearErrors,
     setError,
+    setFocus,
     reset,
     setValue,
     watch,
@@ -164,7 +165,7 @@ const PageContent = () => {
   } = useForm<ProductFormValues>({
     resolver: zodResolver(createProductFormSchema),
     defaultValues: PRODUCT_FORM_DEFAULT_VALUES,
-    mode: 'onBlur',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
   })
 
@@ -381,7 +382,7 @@ const PageContent = () => {
         const { imageErrors: serverImageErrors, formErrors } =
           splitImageErrors(fieldErrors)
         setImageErrors((prev) => ({ ...prev, ...serverImageErrors }))
-        setServerFieldErrors(setError, formErrors)
+        setServerFieldErrors(setError, formErrors, setFocus)
         unmatched.forEach((message) => toast.error(message))
         setIsUploadingImages(false)
       },

@@ -32,6 +32,7 @@ const PageContent = () => {
     handleSubmit,
     reset,
     setError,
+    setFocus,
     clearErrors,
     formState: { errors },
   } = useForm<CreateCategoryFormValues>({
@@ -52,7 +53,7 @@ const PageContent = () => {
         const { fieldErrors, unmatched } = mapServerErrors(error, (field) =>
           field === 'name' ? 'name' : undefined,
         )
-        setServerFieldErrors(setError, fieldErrors)
+        setServerFieldErrors(setError, fieldErrors, setFocus)
         unmatched.forEach((message) => toast.error(message))
       },
     })
