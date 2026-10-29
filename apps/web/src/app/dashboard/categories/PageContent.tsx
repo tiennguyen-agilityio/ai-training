@@ -11,7 +11,11 @@ import { ROUTES } from '@/constants/routes'
 import { CATEGORIES_TABLE_COLUMNS } from '@/constants/category'
 
 // Hooks
-import { useCategories, useDeleteCategory } from '@/hooks/useCategory'
+import {
+  useCategories,
+  useDeleteCategory,
+  useRestoreCategory,
+} from '@/hooks/useCategory'
 import { useUrlState } from '@/hooks/useUrlState'
 import { useDebouncedUrlSearch } from '@/hooks/useDebouncedUrlSearch'
 
@@ -24,26 +28,43 @@ import { SearchInput } from '@/components/SearchInput'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { CategoryTableRow } from '@/sections/CategoryTableRow'
 
+// Types
+import type { Category } from '@/types/category'
+
 // Utils
 import { urlSchema } from '@/utils/url'
 import { cn } from '@/utils/styles'
 import Loading from '@/components/Loading'
 
-interface PendingDelete {
+interface PendingCategoryAction {
   id: string
   name: string
-  slug: string
 }
+
+const toPendingCategoryAction = (
+  category: Category,
+): PendingCategoryAction => ({
+  id: category.id,
+  name: category.name?.trim() ? category.name : '—',
+})
 
 export const PageContent = () => {
   const { state, update: updateUrl } = useUrlState(urlSchema)
   const { page, search, limit } = state
-  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
+  const [pendingDelete, setPendingDelete] =
+    useState<PendingCategoryAction | null>(null)
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(
     null,
   )
   const { mutate: deleteCategoryMutate, isPending: isDeletePending } =
     useDeleteCategory()
+  const [pendingRestore, setPendingRestore] =
+    useState<PendingCategoryAction | null>(null)
+  const [restoreErrorMessage, setRestoreErrorMessage] = useState<string | null>(
+    null,
+  )
+  const { mutate: restoreCategoryMutate, isPending: isRestorePending } =
+    useRestoreCategory()
   const { searchInput, setSearchInput, searchInputRef } = useDebouncedUrlSearch(
     search,
     updateUrl,
@@ -87,8 +108,7 @@ export const PageContent = () => {
         title="Remove this category?"
         description={
           <p>
-            This will remove <b>{pendingDelete?.name}</b> (
-            <b>{pendingDelete?.slug}</b>).
+            This will remove <b>{pendingDelete?.name}</b>.
           </p>
         }
         textAction="Delete"
@@ -104,6 +124,46 @@ export const PageContent = () => {
             },
             onError: (error) => {
               setDeleteErrorMessage(
+                error instanceof Error
+                  ? error.message
+                  : ERROR_MESSAGES.NETWORK_ERROR,
+              )
+            },
+          })
+        }}
+      />
+
+      <AlertDialog
+        data-testid="modal-confirm-restore-category"
+        open={pendingRestore !== null}
+        isLoading={isRestorePending}
+        errorMessage={restoreErrorMessage}
+        onOpenChange={(open) => {
+          if (!open && !isRestorePending) {
+            setPendingRestore(null)
+            setRestoreErrorMessage(null)
+          }
+        }}
+        title="Restore this category?"
+        description={
+          <p>
+            This will restore <b>{pendingRestore?.name}</b>.
+          </p>
+        }
+        textAction="Restore"
+        actionVariant="default"
+        onClickAction={() => {
+          const id = pendingRestore?.id
+          if (!id) return
+          setRestoreErrorMessage(null)
+          restoreCategoryMutate(id, {
+            onSuccess: () => {
+              toast.success(SUCCESS_MESSAGES.CATEGORY_RESTORED)
+              setPendingRestore(null)
+              setRestoreErrorMessage(null)
+            },
+            onError: (error) => {
+              setRestoreErrorMessage(
                 error instanceof Error
                   ? error.message
                   : ERROR_MESSAGES.NETWORK_ERROR,
@@ -206,11 +266,11 @@ export const PageContent = () => {
                   category={row}
                   onRequestDelete={(c) => {
                     setDeleteErrorMessage(null)
-                    setPendingDelete({
-                      id: c.id,
-                      name: c.name?.trim() ? c.name : '—',
-                      slug: c.slug?.trim() ?? '',
-                    })
+                    setPendingDelete(toPendingCategoryAction(c))
+                  }}
+                  onRequestRestore={(c) => {
+                    setRestoreErrorMessage(null)
+                    setPendingRestore(toPendingCategoryAction(c))
                   }}
                 />
               )}

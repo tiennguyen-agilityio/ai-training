@@ -73,6 +73,24 @@ export async function deleteCategory(
   return { ok: true }
 }
 
+export async function restoreCategory(
+  id: string,
+  options: Pick<CategoryOptions, 'getToken'> = {},
+): Promise<
+  | { ok: true; category: Category }
+  | { ok: false; error: string; status?: number }
+> {
+  const trimmed = id.trim()
+  const url = `${API_ROUTES.CATEGORIES}/${encodeURIComponent(trimmed)}/restore`
+  const result = await apiClient.patch<ApiResponse<Category>>(url, undefined, {
+    getToken: options.getToken,
+    fallbackError: API_FALLBACK_ERRORS.CATEGORY_RESTORE,
+  })
+  if (!result.ok) return result
+
+  return { ok: true, category: result.data.data }
+}
+
 export async function fetchCategories(
   options: CategoryOptions = {},
 ): Promise<

@@ -8,8 +8,9 @@ import {
   categoriesListQueryKey,
   useCategories,
   useDeleteCategory,
+  useRestoreCategory,
 } from '@/hooks/useCategory'
-import { fetchCategories } from '@/services/category'
+import { fetchCategories, restoreCategory } from '@/services/category'
 import type { Category } from '@/types/category'
 import type { ResponseMeta } from '@/types/api'
 
@@ -18,6 +19,7 @@ jest.mock('@clerk/nextjs', () => ({ useAuth: jest.fn() }))
 jest.mock('@/services/category', () => ({
   ...jest.requireActual('@/services/category'),
   deleteCategory: jest.fn().mockResolvedValue({ ok: true }),
+  restoreCategory: jest.fn(),
   fetchCategories: jest
     .fn()
     .mockResolvedValue({ ok: true, categories: [], meta: undefined }),
@@ -25,6 +27,7 @@ jest.mock('@/services/category', () => ({
 
 const mockUseAuth = jest.mocked(useAuth)
 const mockFetchCategories = jest.mocked(fetchCategories)
+const mockRestoreCategory = jest.mocked(restoreCategory)
 
 const mockClerk = (state: {
   isLoaded: boolean
@@ -210,5 +213,100 @@ describe('useDeleteCategory', () => {
 
   it('still invalidates the category queries', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['categories'] })
+  })
+})
+
+describe('useRestoreCategory', () => {
+  const includeDeletedKey = categoriesListQueryKey({
+    page: 2,
+    limit: 10,
+    search: 'bean',
+    includeDeleted: true,
+  })
+  const liveKey = categoriesListQueryKey({ page: 1, limit: 10, search: '' })
+  const deletedA = { ...catA, deletedAt: '2026-02-01T00:00:00.000Z' }
+
+  let client: QueryClient
+  let invalidateSpy: jest.SpyInstance
+
+  const renderRestore = () => {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    return renderHook(() => useRestoreCategory(), { wrapper })
+  }
+
+  beforeEach(() => {
+    client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    })
+    client.setQueryData<ListCache>(includeDeletedKey, {
+      categories: [deletedA, catB],
+      meta,
+    })
+    client.setQueryData<ListCache>(liveKey, {
+      categories: [catA, catB],
+      meta,
+    })
+    invalidateSpy = jest
+      .spyOn(client, 'invalidateQueries')
+      .mockResolvedValue(undefined)
+    mockRestoreCategory.mockReset()
+    mockRestoreCategory.mockResolvedValue({
+      ok: true,
+      category: { ...catA, deletedAt: null },
+    })
+  })
+
+  afterEach(() => {
+    client.clear()
+  })
+
+  it('clears deletedAt in lists that include deleted rows', async () => {
+    const { result } = renderRestore()
+    await act(() => result.current.mutateAsync('cat-a'))
+
+    const list = client.getQueryData<ListCache>(includeDeletedKey)
+    expect(list?.categories).toEqual([{ ...catA, deletedAt: null }, catB])
+    expect(list?.meta).toEqual(meta)
+  })
+
+  it('leaves lists without deleted rows unchanged', async () => {
+    const { result } = renderRestore()
+    await act(() => result.current.mutateAsync('cat-a'))
+
+    expect(client.getQueryData<ListCache>(liveKey)).toEqual({
+      categories: [catA, catB],
+      meta,
+    })
+  })
+
+  it('invalidates the category queries', async () => {
+    const { result } = renderRestore()
+    await act(() => result.current.mutateAsync('cat-a'))
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['categories'] })
+  })
+
+  it('leaves the cache untouched when the restore fails', async () => {
+    mockRestoreCategory.mockResolvedValue({
+      ok: false,
+      error: 'Only a deleted category can be restored.',
+      status: 409,
+    })
+    const { result } = renderRestore()
+
+    await act(async () => {
+      await expect(result.current.mutateAsync('cat-a')).rejects.toThrow(
+        'Only a deleted category can be restored.',
+      )
+    })
+
+    const list = client.getQueryData<ListCache>(includeDeletedKey)
+    expect(list?.categories[0].deletedAt).toBe('2026-02-01T00:00:00.000Z')
+    expect(invalidateSpy).not.toHaveBeenCalled()
   })
 })
