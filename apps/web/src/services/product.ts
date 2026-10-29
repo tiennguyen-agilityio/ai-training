@@ -2,11 +2,13 @@ import { API_FALLBACK_ERRORS } from '@/constants/messages'
 import { API_ROUTES } from '@/constants/routes'
 import type { Response as ApiResponse, ResponseMeta } from '@/types/api'
 import { apiClient } from '@/services/api'
+import { ProductStatus, RoastLevel } from '@repo/constants'
 import type {
-  Product,
-  ProductPayload,
-  ProductUpdatePayload,
-} from '@/types/product'
+  CreateProductPayload,
+  CreateProductVariantPayload,
+  UpdateProductPayload,
+} from '@repo/schemas'
+import type { Product, ProductVariantSummary } from '@/types/product'
 
 export interface ProductOptions {
   getToken?: () => Promise<string | null>
@@ -22,7 +24,7 @@ export interface ProductOptions {
 }
 
 export async function createProduct(
-  body: ProductPayload,
+  body: CreateProductPayload,
   options: ProductOptions = {},
 ): Promise<
   { ok: true; product: Product } | { ok: false; error: string; status?: number }
@@ -47,12 +49,7 @@ export async function createProduct(
 
   return {
     ok: true,
-    product: parsedProduct ?? {
-      id: '',
-      ...body,
-      createdAt: null,
-      updatedAt: null,
-    },
+    product: parsedProduct ?? productFromBody('', body),
   }
 }
 
@@ -153,15 +150,54 @@ export async function fetchProductById(
   return { ok: true, product: parsed }
 }
 
-function isProductUpdatePayload(
-  body: ProductPayload | ProductUpdatePayload,
-): body is ProductUpdatePayload {
-  return !('images' in body)
+const toVariantSummary = (
+  variant: CreateProductVariantPayload,
+): ProductVariantSummary => ({
+  sku: variant.sku,
+  weight: variant.weight,
+  unit: variant.unit,
+  price: variant.price,
+  discountType: variant.discountType ?? null,
+  discountValue: variant.discountValue ?? null,
+  quantity: variant.quantity ?? 0,
+})
+
+// Last resort when neither the response nor a refetch gives the product back:
+// rebuild it from the body web sent. Web's forms send every core field, so the
+// defaults only satisfy the type.
+function productFromBody(
+  id: string,
+  body: CreateProductPayload | UpdateProductPayload,
+): Product {
+  return {
+    id,
+    categoryId: body.categoryId ?? '',
+    name: body.name ?? '',
+    description: body.description ?? '',
+    roastLevel: body.roastLevel ?? RoastLevel.MEDIUM,
+    isOrganic: body.isOrganic ?? false,
+    isFairTrade: body.isFairTrade ?? false,
+    status: body.status ?? ProductStatus.DRAFT,
+    tastingNotes: body.tastingNotes ?? '',
+    origin: body.origin ?? '',
+    processingMethod: body.processingMethod ?? '',
+    variants: 'variants' in body ? body.variants.map(toVariantSummary) : [],
+    images:
+      'images' in body
+        ? body.images.map((image) => ({
+            url: image.url,
+            isPrimary: image.isPrimary ?? false,
+            sortOrder: image.sortOrder ?? 0,
+          }))
+        : [],
+    createdAt: null,
+    updatedAt: null,
+  }
 }
 
 export async function updateProduct(
   id: string,
-  body: ProductPayload | ProductUpdatePayload,
+  body: CreateProductPayload | UpdateProductPayload,
   options: Pick<ProductOptions, 'getToken'> = {},
 ): Promise<
   { ok: true; product: Product } | { ok: false; error: string; status?: number }
@@ -186,40 +222,5 @@ export async function updateProduct(
     return { ok: true, product: refetched.product }
   }
 
-  if ('images' in body) {
-    return {
-      ok: true,
-      product: {
-        id: trimmed,
-        ...body,
-        createdAt: null,
-        updatedAt: null,
-      },
-    }
-  }
-
-  if (isProductUpdatePayload(body)) {
-    const {
-      addImages: _a,
-      removeImageIds: _r,
-      updateImages: _u,
-      ...core
-    } = body
-    return {
-      ok: true,
-      product: {
-        id: trimmed,
-        ...core,
-        images: [],
-        variants: [],
-        createdAt: null,
-        updatedAt: null,
-      },
-    }
-  }
-
-  return {
-    ok: false,
-    error: API_FALLBACK_ERRORS.PRODUCT_UPDATE,
-  }
+  return { ok: true, product: productFromBody(trimmed, body) }
 }

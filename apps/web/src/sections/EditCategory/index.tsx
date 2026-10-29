@@ -13,8 +13,10 @@ import { Button } from '@/components/ui/button'
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { ROUTES, dashboardCategoryEditRoute } from '@/constants/routes'
 import { useCategoryById, useUpdateCategory } from '@/hooks/useCategory'
-import { createCategoryFormSchema } from '@/schemas/category'
-import type { CategoryPayload } from '@/types/category'
+import {
+  createCategoryFormSchema,
+  type CreateCategoryFormValues,
+} from '@/schemas/category'
 import { Input } from '@/components/Input'
 
 const EditCategory = () => {
@@ -34,7 +36,7 @@ const EditCategory = () => {
     setError,
     clearErrors,
     formState: { errors, isDirty },
-  } = useForm<CategoryPayload>({
+  } = useForm<CreateCategoryFormValues>({
     resolver: zodResolver(createCategoryFormSchema),
     defaultValues: { name: category?.name ?? '' },
     mode: 'onBlur',
@@ -46,7 +48,7 @@ const EditCategory = () => {
     reset({ name: category.name ?? '' })
   }, [category, reset])
 
-  const onSubmit = (data: CategoryPayload) => {
+  const onSubmit = (data: CreateCategoryFormValues) => {
     const trimmedId = categoryId.trim()
     if (!trimmedId) return
     mutate(

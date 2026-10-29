@@ -17,9 +17,9 @@ import {
   deleteUserById,
   fetchUsers,
   type FetchUsersOptions,
-  type UpdateUserPayload,
   updateUserById,
 } from '@/services/user'
+import type { UpdateUserPayload } from '@repo/schemas'
 import type { UserRole } from '@repo/constants'
 import type { User } from '@/types/user'
 import { type ResponseMeta } from '@/types/api'

@@ -1,4 +1,5 @@
 import { DiscountType, ProductUnit, RoastLevel } from '@repo/constants'
+import { DISCOUNT_PERCENT_MESSAGE } from '@repo/schemas'
 
 import { createProductFormSchema } from '@/schemas/product'
 
@@ -55,5 +56,24 @@ describe('createProductFormSchema', () => {
         'discountValue',
       ),
     ).toContain('DiscountValue must not be greater than 99,999,999.99')
+  })
+
+  it('uses the shared message for a percent discount of 100', () => {
+    expect(
+      messagesFor(
+        { ...valid, discountType: DiscountType.PERCENT, discountValue: 100 },
+        'discountValue',
+      ),
+    ).toEqual([DISCOUNT_PERCENT_MESSAGE])
+  })
+
+  it('accepts a percent discount of 99', () => {
+    expect(
+      createProductFormSchema.safeParse({
+        ...valid,
+        discountType: DiscountType.PERCENT,
+        discountValue: 99,
+      }).success,
+    ).toBe(true)
   })
 })

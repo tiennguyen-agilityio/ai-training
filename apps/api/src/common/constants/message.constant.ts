@@ -27,8 +27,6 @@ export const ERROR_MESSAGES = {
   PRODUCT_VARIANT: {
     NOT_FOUND: 'Product variant not found',
     SKU_EXISTS: 'SKU already exists',
-    INVALID_DISCOUNT_PERCENT:
-      'DiscountValue must be less than 100 when DiscountType is PERCENT',
   },
   PRODUCT: {
     NOT_FOUND: 'Product not found',

@@ -11,6 +11,7 @@ services:
     volumes:
       - ./src:/app/apps/api/src
       - ../../packages/constants/src:/app/packages/constants/src
+      - ../../packages/schemas/src:/app/packages/schemas/src
     # turbo runs the package's tsc --watch next to nest --watch, like pnpm dev:api.
     # -C keeps the image's WORKDIR, so `compose exec app pnpm run <script>` stays in apps/api.
     command: pnpm -C /app exec turbo run dev --filter=api...

@@ -15,6 +15,7 @@ const config: Config = {
     // Tests read the package source, never a stale dist; its NodeNext
     // imports name `.js` files that exist as `.ts` in src.
     '^@repo/constants$': '<rootDir>/../../packages/constants/src/index.ts',
+    '^@repo/schemas$': '<rootDir>/../../packages/schemas/src/index.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],

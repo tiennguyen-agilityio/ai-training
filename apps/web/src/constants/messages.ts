@@ -12,11 +12,6 @@ export const ERROR_MESSAGES = {
   UNEXPECTED_PROFILE_RESPONSE: 'Unexpected profile response',
   NETWORK_ERROR: 'Network error',
   FIELD_REQUIRED: 'This field is required',
-  // Exact text the API returns for this constraint (DiscountType.PERCENT) —
-  // see ERROR_MESSAGES.PRODUCT_VARIANT.INVALID_DISCOUNT_PERCENT in
-  // apps/api/src/common/constants/message.constant.ts.
-  DISCOUNT_PERCENT_MAX:
-    'DiscountValue must be less than 100 when DiscountType is PERCENT',
   DISCOUNT_FIXED_MUST_BE_LESS_THAN_PRICE:
     'Fixed discount must be less than base price',
   IMAGE_UPLOAD_NOT_CONFIGURED: 'Image upload is not configured',

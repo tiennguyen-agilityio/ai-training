@@ -104,6 +104,19 @@ describe('toErrorDetailsFromStandardSchemaIssues (migrated schemas)', () => {
     );
   };
 
+  it('keeps the raw Zod description for a non-numeric variant price', async () => {
+    const result = await run(createProductSchema, {
+      ...validProduct,
+      variants: [{ ...validVariant, price: 'abc' }],
+    });
+
+    expect(
+      toErrorDetailsFromStandardSchemaIssues(result.issues ?? []).map(
+        ({ description }) => description,
+      ),
+    ).toEqual(['Invalid input: expected number, received NaN']);
+  });
+
   describe('createProductSchema', () => {
     it('accepts a valid product and hands variants over with string decimals', async () => {
       const result = await run(createProductSchema, {

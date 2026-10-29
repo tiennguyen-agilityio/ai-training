@@ -1,15 +1,8 @@
 import { z } from 'zod';
-import { VALIDATION_RULES } from '@repo/constants';
+import { createCategorySchema, updateCategorySchema } from '@repo/schemas';
 
-export const createCategorySchema = z.object({
-  name: z
-    .string()
-    .min(VALIDATION_RULES.NAME.MIN_LENGTH)
-    .max(VALIDATION_RULES.NAME.MAX_LENGTH),
-});
+export { createCategorySchema, updateCategorySchema };
 
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
-
-export const updateCategorySchema = createCategorySchema.partial();
 
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;

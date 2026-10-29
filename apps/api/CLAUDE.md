@@ -35,7 +35,7 @@ pnpm run migration:up
 pnpm run docker:dev          # app + Postgres with hot reload
 ```
 
-`@repo/constants` (`packages/constants`): unit and e2e tests read its `src`. At runtime the API imports its `dist`, which root `pnpm dev`/`pnpm dev:api` and `docker:dev` rebuild with `tsc --watch` (`start:dev` alone does not). `nest --watch` restarts only when the package's `.d.ts` changes (a value), not when only its `.js` does (a message's text): restart `dev:api`/`docker:dev` after that kind of edit.
+`@repo/constants` (`packages/constants`) and `@repo/schemas` (`packages/schemas`): unit and e2e tests read their `src`. At runtime the API imports their `dist`, which root `pnpm dev`/`pnpm dev:api` and `docker:dev` rebuild with `tsc --watch` (`start:dev` alone does not). `nest --watch` restarts only when the package's `.d.ts` changes (a value), not when only its `.js` does (a message's text): restart `dev:api`/`docker:dev` after that kind of edit.
 
 Never run `migration:down`/`fresh` or `schema:drop`/`fresh`/`update --run` without approval: they drop data. Add a forward migration instead.
 

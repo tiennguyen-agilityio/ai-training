@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
 // Types
-import { type CategoryPayload } from '@/types/category'
 
 // Constants
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { ROUTES } from '@/constants/routes'
-import { createCategoryFormSchema } from '@/schemas/category'
+import {
+  createCategoryFormSchema,
+  type CreateCategoryFormValues,
+} from '@/schemas/category'
 
 // Hooks
 import { useCreateCategory } from '@/hooks/useCategory'
@@ -31,14 +33,14 @@ const PageContent = () => {
     setError,
     clearErrors,
     formState: { errors },
-  } = useForm<CategoryPayload>({
+  } = useForm<CreateCategoryFormValues>({
     resolver: zodResolver(createCategoryFormSchema),
     defaultValues: { name: '' },
     mode: 'onBlur',
     reValidateMode: 'onChange',
   })
 
-  const onSubmit = (data: CategoryPayload) => {
+  const onSubmit = (data: CreateCategoryFormValues) => {
     mutate(data, {
       onSuccess: () => {
         toast.success(SUCCESS_MESSAGES.CATEGORY_CREATED)
