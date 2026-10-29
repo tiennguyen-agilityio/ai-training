@@ -37,9 +37,12 @@ FROM base AS production
 ARG PORT
 ENV NODE_ENV=production
 COPY --from=pruner /app/out/json/ .
-# "api..." also installs the dependencies of the workspace packages api imports
-# (e.g. zod and @repo/constants for @repo/schemas).
-RUN pnpm --filter "api..." install --frozen-lockfile --prod --ignore-scripts \
+# Also install the runtime dependencies of the workspace packages api imports
+# (zod and @repo/constants for @repo/schemas). Not "api...": that also selects
+# api's dev-only workspace packages (@repo/eslint-config, ...) and ships their
+# dependencies (eslint and friends) in the image.
+RUN pnpm --filter api --filter @repo/schemas --filter @repo/constants \
+  install --frozen-lockfile --prod --ignore-scripts \
   && rm -rf /root/.cache /pnpm/store /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/packages/constants/dist ./packages/constants/dist
