@@ -1,18 +1,13 @@
 'use client'
 
 import {
-  keepPreviousData,
   useMutation,
   useQuery,
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query'
 
-import {
-  LIST_QUERY_GC_MS,
-  LIST_QUERY_STALE_MS,
-  PAGE_SIZE,
-} from '@/constants/common'
+import { PAGE_SIZE } from '@/constants/common'
 import {
   deleteUserById,
   fetchUsers,
@@ -23,7 +18,12 @@ import type { UpdateUserPayload } from '@repo/schemas'
 import type { UserRole } from '@repo/constants'
 import type { User } from '@/types/user'
 import { type ResponseMeta } from '@/types/api'
-import { getQueryErrorMessage, throwIfServiceFailed } from '@/utils/query'
+import {
+  listQueryOptions,
+  removeFromCachedLists,
+  throwIfServiceFailed,
+  toQueryResult,
+} from '@/utils/query'
 
 export type UseUsersParams = FetchUsersOptions
 
@@ -63,11 +63,6 @@ export function useUpdateUserInfo() {
   })
 }
 
-interface UsersListCache {
-  users: User[]
-  meta: ResponseMeta | null
-}
-
 export function useDeleteUser() {
   const queryClient = useQueryClient()
 
@@ -80,23 +75,11 @@ export function useDeleteUser() {
     onSuccess: async (_result, deletedId) => {
       await queryClient.cancelQueries({ queryKey: usersQueryRoot })
 
-      const deleted = String(deletedId).trim()
-      queryClient.setQueriesData<UsersListCache>(
+      removeFromCachedLists(
+        queryClient,
         { queryKey: ['users', 'list'], type: 'all' },
-        (old) => {
-          if (!old) return old
-          const users = old.users.filter(
-            (u) => String(u.id ?? '').trim() !== deleted,
-          )
-          if (users.length === old.users.length) return old
-          const meta = old.meta
-            ? {
-                ...old.meta,
-                totalCount: Math.max(0, old.meta.totalCount - 1),
-              }
-            : null
-          return { users, meta }
-        },
+        'users',
+        deletedId,
       )
       await invalidateUserLists(queryClient)
     },
@@ -136,20 +119,12 @@ export const useUsers = (params: UseUsersParams = {}): UseUserResult => {
         meta: result.meta ?? null,
       }
     },
-    staleTime: LIST_QUERY_STALE_MS,
-    gcTime: LIST_QUERY_GC_MS,
-    placeholderData: keepPreviousData,
+    ...listQueryOptions,
   })
 
   return {
     users: query.data?.users ?? [],
     meta: query.data?.meta ?? null,
-    isLoading: !query.data && query.isFetching,
-    isFetching: query.isFetching,
-    isError: query.isError,
-    errorMessage: getQueryErrorMessage(query),
-    refetch: async () => {
-      await query.refetch()
-    },
+    ...toQueryResult(query),
   }
 }

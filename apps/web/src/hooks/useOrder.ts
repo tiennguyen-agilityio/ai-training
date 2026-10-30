@@ -1,17 +1,8 @@
 'use client'
 
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import {
-  LIST_QUERY_GC_MS,
-  LIST_QUERY_STALE_MS,
-  PAGE_SIZE,
-} from '@/constants/common'
+import { PAGE_SIZE } from '@/constants/common'
 import {
   createOrder,
   deleteOrder,
@@ -27,7 +18,7 @@ import type {
   ORDER_STATUS,
   SHIPPING_STATUS,
 } from '@/types/order'
-import { getQueryErrorMessage } from '@/utils/query'
+import { listQueryOptions, toQueryResult } from '@/utils/query'
 
 export function useCreateOrder() {
   return useMutation({
@@ -131,20 +122,12 @@ export function useOrders(params: UseOrdersParams = {}): UseOrdersResult {
         meta: result.meta ?? null,
       }
     },
-    staleTime: LIST_QUERY_STALE_MS,
-    gcTime: LIST_QUERY_GC_MS,
-    placeholderData: keepPreviousData,
+    ...listQueryOptions,
   })
 
   return {
     orders: query.data?.orders ?? [],
     meta: query.data?.meta ?? null,
-    isLoading: !query.data && query.isFetching,
-    isFetching: query.isFetching,
-    isError: query.isError,
-    errorMessage: getQueryErrorMessage(query),
-    refetch: async () => {
-      await query.refetch()
-    },
+    ...toQueryResult(query),
   }
 }

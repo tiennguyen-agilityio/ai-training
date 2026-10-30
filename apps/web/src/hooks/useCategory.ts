@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  keepPreviousData,
   useMutation,
   useQuery,
   useQueryClient,
@@ -9,12 +8,7 @@ import {
 } from '@tanstack/react-query'
 import { useAuth } from '@clerk/nextjs'
 
-import {
-  CLERK_SESSION_TEMPLATE,
-  LIST_QUERY_GC_MS,
-  LIST_QUERY_STALE_MS,
-  PAGE_SIZE,
-} from '@/constants/common'
+import { CLERK_SESSION_TEMPLATE, PAGE_SIZE } from '@/constants/common'
 import {
   createCategory,
   deleteCategory,
@@ -30,7 +24,13 @@ import type {
 } from '@repo/schemas'
 import type { Category } from '@/types/category'
 import type { ResponseMeta } from '@/types/api'
-import { getQueryErrorMessage, throwIfServiceFailed } from '@/utils/query'
+import {
+  detailQueryOptions,
+  listQueryOptions,
+  removeFromCachedLists,
+  throwIfServiceFailed,
+  toQueryResult,
+} from '@/utils/query'
 
 export interface UseCategoriesResult {
   categories: Category[]
@@ -59,17 +59,6 @@ export function categoriesListQueryKey(
 }
 
 const categoriesQueryRoot = ['categories'] as const
-
-const listQueryOptions = {
-  staleTime: LIST_QUERY_STALE_MS,
-  gcTime: LIST_QUERY_GC_MS,
-  placeholderData: keepPreviousData,
-} as const
-
-const detailQueryOptions = {
-  staleTime: LIST_QUERY_STALE_MS,
-  gcTime: LIST_QUERY_GC_MS,
-} as const
 
 export function categoryDetailQueryKey(id: string) {
   return ['categories', 'detail', id] as const
@@ -112,13 +101,7 @@ export const useCategories = (
   return {
     categories: query.data?.categories ?? [],
     meta: query.data?.meta ?? null,
-    isLoading: !query.data && query.isFetching,
-    isFetching: query.isFetching,
-    isError: query.isError,
-    errorMessage: getQueryErrorMessage(query),
-    refetch: async () => {
-      await query.refetch()
-    },
+    ...toQueryResult(query),
   }
 }
 
@@ -164,20 +147,11 @@ export function useDeleteCategory() {
           return { ...old, categories }
         },
       )
-      queryClient.setQueriesData<CategoriesListCache>(
+      removeFromCachedLists(
+        queryClient,
         { queryKey: ['categories', 'list', false] },
-        (old) => {
-          if (!old) return old
-          const categories = old.categories.filter((c) => c.id !== deletedId)
-          if (categories.length === old.categories.length) return old
-          const meta = old.meta
-            ? {
-                ...old.meta,
-                totalCount: Math.max(0, old.meta.totalCount - 1),
-              }
-            : null
-          return { categories, meta }
-        },
+        'categories',
+        deletedId,
       )
       await invalidateCategoryLists(queryClient)
     },
@@ -231,15 +205,9 @@ export function useCategoryById(id: string): UseCategoryByIdResult {
     ...detailQueryOptions,
   })
 
-  return {
-    category: query.data ?? null,
-    isLoading: !query.data && query.isFetching,
-    isError: query.isError,
-    errorMessage: getQueryErrorMessage(query),
-    refetch: async () => {
-      await query.refetch()
-    },
-  }
+  const { isFetching: _isFetching, ...state } = toQueryResult(query)
+
+  return { category: query.data ?? null, ...state }
 }
 
 export function useUpdateCategory() {
