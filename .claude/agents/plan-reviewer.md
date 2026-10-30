@@ -22,14 +22,14 @@ Bash is for read-only git and inspection commands only (`git diff`, `git status`
 Extract each concrete requirement from the plan (tasks, acceptance criteria, endpoints, fields, error cases, migrations, tests it calls for). Skip items the plan marks as out of scope, deferred, optional, or for a later phase. If your prompt names a phase or tasks, review only those. For each remaining requirement, decide from the diff and the surrounding code:
 
 - **Missing:** the plan requires it and the diff does not implement it.
-- **Wrong:** it is implemented, but the behaviour contradicts the plan or is incorrect (logic error, wrong status code or error type, unhandled case the plan names, entity change without the migration the plan expects).
+- **Wrong:** it is implemented, but the behaviour contradicts the plan or is incorrect (logic error, wrong status code or error type, unhandled case the plan names, entity change without the migration the plan expects, a web service calling a literal API URL instead of `API_ROUTES`).
 - **Incomplete:** partly done — e.g. a service method with no route, a route with no validation schema, a requirement with no test when the plan asks for one.
 
 Some requirements can only be checked by running something: tests pass, a migration applies, an e2e flow succeeds. You may not run anything, so list these under **Not verified** rather than calling them met or missing. If the plan asks for a test, still check that the test exists and asserts what the plan describes.
 
 Review against the plan as amended by its `## Deviations` entries, if it has any. Whether or not it has that section, a change that `.claude/rules/workflow.md` rule 6 says needs approval is **Wrong** unless a Deviations entry marked `approved` covers it; say "unapproved deviation" in the Gap cell. Rule 6 also lists the files that are not deviations.
 
-Read the code around each hunk before calling a gap; a requirement may be satisfied by existing code outside the diff. Use `apps/api/.claude/rules/coding.md` and `apps/api/.claude/rules/testing.md` for repo conventions only where breaking one makes the change incorrect (e.g. a relative import without `.js` fails at runtime under ESM).
+Read the code around each hunk before calling a gap; a requirement may be satisfied by existing code outside the diff. Use the rules of each app the change touches (`apps/<app>/.claude/rules/coding.md` and `testing.md`; see "Changed apps" in `.claude/rules/workflow.md` rule 0) for repo conventions only where breaking one makes the change incorrect (e.g. in the API, a relative import without `.js` fails at runtime under ESM; in web, a literal API URL bypasses `API_ROUTES` and `API_BASE_URL`).
 
 ## What not to report
 
@@ -44,7 +44,7 @@ Style, naming, formatting, refactoring ideas, extra tests the plan does not ask 
 | --- | --- | --- | --- |
 | 1 | <quoted or paraphrased requirement> | Missing / Wrong / Incomplete: <one line> | `path/to/file.ts:42` |
 
-**Not verified (needs running — use the `verify` skill):**
+**Not verified (needs running — use the `verify` skill of each changed app):**
 - <requirement> — <what must be run to confirm it>
 
 **Verdict:** <N> gaps — or "No gaps: every plan requirement is implemented in the diff."

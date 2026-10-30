@@ -12,7 +12,7 @@ Guidance for Claude Code in this repo. App-specific guidance lives next to each 
 - `packages/schemas` (`@repo/schemas`): the API's request body schemas (Zod), the field rules and discount percent rule they use, and their payload types (`z.input`), which web uses for the bodies it sends. The API adds its server-only refines and maps Zod issues to errors itself; web forms keep their own schemas. Depends on `@repo/constants` and `zod` (`catalog:`); built and copied into the API image like `@repo/constants`.
 - Shared devDependency versions (`eslint`, `prettier`, `typescript`, `typescript-eslint`, `@types/node`, …) live in the `catalog:` of `pnpm-workspace.yaml`; apps reference them as `"catalog:"`.
 - `docs/`: training material (exercises, conventions), not product docs. `docs/specs/` holds the workflow's design and plan files; it is gitignored, so they are local-only. `docs/conventions/git.md` is the authoritative git workflow.
-- `.claude/`: shared workflow, agents, and the `work-ticket` and `pr-description` skills. `hooks/block-forbidden-command.mjs` (PreToolUse on `Bash|Edit|Write|MultiEdit`, wired in `.claude/settings.json`) asks before Claude skips git hooks, force-pushes or pushes to `develop`/`main`, discards uncommitted work, runs `rm -rf` on the project or home, drops DB data or Docker volumes, pipes a script into a shell, or writes to a secret file. `hooks/notify-on-finish.mjs` (UserPromptSubmit, Stop, and Notification on `permission_prompt|elicitation_dialog`) shows a macOS notification (`osascript`; other systems stay silent) when Claude needs you or finishes a turn of at least 60 s with no background task left; `CLAUDE_NOTIFY=0` turns it off, and it does nothing when `CI` or `GITHUB_ACTIONS` is set. API rules and the `verify` skill are in `apps/api/.claude/`.
+- `.claude/`: shared workflow, agents, and the `work-ticket` and `pr-description` skills. `hooks/block-forbidden-command.mjs` (PreToolUse on `Bash|Edit|Write|MultiEdit`, wired in `.claude/settings.json`) asks before Claude skips git hooks, force-pushes or pushes to `develop`/`main`, discards uncommitted work, runs `rm -rf` on the project or home, drops DB data or Docker volumes, pipes a script into a shell, or writes to a secret file. `hooks/notify-on-finish.mjs` (UserPromptSubmit, Stop, and Notification on `permission_prompt|elicitation_dialog`) shows a macOS notification (`osascript`; other systems stay silent) when Claude needs you or finishes a turn of at least 60 s with no background task left; `CLAUDE_NOTIFY=0` turns it off, and it does nothing when `CI` or `GITHUB_ACTIONS` is set. API and web rules and `verify` skills are in `apps/<app>/.claude/`.
 
 ## Commands
 
@@ -26,7 +26,7 @@ pnpm web <script>     # any web script, e.g. pnpm web test:cov
 pnpm build --affected # only packages changed against TURBO_SCM_BASE
 ```
 
-`lint` runs `eslint --fix`; use the `verify` skill (plain `eslint`) to check without rewriting.
+`lint` runs `eslint --fix`; use the `apps/api:verify` or `apps/web:verify` skill (plain `eslint`) to check without rewriting.
 
 ## Git
 

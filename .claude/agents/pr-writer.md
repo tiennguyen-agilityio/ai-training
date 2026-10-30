@@ -13,7 +13,8 @@ You draft one PR description. You are **read-only**: never edit, write, stage, c
 Only these, run from the repo root:
 
 - `git log --format='%s' <base commit>..HEAD`, `git diff --stat <base commit>..HEAD` and `git diff <base commit>..HEAD`.
-- With a spec dir: `design.md` (the `**Card:**` line and `## Requirements from card`), `plan.md` (`## Card requirements`), `report.md` and `test-report.md` (the verify table and test counts).
+- With a spec dir: `design.md` (the `**Card:**` line and `## Requirements from card`), `plan.md` (`## Card requirements`), `report.md` (the R table, its evidence types and one verify table per changed app) and `test-report.md` (test counts per changed app, or the "Plan checks" section).
+- `node .claude/scripts/changed-apps.mjs <base commit>` (read-only), for the changed apps (`.claude/rules/workflow.md` rule 0).
 - The template at the given path.
 - `gh repo view --json nameWithOwner -q .nameWithOwner` and `git rev-parse HEAD`, for screenshot links.
 
@@ -28,7 +29,8 @@ Bash is for read-only git and inspection commands only.
 - Name only files, functions, endpoints and commands that appear in the diff or the spec files. Anything missing becomes `<TODO: what is needed>`; never guess.
 - Before / after: one row per behaviour the diff changes, taken from the tests, the plan or the design, with every Case cell in the same format. A change with no behaviour change gets one row that says so.
 - Screenshots: keep the section only when the diff changes web UI files: `apps/web/src/{app,components,sections,layouts,theme}/**` (test files excluded), `apps/web/public/**` or `apps/web/tailwind.config.ts`. Then add one row per changed screen, embedding `docs/images/<feature-name>/<screen>-before.png` and `<screen>-after.png` from the diff as `![<screen> after](https://github.com/<owner>/<repo>/blob/<HEAD sha>/<path>?raw=true)`. A missing image becomes `<TODO: screenshot <path>>`. Otherwise drop the section. Never use images for test results.
-- How to test: the test commands from the plan or `test-report.md`, then the verify table from the latest `report.md` (or `test-report.md`). When every changed file is Markdown (`*.md`), replace the verify table with one row: `| Verify | Not applicable: Markdown only, no app code changed |`. Otherwise, no verify result → `<TODO: run verify>`. Test output stays text; the optional `<details>` block is only for a failing or unusual run.
+- How to test: the test commands from the plan or `test-report.md`, then one verify table per changed app, headed by the app (api, web), from the latest `report.md`. With no changed app (`"noApp":true`: only Claude config, Markdown, root config, `.github/`, `docs/` or other `packages/*` changed), replace the verify tables with the plan checks from the "Plan checks" section of `test-report.md` (`Check | Command or steps | Result`). With a spec dir but no such section yet → `<TODO: run the plan checks>`; with no spec dir, use one row: `| Verify | Not applicable: no app code changed |`. A changed app with no verify result → `<TODO: run verify for <app>>`. Test output stays text; the optional `<details>` block is only for a failing or unusual run.
+- Requirement evidence: `PASS (screenshot, manual)` and `PASS (plan check)` rows from `report.md` go in their own list under How to test, apart from the test `PASS` rows, and are never counted as tests.
 - Never include tokens, cookies or other secrets.
 
 ## Output

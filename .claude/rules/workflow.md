@@ -1,6 +1,21 @@
 # Feature workflow (overrides for superpowers)
 
-For a feature or bug task, use the superpowers skills `brainstorming` → `writing-plans` → `executing-plans` (or `subagent-driven-development` outside `/work-ticket`). They allow user preferences to override their defaults; in this repo, the rules below override them. After implementing, follow this repo's own rules in this order: code review (rule 8), verify (rule 7), report (rule 9), commit (rule 11), security review on the commit (rule 8), finishing the branch (rule 10). `/work-ticket` runs the whole flow for a Trello card.
+For a feature or bug task, use the superpowers skills `brainstorming` → `writing-plans` → `executing-plans` (or `subagent-driven-development` outside `/work-ticket`). They allow user preferences to override their defaults; in this repo, the rules below override them. After implementing, follow this repo's own rules in this order: code review (rule 8), verify of each changed app (rule 7), report (rule 9), commit (rule 11), security review on the commit (rule 8), finishing the branch (rule 10). `/work-ticket` runs the whole flow for a Trello card.
+
+## 0. Changed apps
+
+The changed apps decide which rules, `verify` skill, coverage baseline and security triggers apply. They are what `node .claude/scripts/changed-apps.mjs <base commit>` prints, run from the repo root, and are never classified by hand:
+
+```json
+{"apps":["api","web"],"rebuild":["@repo/schemas"],"noApp":false}
+```
+
+- Before code exists (planning at step 3, the baseline at step 5), run it with `--files <every file the plan creates or modifies>`.
+- Only code or app-config files count: anything under `apps/<app>/` except `apps/<app>/.claude/**` and `*.md`. A change only to Claude config or Markdown has no changed app.
+- `packages/constants` and `packages/schemas` count as both apps. Their own gates (lint, format, build, Vitest) are not part of this workflow: lint-staged lints and formats their staged files at commit, and the root pre-push builds and tests them. Other `packages/*`, root config, `.github/` and `docs/` count as no app.
+- Each `rebuild` entry has its `dist` rebuilt before the app gates (rule 7), so `tsc`, `next build` and `nest build` never check against a stale one.
+- No changed app (`"noApp":true`): no coverage baseline and no `verify`. Step 8 runs the plan's `## Plan checks` and still writes `test-report.md`, with a "Plan checks" section.
+- Nested config loads only after a file under the app is touched. Read each changed app's `apps/<app>/.claude/rules/*.md` and `apps/<app>/.claude/skills/verify/SKILL.md` explicitly instead of waiting for them to load.
 
 ## 1. Save paths
 
@@ -8,9 +23,10 @@ For a feature or bug task, use the superpowers skills `brainstorming` → `writi
 - Plan (writing-plans): `docs/specs/YYYY-MM-DD/<feature-name>/plan.md`
 - Report (end of review): `docs/specs/YYYY-MM-DD/<feature-name>/report.md`
 - Test report (every verify run): `docs/specs/YYYY-MM-DD/<feature-name>/test-report.md`
-- Coverage baseline (before any code change): `docs/specs/YYYY-MM-DD/<feature-name>/coverage-baseline.json`
+- Coverage baseline (before any code change): `docs/specs/YYYY-MM-DD/<feature-name>/coverage-baseline-<app>.json`, one per changed app (rule 0), none with no changed app. A spec started before per-app baselines may hold `coverage-baseline.json`: it is the API baseline.
 - PR description (Gate 3): `docs/specs/YYYY-MM-DD/<feature-name>/pr-description.md`
 - Screenshots (web UI changes only): `docs/images/<feature-name>/<screen>-before.png` and `<screen>-after.png`. Unlike `docs/specs/`, they are committed with the code and embedded in the PR description.
+- `test-report.md` has Overview rows and a Coverage block per changed app, or a "Plan checks" section with no changed app (rule 7, `.claude/templates/test-report.md`); `report.md` has one `verify` table per changed app (rule 9).
 - Paths are relative to the repo root.
 - `<feature-name>` is a kebab-case slug, identical to the part after `<type>/` in the branch name.
 - The spec dir is created with the design, under that day's date; every later file goes in the same dir.
@@ -35,7 +51,7 @@ The design lists every requirement on the card, analysed from the description (l
 - [ ] R1 — <requirement in the card's words> (description | checklist)
 ```
 
-Each `R<n>` is ticked at step 8 of `/work-ticket`, once its test passes in the final verify run.
+Each `R<n>` is ticked at step 8 of `/work-ticket`, once its evidence in the final verify run is `PASS`, `PASS (screenshot, manual)` or `PASS (plan check)` (rule 9).
 
 The design records every question asked during brainstorming and builder checks:
 
@@ -108,9 +124,11 @@ Right after `## Card requirements`, list what could go wrong while building the 
 - Rejected approaches come from the design's decisions and from planning; "none" if only one approach was considered.
 - No risk found → the table becomes one line `None found: <what was checked>`; the two bullets stay.
 
+When the plan's files give no changed app (rule 0, `--files`), add `## Plan checks` after `## Risks` (and `## Deviations`, once it exists), before the first task. Each check `M<n>` has its command or steps and the expected result, and every R's Test cell in `## Card requirements` names the checks that prove it. Step 8 runs them in place of `verify` (rule 7), and rule 9 records them as `PASS (plan check)`. An approved deviation that changes the changed apps updates the plan with it (rule 6): `## Plan checks` and the Test cells when the change now has no changed app, the tests when it gains one (the report then notes "no clean baseline" for that app, rule 7).
+
 ## 5. Global Constraints
 
-The plan's Global Constraints come from `apps/api/.claude/rules/coding.md` and `apps/api/.claude/rules/testing.md`. Read both while planning, even if no `src/` file has been opened yet, and cite the rules that apply.
+The plan's Global Constraints come from the rules of each changed app (rule 0, with `--files` on the plan's files): `apps/<app>/.claude/rules/coding.md` and `testing.md`. Read them while planning, even if no `src/` file has been opened yet, and cite the rules that apply. With no changed app, they come from the conventions of the files the plan touches (for example the format of the rules or skills it edits).
 
 ## 6. No commits or hand-offs until approval
 
@@ -127,8 +145,8 @@ Tasks end at "run the tests, expect PASS". Commits happen only after the user ap
 - `writing-plans`: no commit steps; it ends after saving the plan and does not invoke an execution skill.
 - `executing-plans` in `/work-ticket`: after each task passes, dispatch the `plan-reviewer` subagent with the plan path and the task number. It checks that task against its acceptance criteria and that each test the plan names for it asserts the AC. Fix any gap before the next task.
 - Deviations from the plan in `/work-ticket`, at step 6 and in any fix at steps 7, 8 and 10 (overrides `executing-plans`' "Rulings, not stalls" and adds a fifth case to its "Four things stop you"). Classify each one by whether it changes what Gate 1 approved:
-  - It changes an acceptance criterion, the scope, the `## Card requirements` mapping, an endpoint or request/response shape, an entity or migration, a dependency, or touches a file the plan does not list (a generated name the plan describes, such as `Migration<timestamp>.ts`, counts as listed) → stop before making it and ask:
-    - A "Update the plan as proposed" (Recommended): edit `plan.md`, including `## Card requirements` and `## Risks` when the change affects them, and add the entry to `## Deviations` (task, what changes, why, `approved <YYYY-MM-DD>`). A new task takes the next free number; never renumber tasks, since the ledger records them by number. An R dropped from scope keeps its row, with `out of scope, approved <YYYY-MM-DD>` in the Test column.
+  - It changes an acceptance criterion, the scope, the `## Card requirements` mapping, an endpoint or request/response shape, an entity or migration, which apps are changed (rule 0), a web route or page added or removed, the `apps/web/src/middleware.ts` matcher, the `apiClient`/service result contract, a dependency, or touches a file the plan does not list (a generated name the plan describes, such as `Migration<timestamp>.ts`, counts as listed) → stop before making it and ask:
+    - A "Update the plan as proposed" (Recommended): edit `plan.md`, including `## Card requirements`, `## Risks` and `## Plan checks` (rule 4) when the change affects them, and add the entry to `## Deviations` (task, what changes, why, `approved <YYYY-MM-DD>`). A new task takes the next free number; never renumber tasks, since the ledger records them by number. An R dropped from scope keeps its row, with `out of scope, approved <YYYY-MM-DD>` in the Test column.
     - B "Keep the plan; find another way". If no way inside the plan works, ask again with only A and C.
     - C "Stop to revise the design and plan": add the entry to `## Deviations` marked `pending`, remove the Gate 1 row (and the design's `**Design approved:**` line if the design must change), then stop and notify. On resume, revise the plan for each `pending` entry before Gate 1 asks again; after approval, continue at step 6 on the existing branch.
   - Anything else (an internal name, a helper split out, the order of steps inside a task) → no question; add the entry to `## Deviations` (task, what changed, why) before dispatching `plan-reviewer`.
@@ -145,43 +163,56 @@ Tasks end at "run the tests, expect PASS". Commits happen only after the user ap
 
 ## 7. Verification and test report
 
-Start from `apps/api/`:
+**Autofix**, once for the whole change, from the repo root, with or without a changed app:
 
-1. List the changed files: `git diff --name-only --relative --diff-filter=d <base commit> -- '*.ts'` plus `git ls-files --others --exclude-standard -- '*.ts'`.
-2. If the list is not empty, run `pnpm exec eslint --fix <files>` and `pnpm exec prettier --write <files>` on it.
-3. Run the `verify` skill (lint without `--fix`, format check, build, unit, e2e with the database guard). Never `pnpm run lint` as a check — it autofixes.
+1. Run `git add -N` on the untracked files from `git status --short -uall`.
+2. Run `pnpm exec lint-staged --diff=<base commit> --no-hide-partially-staged`. It runs the pre-commit hook's own tasks (each file's closest lint-staged config: an app's or package's `package.json`, or the root `.lintstagedrc.json`) on every file changed since the base commit, instead of only the staged ones. `--no-hide-partially-staged` makes the tasks see the working tree: without it, edits made after an earlier run are hidden, left unformatted, and their restore can conflict. Like the hook, it stages the files it touched, so review and verify read `git diff <base commit>`, never a bare `git diff`. A lint error it cannot fix: fix the cause and run it again.
 
-Steps 1–2 (the autofix) also run right after implementing, before the code review (rule 8), so the review reads a formatted diff; in `/work-ticket` that is the end of step 6. `verify` runs after the code review, at step 8 of `/work-ticket`.
+The autofix runs before every code review (rule 8): the first review of the change at the end of step 6 of `/work-ticket`, and each review of a fix. It runs again at step 8, before `verify`. The commit hook then has nothing left to rewrite, so the reviewed and verified code is the committed code.
 
-- **Coverage baseline.** Right after creating the feature branch and before changing any code, from `apps/api/`, run `pnpm run test:cov --coverage.reporter=json-summary --coverage.reporter=text-summary`, then `node .claude/skills/verify/coverage-diff.mjs snapshot ../../<spec dir>/coverage-baseline.json`. If code already changed (e.g. on resume), note "no clean baseline" in the report.
-- **Unit gate runs with coverage.** Inside `verify`, the unit gate is the same `test:cov` command, not `pnpm run test`, so tests run once per verify run. The `pnpm run test` at the end of `/work-ticket` step 6 is separate: it catches one task breaking another before the code review.
-- **Test report after every verify run**, pass or fail, overwritten each time. Fill `.claude/templates/test-report.md` into `<spec dir>/test-report.md`:
-  - Overview numbers come from the vitest output of this run (passed / failed / skipped / duration / file count).
+**Verify**, for each changed app (rule 0), from `apps/<app>/`. With no changed app, skip it: step 8 runs the plan's `## Plan checks` instead.
+
+- Precondition, once per run before any app's verify, from the repo root: `pnpm --filter <pkg> build` for each `rebuild` entry.
+- Run the app's `verify` skill (`apps/<app>/.claude/skills/verify/SKILL.md`). api: lint without `--fix`, format check, build, unit, e2e with the database guard. web: lint without `--fix`, format check, type check, build, unit. Never `pnpm run lint` as a check — it autofixes.
+
+The coverage command `<cov>` depends on the app's runner:
+
+| App | Runner | `<cov>` |
+| --- | --- | --- |
+| api | Vitest | `pnpm run test:cov --coverage.reporter=json-summary --coverage.reporter=text-summary` |
+| web | Jest | `pnpm run test:cov --coverageReporters=json-summary --coverageReporters=text-summary` |
+
+- **Coverage baseline.** Right after creating the feature branch and before changing any code, for each changed app, from `apps/<app>/`, run `<cov>`, then `node ../../.claude/scripts/coverage-diff.mjs snapshot ../../<spec dir>/coverage-baseline-<app>.json`. If code already changed (e.g. on resume), or an app becomes changed after this step (an approved deviation), note "no clean baseline" for that app in the report.
+- **Unit gate runs with coverage.** Inside `verify`, the unit gate is the same `<cov>` command, not `pnpm run test`, so tests run once per verify run. The `pnpm run test` of each changed app at the end of `/work-ticket` step 6 is separate: it catches one task breaking another before the code review.
+- **One verify run covers every changed app.** A fix after it reruns only the apps whose files the fix changed, or both apps if a package changed. The fix and its rerun are one round (rule 8).
+- **Test report after every verify run**, pass or fail, overwritten each time. Fill `.claude/templates/test-report.md` into `<spec dir>/test-report.md`, with Overview rows and a Coverage block per changed app:
+  - Overview numbers come from the vitest (api) or jest (web) output of this run (passed / failed / skipped / duration / file count, with jest's suite count as the file count).
   - One Bugs block per failing test, with the location, a rerun command, whether it fails in isolation (rerun that test alone), and the cause. Request/Response only for e2e; never include tokens or cookies.
-  - The Coverage table is the output of `node .claude/skills/verify/coverage-diff.mjs diff ../../<spec dir>/coverage-baseline.json <changed src files>`, run from `apps/api/`, pasted unchanged. Drops are warnings, not failures.
-  - A skipped e2e run is a row with `—` and "Skipped: <reason>".
+  - The Coverage table is the output of `node ../../.claude/scripts/coverage-diff.mjs diff ../../<spec dir>/coverage-baseline-<app>.json <changed src files>`, run from `apps/<app>/`, pasted unchanged. For api, use `coverage-baseline.json` when `coverage-baseline-api.json` is absent. Drops are warnings, not failures.
+  - A skipped e2e run is a row with `—` and "Skipped: <reason>". Web has no e2e suite: its row is n/a.
+  - With no changed app, the report has a "Plan checks" section (`Check | Command or steps | Result`) instead of the app sections.
 - The last verify run before commit produces the report; it must match the code being committed.
 
 ## 8. Code review and security review
 
-**Code review, before the commit.** First run `git add -N` on the untracked files from `git status --short -uall`, so `git diff` shows new files too. Then invoke the built-in `code-review` skill at `medium`, and name in the prompt:
+**Code review, before the commit.** First run the autofix (rule 7), which also runs `git add -N` on the untracked files, so `git diff <base commit>` shows new files too and the review reads formatted code. Then invoke the built-in `code-review` skill at `medium`, and name in the prompt:
 - the target: the working tree against the plan's base commit, i.e. `git diff <base commit>`. Its default target falls back to `git diff HEAD~1` on a branch with no upstream, and on a fresh feature branch that is the last merged PR;
-- the rules to check against: `apps/api/.claude/rules/coding.md` and `apps/api/.claude/rules/testing.md`.
+- the rules to check against: `apps/<app>/.claude/rules/coding.md` and `testing.md` of each changed app; with no changed app, the plan's Global Constraints.
 
 The acceptance criteria were already checked per task (rule 6). Handle each finding by its type:
 
 | Finding | Action |
 | --- | --- |
 | Bug: wrong behaviour, crash, data loss, security hole, an AC not met | Fix |
-| Violation of `apps/api/.claude/rules/coding.md` or `testing.md` | Fix |
+| Violation of a changed app's `coding.md` or `testing.md` (with no changed app, the plan's Global Constraints) | Fix |
 | Cleanup or suggestion (naming, refactor, simplification) | Do not fix; one line in `report.md` |
 | False positive | Push back with the reason; one line in `report.md` |
 
-After fixing a bug, run the related tests, then `code-review` on the fix. In `/work-ticket`, a fix that changes logic in `src/` after a failed verify also goes back to the code review for that fix, instead of the `verify` skill's step 4 ("Fix and rerun").
+After fixing a bug, run the related tests and the autofix (rule 7), then `code-review` on the fix. In `/work-ticket`, a fix that changes logic in `src/` after a failed verify also goes back to the code review for that fix, instead of the `verify` skill's step 4 ("Fix and rerun").
 
-**Round limit.** A round is one fix plus the check that follows it: `code-review` on a logic fix, or a `verify` rerun for a test, lint or format fix. The first review of the whole change is not a round. At most 2 rounds before the commit (code review and verify together) and 2 more after it (the security review, where one round is a finding's fix → code review → verify → amend → rerun). Then stop, notify and ask the user.
+**Round limit.** A round is one fix plus the check that follows it: `code-review` on a logic fix, or a `verify` rerun for a test, lint or format fix. The first review of the whole change is not a round. At most 2 rounds before the commit (code review and verify together) and 2 more after it (the security review, where one round is a finding's fix → code review → verify → amend → rerun). Then stop, notify and ask the user. A screenshot the user reports wrong at Gate 2 goes back to the code review (for its fix) and verify, then Gate 2 asks again; that counts as a round.
 
-**Security review, after the commit and before the push.** Run it when the committed change (`<base commit>..HEAD`) touches access control (guards, `@AdminOnly`/`@Roles`, Clerk auth, the global `APP_GUARD`, `apps/api/src/modules/webhook/`), config or secrets (`configs/`, `.env*`, CORS, Docker, CI workflows) or dependencies (`package.json`, the lockfile, the `catalog:`). Otherwise skip it.
+**Security review, after the commit and before the push.** Run it when the committed change (`<base commit>..HEAD`) touches access control (guards, `@AdminOnly`/`@Roles`, Clerk auth, the global `APP_GUARD`, `apps/api/src/modules/webhook/`, `apps/web/src/middleware.ts`, `apps/web/src/services/api.ts`), config or secrets (`configs/`, `.env*`, CORS, Docker, CI workflows, `apps/web/next.config.ts`, `apps/web/vercel.json`) or dependencies (`package.json`, the lockfile, the `catalog:`). Otherwise skip it.
 
 Invoke the built-in `security-review` skill. It runs `git diff origin/HEAD...`, the committed branch diff against origin's default branch (`develop`), so it needs the commit but no PR. First check `git rev-parse --abbrev-ref origin/HEAD`. If it fails, or is not `origin/<base branch>` from the plan, that diff is not this change's diff: tell the user and ask before running it. A missing `origin/HEAD` is set with `git remote set-head origin -a`. A finding:
 1. fix it, then run the code review on the fix;
@@ -197,8 +228,12 @@ The multi-agent `/claude-security` scan is not part of this flow. The user runs 
 
 Before asking to commit, write `report.md` with:
 
-- a link to `test-report.md` and the `verify` table;
-- an `R → test → PASS` table from the final verify run. An AC with no test, or whose test sits in a SKIPPED gate (e.g. e2e skipped by the database guard), is listed under Not verified with the reason, for the user to check, never as PASS;
+- a link to `test-report.md` and one `verify` table per changed app (with no changed app, the plan checks);
+- an `R → test → result` table from the final verify run. Each row has one evidence type:
+  - `PASS`: a test passed in the final verify run;
+  - `PASS (screenshot, manual)`: a web UI requirement shown by the `docs/images/<feature-name>/<screen>-after.png` the row links. These rows are listed apart from the test PASS rows, never counted with them, and confirmed by the user at Gate 2;
+  - `PASS (plan check)`: a check from the plan's `## Plan checks`, with its command or steps and the observed result. Only when there is no changed app;
+  - `Not verified`, with the reason, for the user to check, never PASS: an AC with no test, a test in a SKIPPED gate (e.g. e2e skipped by the database guard), or a test that only a package runs ("package tests run only in pre-push");
 - the code-review result: findings fixed, and findings left with their reason (cleanup or false positive);
 - one Security line. Step 8 writes `Security: pending`. Step 10 of `/work-ticket`, after the commit, replaces it with `no findings`, `findings fixed` (plus each finding and its fix) or `skipped, no security-relevant change`. A rerun of step 8 during step 10 keeps the Security line and its findings as they are;
 - the plan's `## Deviations`, or "none";
