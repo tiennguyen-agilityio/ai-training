@@ -16,6 +16,9 @@ import type { Product, ProductVariantSummary } from '@/types/product'
 
 export interface ProductOptions {
   getToken?: () => Promise<string | null>
+  // Send the session token, so the API answers as the signed-in admin (every
+  // status, deleted products included) instead of as a shopper.
+  asAdmin?: boolean
   page?: number
   limit?: number
   search?: string
@@ -64,6 +67,8 @@ export async function fetchProducts(
   | { ok: false; error: string; status?: number }
 > {
   const {
+    getToken,
+    asAdmin,
     page,
     limit,
     search,
@@ -77,7 +82,8 @@ export async function fetchProducts(
   const result = await apiClient.get<ApiResponse<Product[]>>(
     API_ROUTES.PRODUCTS,
     {
-      skipAuth: true,
+      getToken,
+      skipAuth: !asAdmin,
       query: {
         page,
         limit,
@@ -136,13 +142,15 @@ function parseProductFromResponse(json: unknown): Product | null {
 
 export async function fetchProductById(
   id: string,
+  options: Pick<ProductOptions, 'getToken' | 'asAdmin'> = {},
 ): Promise<
   { ok: true; product: Product } | { ok: false; error: string; status?: number }
 > {
   const trimmed = id.trim()
   const url = `${API_ROUTES.PRODUCTS}/${encodeURIComponent(trimmed)}`
   const result = await apiClient.get<ApiResponse<Product>>(url, {
-    skipAuth: true,
+    getToken: options.getToken,
+    skipAuth: !options.asAdmin,
     fallbackError: API_FALLBACK_ERRORS.PRODUCT_LOAD,
   })
   if (!result.ok) return result
@@ -196,6 +204,7 @@ function productFromBody(
         : [],
     createdAt: null,
     updatedAt: null,
+    deletedAt: null,
   }
 }
 
@@ -227,7 +236,11 @@ export async function updateProduct(
     return { ok: true, product: parsedProduct }
   }
 
-  const refetched = await fetchProductById(trimmed)
+  // Only an admin updates, and the product may not be ACTIVE.
+  const refetched = await fetchProductById(trimmed, {
+    asAdmin: true,
+    getToken: options.getToken,
+  })
   if (refetched.ok) {
     return { ok: true, product: refetched.product }
   }

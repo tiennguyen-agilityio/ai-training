@@ -34,9 +34,59 @@ const baseProduct = {
   images: [],
   createdAt: null,
   updatedAt: null,
+  deletedAt: null as string | null,
+}
+
+const renderRow = (
+  product: typeof baseProduct,
+  onRequestDelete = jest.fn(),
+) => {
+  render(
+    <table>
+      <tbody>
+        <tr>
+          <ProductTableRow
+            product={product}
+            categoryOptions={[{ value: 'cat-1', label: 'Cat' }]}
+            onRequestDelete={onRequestDelete}
+          />
+        </tr>
+      </tbody>
+    </table>,
+  )
+  return onRequestDelete
 }
 
 describe('ProductTableRow', () => {
+  it('greys a deleted row and disables Edit and Delete', () => {
+    const onRequestDelete = renderRow({
+      ...baseProduct,
+      status: ProductStatus.ARCHIVED,
+      deletedAt: '2026-10-30T00:00:00.000Z',
+    })
+
+    expect(
+      screen.getByRole('link', { name: /edit test product/i }),
+    ).toHaveAttribute('aria-disabled', 'true')
+    const deleteButton = screen.getByRole('button', {
+      name: /delete test product/i,
+    })
+    expect(deleteButton).toBeDisabled()
+    fireEvent.click(deleteButton)
+    expect(onRequestDelete).not.toHaveBeenCalled()
+  })
+
+  it('keeps Edit and Delete on for a live Archived product', () => {
+    renderRow({ ...baseProduct, status: ProductStatus.ARCHIVED })
+
+    expect(
+      screen.getByRole('link', { name: /edit test product/i }),
+    ).toHaveAttribute('aria-disabled', 'false')
+    expect(
+      screen.getByRole('button', { name: /delete test product/i }),
+    ).toBeEnabled()
+  })
+
   it('calls onRequestDelete when delete is clicked', () => {
     const onRequestDelete = jest.fn()
     render(

@@ -1,6 +1,7 @@
 'use client'
 
 import { type ComponentProps, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { BadgeCheck, Leaf, Plus, X } from 'lucide-react'
@@ -16,7 +17,11 @@ import {
   VALIDATION_RULES,
 } from '@repo/constants'
 
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
+import {
+  ERROR_MESSAGES,
+  NOTICE_MESSAGES,
+  SUCCESS_MESSAGES,
+} from '@/constants/messages'
 import { CATEGORY_QUERY_OPTIONS } from '@/constants/category'
 import {
   DISCOUNT_TYPE_OPTIONS,
@@ -39,7 +44,7 @@ import UploadImage from '@/components/UploadImage'
 import UploadImageGallery from '@/components/UploadImage/Gallery'
 import type { UploadImageGalleryItem } from '@/components/UploadImage/Gallery'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/Select'
 import { Slider } from '@/components/ui/slider'
@@ -60,6 +65,7 @@ import {
   buildVariantUpdates,
   mapProductToEditFormValues,
   parseTastingNotesString,
+  resolveEditedProductStatus,
   splitImageErrors,
   splitProductImagesForGallery,
   updateProductErrorTarget,
@@ -394,15 +400,10 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
     const { addImages, removeImageIds, updateImages } =
       buildProductUpdateImageDiff(product.images, finalImages)
 
-    let nextStatus = ProductStatus.DRAFT
-    if (isListedOnStorefront) {
-      nextStatus = ProductStatus.ACTIVE
-    } else if (
-      product.status === ProductStatus.ACTIVE ||
-      product.status === ProductStatus.INACTIVE
-    ) {
-      nextStatus = ProductStatus.INACTIVE
-    }
+    const nextStatus = resolveEditedProductStatus(
+      product.status,
+      isListedOnStorefront,
+    )
 
     const updatePayload: UpdateProductPayload = {
       categoryId: data.categoryId,
@@ -928,8 +929,10 @@ export default function PageContent() {
         ? (rawId[0] ?? '')
         : ''
 
-  const { product, isLoading, isError, errorMessage, refetch } =
-    useProductById(productId)
+  const { product, isLoading, isError, errorMessage, refetch } = useProductById(
+    productId,
+    { asAdmin: true },
+  )
 
   if (!productId) {
     return (
@@ -961,6 +964,25 @@ export default function PageContent() {
         >
           Retry
         </Button>
+      </div>
+    )
+  }
+
+  if (product.deletedAt) {
+    return (
+      <div className="flex flex-col items-center gap-4 px-6 py-12 text-center">
+        <p className="text-muted-foreground">
+          {NOTICE_MESSAGES.PRODUCT_DELETED.MESSAGE}
+        </p>
+        <Link
+          href={ROUTES.DASHBOARD_PRODUCTS}
+          className={cn(
+            buttonVariants({ variant: 'outline', size: 'sm' }),
+            'w-fit px-6',
+          )}
+        >
+          {NOTICE_MESSAGES.PRODUCT_DELETED.ACTION}
+        </Link>
       </div>
     )
   }

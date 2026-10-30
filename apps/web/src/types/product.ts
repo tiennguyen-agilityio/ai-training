@@ -53,6 +53,7 @@ export interface Product {
   images: ProductImage[]
   createdAt: string | null
   updatedAt: string | null
+  deletedAt: string | null
 }
 
 export interface ProductFormValues {

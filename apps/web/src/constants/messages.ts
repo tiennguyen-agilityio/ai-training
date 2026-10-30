@@ -92,6 +92,14 @@ export const SUCCESS_MESSAGES = {
   DRAFT_DISCARDED: 'Draft discarded',
 }
 
+// Notices shown in place of a page's content.
+export const NOTICE_MESSAGES = {
+  PRODUCT_DELETED: {
+    MESSAGE: 'This product has been deleted, so it can no longer be edited.',
+    ACTION: 'Back to products',
+  },
+}
+
 export const DIALOG_MESSAGES = {
   CATEGORY: {
     DELETE: {

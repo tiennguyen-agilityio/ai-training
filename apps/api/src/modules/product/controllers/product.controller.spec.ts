@@ -128,6 +128,72 @@ describe('ProductController', () => {
         { includeDeleted: true },
       );
     });
+
+    it('forces ACTIVE for a visitor with no session', async () => {
+      productService.findAll.mockResolvedValue({ data: [], meta: {} });
+
+      await controller.findAll({ page: 1, limit: 10 }, undefined);
+
+      expect(productService.findAll).toHaveBeenCalledWith(
+        { page: 1, limit: 10, search: undefined },
+        { status: ProductStatus.ACTIVE },
+        { includeDeleted: false },
+      );
+    });
+
+    it('ignores a requested DRAFT status for a shopper', async () => {
+      productService.findAll.mockResolvedValue({ data: [], meta: {} });
+      const customer = {
+        id: 'user-id-1',
+        role: UserRole.USER,
+        status: UserStatus.ACTIVE,
+      } as User;
+
+      await controller.findAll(
+        { page: 1, limit: 10, status: ProductStatus.DRAFT },
+        customer,
+      );
+
+      expect(productService.findAll).toHaveBeenCalledWith(
+        { page: 1, limit: 10, search: undefined },
+        { status: ProductStatus.ACTIVE },
+        { includeDeleted: false },
+      );
+    });
+
+    it('treats an inactive admin as a shopper', async () => {
+      productService.findAll.mockResolvedValue({ data: [], meta: {} });
+      const inactiveAdmin = {
+        ...adminUser,
+        status: UserStatus.INACTIVE,
+      } as User;
+
+      await controller.findAll(
+        { page: 1, limit: 10, status: ProductStatus.ARCHIVED },
+        inactiveAdmin,
+      );
+
+      expect(productService.findAll).toHaveBeenCalledWith(
+        { page: 1, limit: 10, search: undefined },
+        { status: ProductStatus.ACTIVE },
+        { includeDeleted: false },
+      );
+    });
+
+    it('keeps the requested status for an active admin', async () => {
+      productService.findAll.mockResolvedValue({ data: [], meta: {} });
+
+      await controller.findAll(
+        { page: 1, limit: 10, status: ProductStatus.DRAFT },
+        adminUser,
+      );
+
+      expect(productService.findAll).toHaveBeenCalledWith(
+        { page: 1, limit: 10, search: undefined },
+        { status: ProductStatus.DRAFT },
+        { includeDeleted: true },
+      );
+    });
   });
 
   describe('findOne', () => {
@@ -138,8 +204,20 @@ describe('ProductController', () => {
 
       expect(productService.findOne).toHaveBeenCalledWith('product-id-1', {
         includeDeleted: false,
+        activeOnly: true,
       });
       expect(result).toEqual(ResponseProductDto.fromEntity(product));
+    });
+
+    it('reads any status for an active admin', async () => {
+      productService.findOne.mockResolvedValue(product);
+
+      await controller.findOne({ id: 'product-id-1' }, adminUser);
+
+      expect(productService.findOne).toHaveBeenCalledWith('product-id-1', {
+        includeDeleted: true,
+        activeOnly: false,
+      });
     });
 
     it('propagates ItemNotFoundException', async () => {

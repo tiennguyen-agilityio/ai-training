@@ -13,6 +13,7 @@ import {
   buildVariantUpdates,
   createProductErrorTarget,
   mapProductToEditFormValues,
+  resolveEditedProductStatus,
   toCreateVariantPayload,
   updateProductErrorTarget,
 } from '@/utils/product'
@@ -47,6 +48,7 @@ const product = (variants: ProductVariantSummary[]): Product => ({
   images: [],
   createdAt: null,
   updatedAt: null,
+  deletedAt: null,
 })
 
 const formValues = (
@@ -261,5 +263,25 @@ describe('createProductErrorTarget', () => {
   it('maps the images array and an unknown image index to gallery', () => {
     expect(target('images')).toBe('gallery')
     expect(target('images.9.url')).toBe('gallery')
+  })
+})
+
+describe('resolveEditedProductStatus', () => {
+  it.each(Object.values(ProductStatus))(
+    'sends ACTIVE for a %s product listed on the storefront',
+    (current) => {
+      expect(resolveEditedProductStatus(current, true)).toBe(
+        ProductStatus.ACTIVE,
+      )
+    },
+  )
+
+  it.each([
+    [ProductStatus.ACTIVE, ProductStatus.INACTIVE],
+    [ProductStatus.INACTIVE, ProductStatus.INACTIVE],
+    [ProductStatus.ARCHIVED, ProductStatus.ARCHIVED],
+    [ProductStatus.DRAFT, ProductStatus.DRAFT],
+  ])('sends %s → %s when not listed on the storefront', (current, expected) => {
+    expect(resolveEditedProductStatus(current, false)).toBe(expected)
   })
 })

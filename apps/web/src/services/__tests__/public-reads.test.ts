@@ -69,6 +69,28 @@ describe('public reads never carry the session token', () => {
     expect(authorizationOf(fetchMock)).toBeNull()
   })
 
+  it('fetchProducts with asAdmin sends the session token', async () => {
+    const fetchMock = mockJson({ data: [] })
+
+    await fetchProducts({
+      asAdmin: true,
+      getToken: async () => 'admin-token',
+    })
+
+    expect(authorizationOf(fetchMock)).toBe('Bearer admin-token')
+  })
+
+  it('fetchProductById with asAdmin sends the session token', async () => {
+    const fetchMock = mockJson({ data: { id: 'p-1', name: 'Roast' } })
+
+    await fetchProductById('p-1', {
+      asAdmin: true,
+      getToken: async () => 'admin-token',
+    })
+
+    expect(authorizationOf(fetchMock)).toBe('Bearer admin-token')
+  })
+
   it('still authenticates reads the API protects', async () => {
     const fetchMock = mockJson({ data: [] })
 

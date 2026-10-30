@@ -37,6 +37,7 @@ import { User } from '../../user/entities/user.entity.js';
 import { ERROR_MESSAGES } from '../../../common/constants/message.constant.js';
 import { mapPaginatedResult } from '../../../common/utils/pagination.util.js';
 import { isActiveAdmin } from '../../../common/utils/user.util.js';
+import { ProductStatus } from '@repo/constants';
 
 @ApiTags('products')
 @Controller('products')
@@ -55,10 +56,12 @@ export class ProductController {
     @AuthUser() user?: User,
   ): Promise<PaginatedResult<ResponseProductDto>> {
     const { page, limit, search, ...filters } = query;
+    const asAdmin = isActiveAdmin(user);
+    // Shoppers only ever see ACTIVE products, whatever status they ask for.
     const result = await this.productService.findAll(
       { page, limit, search },
-      filters,
-      { includeDeleted: isActiveAdmin(user) },
+      asAdmin ? filters : { ...filters, status: ProductStatus.ACTIVE },
+      { includeDeleted: asAdmin },
     );
 
     return mapPaginatedResult(result, (product) =>
@@ -74,8 +77,10 @@ export class ProductController {
     @Param({ schema: idParamSchema }) { id }: IdParam,
     @AuthUser() user?: User,
   ): Promise<ResponseProductDto> {
+    const asAdmin = isActiveAdmin(user);
     const product = await this.productService.findOne(id, {
-      includeDeleted: isActiveAdmin(user),
+      includeDeleted: asAdmin,
+      activeOnly: !asAdmin,
     });
     return ResponseProductDto.fromEntity(product);
   }

@@ -91,6 +91,7 @@ const productFixture: Product = {
   ],
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
+  deletedAt: null,
 }
 
 describe('RoastDetailPageContent', () => {
@@ -126,6 +127,39 @@ describe('RoastDetailPageContent', () => {
     render(<RoastDetailPageContent />)
     expect(screen.getByText('Network down')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument()
+  })
+
+  it('shows Product not found for a product the API does not return', () => {
+    mockUseProductById.mockReturnValue({
+      product: null,
+      isLoading: false,
+      isError: true,
+      errorMessage: 'Product not found',
+      refetch: jest.fn(),
+    })
+
+    render(<RoastDetailPageContent />)
+    expect(screen.getByText('Product not found')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Back to roasts' }),
+    ).toHaveAttribute('href', '/roasts')
+  })
+
+  it('reads the product without asAdmin', () => {
+    mockUseProductById.mockReturnValue({
+      product: productFixture,
+      isLoading: false,
+      isError: false,
+      errorMessage: null,
+      refetch: jest.fn(),
+    })
+
+    render(<RoastDetailPageContent />)
+    expect(mockUseProductById).toHaveBeenCalled()
+    for (const args of mockUseProductById.mock.calls) {
+      expect(args).toEqual(['product-1'])
+    }
   })
 
   it('renders product title and spec grid when loaded', () => {

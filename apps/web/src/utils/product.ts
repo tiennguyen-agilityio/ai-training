@@ -2,7 +2,12 @@ import type { UploadImageGalleryItem } from '@/components/UploadImage/Gallery'
 import { OUT_OF_STOCK_LABEL } from '@/constants/order'
 import { type RoastCollection } from '@/constants/roast'
 import type { EditProductFormValues } from '@/schemas/product'
-import { DiscountType, type ProductUnit, RoastLevel } from '@repo/constants'
+import {
+  DiscountType,
+  ProductStatus,
+  type ProductUnit,
+  RoastLevel,
+} from '@repo/constants'
 import type { ServerFieldError } from '@/utils/form'
 import {
   type Product,
@@ -109,6 +114,18 @@ export function mapProductToEditFormValues(
     origin: product.origin,
     processingMethod: product.processingMethod,
   }
+}
+
+// The status the Edit page sends, from the "Listed on Storefront" switch:
+// listed is ACTIVE; unlisted keeps DRAFT and ARCHIVED, and turns ACTIVE into
+// INACTIVE.
+export function resolveEditedProductStatus(
+  current: ProductStatus,
+  isListedOnStorefront: boolean,
+): ProductStatus {
+  if (isListedOnStorefront) return ProductStatus.ACTIVE
+  if (current === ProductStatus.ACTIVE) return ProductStatus.INACTIVE
+  return current
 }
 
 /**
