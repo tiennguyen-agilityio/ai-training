@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 
 import EditCategory from '.'
+import { ROUTES } from '@/constants/routes'
 import { useCategoryById, useUpdateCategory } from '@/hooks/useCategory'
 import type { Category } from '@/types/category'
 import { ServiceError } from '@/utils/query'
@@ -55,6 +56,56 @@ const failWith = (error: unknown) => {
   const [, options] = mockMutate.mock.calls[0] as [unknown, MutateOptions]
   act(() => options.onError?.(error))
 }
+
+describe('EditCategory', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    jest.mocked(useCategoryById).mockReturnValue({
+      category,
+      isLoading: false,
+      isError: false,
+      errorMessage: null,
+      refetch: jest.fn(),
+    })
+    jest.mocked(useUpdateCategory).mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateCategory>)
+  })
+
+  it('keeps Save changes disabled until the name changes', async () => {
+    const user = userEvent.setup()
+    render(<EditCategory />)
+    const save = screen.getByRole('button', { name: /save changes/i })
+    const input = screen.getByRole('textbox', { name: /category name/i })
+
+    expect(save).toBeDisabled()
+
+    await user.type(input, 'X')
+    expect(save).toBeEnabled()
+
+    await user.type(input, '{backspace}')
+    expect(save).toBeDisabled()
+  })
+
+  it('shows the load error with a link back to categories', () => {
+    jest.mocked(useCategoryById).mockReturnValue({
+      category: null,
+      isLoading: false,
+      isError: true,
+      errorMessage: 'Not found',
+      refetch: jest.fn(),
+    })
+
+    render(<EditCategory />)
+
+    expect(screen.getByText('Not found')).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: /back to categories/i }),
+    ).toHaveAttribute('href', ROUTES.DASHBOARD_CATEGORIES)
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  })
+})
 
 describe('EditCategory API errors', () => {
   beforeEach(() => {

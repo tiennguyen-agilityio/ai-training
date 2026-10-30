@@ -4,7 +4,7 @@ import { Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 import { Button, buttonVariants } from '@/components/ui/button'
-import { dashboardCategoryEditRoute } from '@/constants/routes'
+import { ROUTES, dashboardEditPath } from '@/constants/routes'
 import type { Category } from '@/types/category'
 import { cn } from '@/utils/styles'
 
@@ -67,7 +67,10 @@ export function CategoryTableRow({
           {!isDeleted &&
             (category.id ? (
               <Link
-                href={dashboardCategoryEditRoute(category.id)}
+                href={dashboardEditPath(
+                  ROUTES.DASHBOARD_CATEGORIES,
+                  category.id,
+                )}
                 className={cn(
                   buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
                   'inline-flex',

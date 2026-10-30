@@ -73,6 +73,14 @@ describe('AddCategoryPage', () => {
     ).toBeInTheDocument()
   })
 
+  it('renders the form with the create-category-form id', () => {
+    const { container } = renderWithQueryClient(<AddCategoryPage />)
+    expect(container.querySelector('form')).toHaveAttribute(
+      'id',
+      'create-category-form',
+    )
+  })
+
   it('includes breadcrumb links to dashboard and categories', () => {
     renderWithQueryClient(<AddCategoryPage />)
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
