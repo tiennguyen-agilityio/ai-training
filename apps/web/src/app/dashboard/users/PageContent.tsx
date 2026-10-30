@@ -10,7 +10,7 @@ import type { User } from '@/types/user'
 
 // Constants
 import { ROUTES } from '@/constants/routes'
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
+import { SUCCESS_MESSAGES } from '@/constants/messages'
 import {
   ROLE_FILTER_OPTIONS,
   STATUS_FILTER_OPTIONS,
@@ -22,10 +22,11 @@ import {
 import { useDeleteUser, useUpdateUserRole, useUsers } from '@/hooks/useUser'
 import { useUrlState } from '@/hooks/useUrlState'
 import { useDebouncedUrlSearch } from '@/hooks/useDebouncedUrlSearch'
+import { usePageClamp } from '@/hooks/usePageClamp'
 
 // Components
 import Breadcrumb from '@/components/Breadcrumb'
-import AlertDialog from '@/components/AlertDialog'
+import ConfirmActionDialog from '@/components/ConfirmActionDialog'
 import Table from '@/components/Table'
 import { PaginationBar } from '@/components/Pagination'
 import { Select } from '@/components/Select'
@@ -36,7 +37,8 @@ import { EditUserForm } from '@/sections/EditUserForm'
 
 // Utils
 import { userUrlSchema } from '@/utils/url'
-import Loading from '@/components/Loading'
+import { getErrorMessage } from '@/utils/form'
+import ListBody from '@/components/ListBody'
 
 export const PageContent = () => {
   const { state, update: updateUrl } = useUrlState(userUrlSchema)
@@ -73,9 +75,6 @@ export const PageContent = () => {
   )
   const [pendingDeleteUser, setPendingDeleteUser] = useState<User | null>(null)
   const [pendingEditUser, setPendingEditUser] = useState<User | null>(null)
-  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(
-    null,
-  )
   const [optimisticRoles, setOptimisticRoles] = useState<
     Partial<Record<string, UserRole>>
   >({})
@@ -83,11 +82,7 @@ export const PageContent = () => {
   const { mutate: deleteUserMutate, isPending: isDeletePending } =
     useDeleteUser()
 
-  useEffect(() => {
-    if (meta && page > totalPages) {
-      updateUrl({ page: totalPages })
-    }
-  }, [meta, page, totalPages, updateUrl])
+  usePageClamp({ meta, page, totalPages, updateUrl })
 
   useEffect(() => {
     setOptimisticRoles((current) => {
@@ -143,11 +138,7 @@ export const PageContent = () => {
             delete next[userId]
             return next
           })
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : ERROR_MESSAGES.NETWORK_ERROR,
-          )
+          toast.error(getErrorMessage(error))
         },
         onSettled: () => {
           setPendingRoleUserId((current) =>
@@ -160,7 +151,6 @@ export const PageContent = () => {
 
   const handleUserDeleteRequest = (user: User) => {
     if (!user.id) return
-    setDeleteErrorMessage(null)
     setPendingDeleteUser(user)
   }
 
@@ -188,44 +178,21 @@ export const PageContent = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <AlertDialog
+      <ConfirmActionDialog
         data-testid="modal-confirm-delete-user"
-        open={pendingDeleteUser !== null}
-        isLoading={isDeletePending}
-        errorMessage={deleteErrorMessage}
-        onOpenChange={(open) => {
-          if (!open && !isDeletePending) {
-            setPendingDeleteUser(null)
-            setDeleteErrorMessage(null)
-          }
-        }}
+        item={pendingDeleteUser}
+        onClose={() => setPendingDeleteUser(null)}
+        mutate={deleteUserMutate}
+        isPending={isDeletePending}
+        successMessage={SUCCESS_MESSAGES.USER_DELETED}
         title="Delete user?"
-        description={
+        renderDescription={() => (
           <p>
             Are you sure you want to delete <b>{pendingDeleteLabel}</b>? This
             action cannot be undone.
           </p>
-        }
+        )}
         textAction="Delete"
-        onClickAction={() => {
-          const userId = pendingDeleteUser?.id
-          if (!userId) return
-          setDeleteErrorMessage(null)
-          deleteUserMutate(userId, {
-            onSuccess: () => {
-              toast.success(SUCCESS_MESSAGES.USER_DELETED)
-              setPendingDeleteUser(null)
-              setDeleteErrorMessage(null)
-            },
-            onError: (error) => {
-              setDeleteErrorMessage(
-                error instanceof Error
-                  ? error.message
-                  : ERROR_MESSAGES.NETWORK_ERROR,
-              )
-            },
-          })
-        }}
       />
       <EditUserForm
         open={pendingEditUser !== null}
@@ -324,59 +291,42 @@ export const PageContent = () => {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="px-6 py-12 text-center text-muted-foreground">
-            <Loading />
-          </div>
-        ) : isError ? (
-          <div className="flex flex-col items-center gap-4 px-6 py-12 text-center">
-            <p className="text-muted-foreground">{errorMessage}</p>
-            <Button
-              className="w-fit px-6"
-              variant="destructive"
-              size="sm"
-              onClick={() => void refetch()}
-            >
-              Retry
-            </Button>
-          </div>
-        ) : (
-          <div className="relative">
-            {isFetching && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/60 backdrop-blur-[1px]">
-                <Loading size="sm" />
-              </div>
+        <ListBody
+          isLoading={isLoading}
+          isError={isError}
+          errorMessage={errorMessage}
+          isFetching={isFetching}
+          onRetry={() => void refetch()}
+        >
+          <Table
+            columns={USERS_TABLE_COLUMNS}
+            isStackedOnMobile
+            data={users}
+            getRowKey={(user, index) => user.id ?? `user-${index}`}
+            resolveRowClassName={(user) =>
+              user.deletedAt
+                ? 'border-b border-border bg-muted-foreground/20'
+                : ''
+            }
+            renderRow={(user) => (
+              <UserTableRow
+                user={
+                  user.id && optimisticRoles[user.id]
+                    ? { ...user, role: optimisticRoles[user.id] }
+                    : user
+                }
+                onRequestRoleChange={handleUserRoleUpdate}
+                onRequestEdit={handleUserEditRequest}
+                onRequestDelete={handleUserDeleteRequest}
+                isRoleDisabled={
+                  pendingRoleUserId === user.id || Boolean(user.deletedAt)
+                }
+                isEditDisabled={Boolean(user.deletedAt)}
+                isDeleteDisabled={isDeletePending || Boolean(user.deletedAt)}
+              />
             )}
-            <Table
-              columns={USERS_TABLE_COLUMNS}
-              isStackedOnMobile
-              data={users}
-              getRowKey={(user, index) => user.id ?? `user-${index}`}
-              resolveRowClassName={(user) =>
-                user.deletedAt
-                  ? 'border-b border-border bg-muted-foreground/20'
-                  : ''
-              }
-              renderRow={(user) => (
-                <UserTableRow
-                  user={
-                    user.id && optimisticRoles[user.id]
-                      ? { ...user, role: optimisticRoles[user.id] }
-                      : user
-                  }
-                  onRequestRoleChange={handleUserRoleUpdate}
-                  onRequestEdit={handleUserEditRequest}
-                  onRequestDelete={handleUserDeleteRequest}
-                  isRoleDisabled={
-                    pendingRoleUserId === user.id || Boolean(user.deletedAt)
-                  }
-                  isEditDisabled={Boolean(user.deletedAt)}
-                  isDeleteDisabled={isDeletePending || Boolean(user.deletedAt)}
-                />
-              )}
-            />
-          </div>
-        )}
+          />
+        </ListBody>
 
         <footer className="border-t border-outline-variant/30 px-6 py-4">
           <PaginationBar

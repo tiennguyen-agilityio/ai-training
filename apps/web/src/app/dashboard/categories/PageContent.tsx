@@ -1,12 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { Download, Printer, Tag } from 'lucide-react'
-import { toast } from 'sonner'
 
 // Constants
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
+import { SUCCESS_MESSAGES } from '@/constants/messages'
 import { ROUTES } from '@/constants/routes'
 import { CATEGORIES_TABLE_COLUMNS } from '@/constants/category'
 
@@ -18,9 +17,10 @@ import {
 } from '@/hooks/useCategory'
 import { useUrlState } from '@/hooks/useUrlState'
 import { useDebouncedUrlSearch } from '@/hooks/useDebouncedUrlSearch'
+import { usePageClamp } from '@/hooks/usePageClamp'
 
 // Components
-import AlertDialog from '@/components/AlertDialog'
+import ConfirmActionDialog from '@/components/ConfirmActionDialog'
 import Breadcrumb from '@/components/Breadcrumb'
 import Table from '@/components/Table'
 import { PaginationBar } from '@/components/Pagination'
@@ -34,7 +34,7 @@ import type { Category } from '@/types/category'
 // Utils
 import { urlSchema } from '@/utils/url'
 import { cn } from '@/utils/styles'
-import Loading from '@/components/Loading'
+import ListBody from '@/components/ListBody'
 
 interface PendingCategoryAction {
   id: string
@@ -53,16 +53,10 @@ export const PageContent = () => {
   const { page, search, limit } = state
   const [pendingDelete, setPendingDelete] =
     useState<PendingCategoryAction | null>(null)
-  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(
-    null,
-  )
   const { mutate: deleteCategoryMutate, isPending: isDeletePending } =
     useDeleteCategory()
   const [pendingRestore, setPendingRestore] =
     useState<PendingCategoryAction | null>(null)
-  const [restoreErrorMessage, setRestoreErrorMessage] = useState<string | null>(
-    null,
-  )
   const { mutate: restoreCategoryMutate, isPending: isRestorePending } =
     useRestoreCategory()
   const { searchInput, setSearchInput, searchInputRef } = useDebouncedUrlSearch(
@@ -82,11 +76,7 @@ export const PageContent = () => {
   const totalCount = meta?.totalCount ?? categories.length
   const showingCount = categories.length
 
-  useEffect(() => {
-    if (meta && page > totalPages) {
-      updateUrl({ page: totalPages })
-    }
-  }, [meta, page, totalPages, updateUrl])
+  usePageClamp({ meta, page, totalPages, updateUrl })
 
   const handleQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInput(event.target.value)
@@ -94,83 +84,37 @@ export const PageContent = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <AlertDialog
+      <ConfirmActionDialog
         data-testid="modal-confirm-delete-category"
-        open={pendingDelete !== null}
-        isLoading={isDeletePending}
-        errorMessage={deleteErrorMessage}
-        onOpenChange={(open) => {
-          if (!open && !isDeletePending) {
-            setPendingDelete(null)
-            setDeleteErrorMessage(null)
-          }
-        }}
+        item={pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        mutate={deleteCategoryMutate}
+        isPending={isDeletePending}
+        successMessage={SUCCESS_MESSAGES.CATEGORY_DELETED}
         title="Remove this category?"
-        description={
+        renderDescription={(category) => (
           <p>
-            This will remove <b>{pendingDelete?.name}</b>.
+            This will remove <b>{category?.name}</b>.
           </p>
-        }
+        )}
         textAction="Delete"
-        onClickAction={() => {
-          const id = pendingDelete?.id
-          if (!id) return
-          setDeleteErrorMessage(null)
-          deleteCategoryMutate(id, {
-            onSuccess: () => {
-              toast.success(SUCCESS_MESSAGES.CATEGORY_DELETED)
-              setPendingDelete(null)
-              setDeleteErrorMessage(null)
-            },
-            onError: (error) => {
-              setDeleteErrorMessage(
-                error instanceof Error
-                  ? error.message
-                  : ERROR_MESSAGES.NETWORK_ERROR,
-              )
-            },
-          })
-        }}
       />
 
-      <AlertDialog
+      <ConfirmActionDialog
         data-testid="modal-confirm-restore-category"
-        open={pendingRestore !== null}
-        isLoading={isRestorePending}
-        errorMessage={restoreErrorMessage}
-        onOpenChange={(open) => {
-          if (!open && !isRestorePending) {
-            setPendingRestore(null)
-            setRestoreErrorMessage(null)
-          }
-        }}
+        item={pendingRestore}
+        onClose={() => setPendingRestore(null)}
+        mutate={restoreCategoryMutate}
+        isPending={isRestorePending}
+        successMessage={SUCCESS_MESSAGES.CATEGORY_RESTORED}
         title="Restore this category?"
-        description={
+        renderDescription={(category) => (
           <p>
-            This will restore <b>{pendingRestore?.name}</b>.
+            This will restore <b>{category?.name}</b>.
           </p>
-        }
+        )}
         textAction="Restore"
         actionVariant="default"
-        onClickAction={() => {
-          const id = pendingRestore?.id
-          if (!id) return
-          setRestoreErrorMessage(null)
-          restoreCategoryMutate(id, {
-            onSuccess: () => {
-              toast.success(SUCCESS_MESSAGES.CATEGORY_RESTORED)
-              setPendingRestore(null)
-              setRestoreErrorMessage(null)
-            },
-            onError: (error) => {
-              setRestoreErrorMessage(
-                error instanceof Error
-                  ? error.message
-                  : ERROR_MESSAGES.NETWORK_ERROR,
-              )
-            },
-          })
-        }}
       />
 
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -236,48 +180,36 @@ export const PageContent = () => {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="px-6 py-12 text-center text-muted-foreground">
-            <Loading />
-          </div>
-        ) : isError ? (
-          <div className="flex flex-col items-center gap-4 px-6 py-12 text-center">
-            <p className="text-muted-foreground">{errorMessage}</p>
-          </div>
-        ) : (
-          <div className="relative">
-            {isFetching && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/60 backdrop-blur-[1px]">
-                <Loading size="sm" />
-              </div>
+        <ListBody
+          isLoading={isLoading}
+          isError={isError}
+          errorMessage={errorMessage}
+          isFetching={isFetching}
+        >
+          <Table
+            columns={CATEGORIES_TABLE_COLUMNS}
+            isStackedOnMobile
+            data={categories}
+            getRowKey={(row, index) => row.id ?? `category-${index}`}
+            resolveRowClassName={(row) =>
+              row.deletedAt
+                ? 'border-b border-border bg-muted-foreground/20'
+                : ''
+            }
+            renderRow={(row) => (
+              <CategoryTableRow
+                category={row}
+                onRequestDelete={(c) => {
+                  setPendingDelete(toPendingCategoryAction(c))
+                }}
+                onRequestRestore={(c) => {
+                  setPendingRestore(toPendingCategoryAction(c))
+                }}
+              />
             )}
-            <Table
-              columns={CATEGORIES_TABLE_COLUMNS}
-              isStackedOnMobile
-              data={categories}
-              getRowKey={(row, index) => row.id ?? `category-${index}`}
-              resolveRowClassName={(row) =>
-                row.deletedAt
-                  ? 'border-b border-border bg-muted-foreground/20'
-                  : ''
-              }
-              renderRow={(row) => (
-                <CategoryTableRow
-                  category={row}
-                  onRequestDelete={(c) => {
-                    setDeleteErrorMessage(null)
-                    setPendingDelete(toPendingCategoryAction(c))
-                  }}
-                  onRequestRestore={(c) => {
-                    setRestoreErrorMessage(null)
-                    setPendingRestore(toPendingCategoryAction(c))
-                  }}
-                />
-              )}
-              emptyMessage="No categories match your filters."
-            />
-          </div>
-        )}
+            emptyMessage="No categories match your filters."
+          />
+        </ListBody>
 
         <footer className="border-t border-outline-variant/30 px-6 py-4">
           <PaginationBar

@@ -373,6 +373,17 @@ describe('Dashboard products page', () => {
     expect(screen.queryByText('Ethiopian Yirgacheffe')).not.toBeInTheDocument()
   })
 
+  it('moves a page past the last page back to the last page', () => {
+    navQueryString = 'page=5'
+
+    renderProductsPage()
+
+    expect(mockReplace).toHaveBeenCalledWith(
+      `${ROUTES.DASHBOARD_PRODUCTS}?page=2`,
+      { scroll: false },
+    )
+  })
+
   it('filters products by category via URL params and API params', async () => {
     const view = renderProductsPage()
 
