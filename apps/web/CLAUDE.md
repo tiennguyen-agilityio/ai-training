@@ -14,7 +14,7 @@ pnpm test:cov
 
 ## Structure
 
-`src/app` (routes: `(shop)`, `dashboard`, `sign-in`, `sign-up`), `src/sections` (page sections), `src/layouts`, `src/components`, `src/services` (API client), `src/hooks`, `src/store`, `src/providers`, `src/schemas`, `src/constants`, `src/theme`, `src/types`, `src/utils`.
+Routes live in `src/app` (`(shop)`, `dashboard`, `sign-in`, `sign-up`); `src/middleware.ts` protects them. The role of every `src/` folder is in the Layers table of `.claude/rules/coding.md`.
 
 ## Shared config
 
@@ -23,3 +23,15 @@ pnpm test:cov
 ## Environment
 
 Copy `.env.example` to `.env`. `NEXT_PUBLIC_API_URL` points at the API (`pnpm dev:api` serves `http://localhost:3000`). `pnpm build` needs `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`; CI reads it from the GitHub Actions variable of the same name.
+
+## Claude rules
+
+The coding and testing rules live in `.claude/rules/` and the workflow rule in the root `.claude/rules/`, loaded when Claude works with matching files:
+
+| File                              | Loaded for                            | Covers                                                                                                                                                                      |
+| --------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.claude/rules/coding.md`         | `src/**/*.{ts,tsx}`                   | Layers, naming and exports, server and client, services and TanStack Query hooks, shared packages, forms, constants, auth, styling and accessibility, TypeScript lint rules |
+| `.claude/rules/testing.md`        | `src/**/*.test.{ts,tsx}`, Jest config | Jest + React Testing Library, test locations, queries, mocks, what to test, coverage, integrity                                                                             |
+| `../../.claude/rules/workflow.md` | always                                | Feature workflow: superpowers overrides, `docs/specs/` paths, changed apps, coverage baseline + test report, review before commit                                           |
+
+When planning or reviewing, read `coding.md` and `testing.md` even if no matching file is open. Run `apps/web:verify` (`.claude/skills/verify/SKILL.md`) before calling a web change done.

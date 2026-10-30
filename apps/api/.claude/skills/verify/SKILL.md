@@ -11,7 +11,7 @@ description: Use when a code change in apps/api (the API) is finished or about t
 
 Run from `apps/api/`.
 
-1. **Gates.** Run every gate, even if one fails, and read each output.
+1. **Gates.** First, outside `/work-ticket` (which already ran the rebuild precondition, `../../.claude/rules/workflow.md` §7), run `node ../../.claude/scripts/changed-apps.mjs <base commit>`, where `<base commit>` is `git merge-base HEAD origin/develop`, and `pnpm --filter <pkg> build` for each `rebuild` entry it prints. Then run every gate, even if one fails, and read each output.
 
    ```bash
    pnpm exec eslint "{src,apps,libs,test}/**/*.ts"   # no --fix: observe, don't rewrite

@@ -8,11 +8,15 @@
 
 | Suite | Passed | Failed | Skipped | Duration | Scope |
 | --- | --- | --- | --- | --- | --- |
-| Unit test | {{passed}} | {{failed}} | {{skipped}} | {{duration}} | {{N}} files |
-| E2E test | {{passed}} | {{failed}} | {{skipped}} | {{duration}} | {{N}} files |
+| Unit test (api, Vitest) | {{passed}} | {{failed}} | {{skipped}} | {{duration}} | {{N}} files |
+| E2E test (api) | {{passed}} | {{failed}} | {{skipped}} | {{duration}} | {{N}} files |
+| Unit test (web, Jest) | {{passed}} | {{failed}} | {{skipped}} | {{duration}} | {{N}} suites |
 
-<!-- E2E not run: put — in the number columns and "Skipped: <reason>" in Scope
-     (e.g. "Skipped: DB resolves to coffee_shop, not *_test" or "Skipped: service-only change"). -->
+<!-- One row set per changed app (.claude/rules/workflow.md rule 0); drop the rows of an app that did not change.
+     E2E not run: put — in the number columns and "Skipped: <reason>" in Scope
+     (e.g. "Skipped: DB resolves to coffee_shop, not *_test" or "Skipped: service-only change").
+     Web has no e2e suite: add the row `| E2E test (web) | — | — | — | — | n/a: no web e2e suite |`.
+     No changed app: drop this table and fill "Plan checks" below. -->
 
 ## Bugs ({{N}})
 
@@ -22,8 +26,8 @@
 
 | Field | Detail |
 | --- | --- |
-| Type | {{Unit test / E2E test}} |
-| API | {{method}} {{path}} <!-- — for unit tests --> |
+| Type | {{Unit test / E2E test}} ({{api / web}}) |
+| API | {{method}} {{path}} <!-- — for unit tests, and — for web --> |
 | Expected | {{expected value}} |
 | Actual | {{actual value}} |
 | Error message | {{message}} |
@@ -47,10 +51,15 @@
 
 ## Coverage
 
+<!-- One "### {{app}}" block per changed app; no changed app: drop this section. -->
+
+### {{app}}
+
 Compared with the baseline from {{YYYY-MM-DD}}, commit {{base commit}}.
 
-<!-- Paste the output of:
-     node .claude/skills/verify/coverage-diff.mjs diff <spec dir>/coverage-baseline.json <changed src files>
+<!-- Paste the output of, run from apps/<app>/:
+     node ../../.claude/scripts/coverage-diff.mjs diff ../../<spec dir>/coverage-baseline-<app>.json <changed src files>
+     For api, use coverage-baseline.json when coverage-baseline-api.json is absent (a spec started before per-app baselines).
      Do not compute or edit the numbers by hand. -->
 
 | File | Statements | Branches | Functions | Lines |
@@ -64,11 +73,20 @@ Coverage drops (warning only, not a failure):
 
 > {{baseline warning — e.g. "No baseline: captured after code changes started", or "Baseline is from an older base commit"}}
 
+## Plan checks
+
+<!-- Only when there is no changed app (workflow rule 0): the plan's `## Plan checks`, run at step 8. Otherwise drop this section.
+     In report.md, a requirement proven here is `PASS (plan check)`; a test passed in a verify run is `PASS`; a web UI requirement shown by an after screenshot is `PASS (screenshot, manual)`; anything else is `Not verified` (workflow rule 9). -->
+
+| Check | Command or steps | Result |
+| --- | --- | --- |
+| {{M1: name}} | `{{command}}` or {{steps}} | {{PASS / FAIL}}: {{observed result}} |
+
 ## Scope
 
 - Changed files:
   - {{path}}
-- Unit tests run: {{spec list, or "all (N files)"}}
+- Unit tests run: {{per changed app: spec list, or "all (N files)" / "all (N suites)"}}
 - E2E tests run: {{spec list, or "not run"}}
 - Scope notes:
   - {{note}}

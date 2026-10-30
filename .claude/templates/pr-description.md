@@ -30,7 +30,9 @@
 
 ## How to test
 
-<!-- Commands a reviewer runs, then the verify result of the last run. When every changed file is Markdown, replace the table with one row: | Verify | Not applicable: Markdown only, no app code changed | -->
+<!-- Commands a reviewer runs, then the verify result of the last run: one table per changed app (.claude/rules/workflow.md rule 0), headed by the app; drop the table of an app that did not change. -->
+
+**api**
 
 | Gate | Result |
 | --- | --- |
@@ -40,10 +42,31 @@
 | Unit tests |  |
 | E2E tests |  |
 
-<!-- Optional, for failing or unusual runs: the vitest summary lines as text.
+**web**
+
+| Gate | Result |
+| --- | --- |
+| Lint |  |
+| Format |  |
+| Type check |  |
+| Build |  |
+| Unit tests |  |
+| E2E tests | n/a: no web e2e suite |
+
+<!-- No changed app (only Claude config, Markdown, root config, .github/, docs/ or other packages/* changed): replace the tables with the plan checks from test-report.md:
+
+| Check | Command or steps | Result |
+| --- | --- | --- |
+|  |  |  |
+
+With no spec dir, use one row instead: | Verify | Not applicable: no app code changed |. With a spec dir whose test-report.md has no Plan checks section yet: <TODO: run the plan checks>.
+
+Requirements shown as `PASS (screenshot, manual)` or `PASS (plan check)` in report.md go in their own list here, apart from the test results. -->
+
+<!-- Optional, for failing or unusual runs: the vitest/jest summary lines as text.
 <details><summary>Test output</summary>
 
-    <vitest summary lines>
+    <vitest/jest summary lines>
 
 </details>
 -->
