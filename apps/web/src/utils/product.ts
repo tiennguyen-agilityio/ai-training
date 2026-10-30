@@ -3,7 +3,7 @@ import { OUT_OF_STOCK_LABEL } from '@/constants/order'
 import { type RoastCollection } from '@/constants/roast'
 import type { EditProductFormValues } from '@/schemas/product'
 import { DiscountType, type ProductUnit, RoastLevel } from '@repo/constants'
-import type { ErrorDetail } from '@/types/api'
+import type { ServerFieldError } from '@/utils/form'
 import {
   type Product,
   type ProductFormValues,
@@ -11,8 +11,10 @@ import {
 } from '@/types/product'
 import type {
   CreateProductImagePayload,
+  CreateProductPayload,
   CreateProductVariantPayload,
   UpdateProductImagePayload,
+  UpdateProductPayload,
   UpdateProductVariantPayload,
 } from '@repo/schemas'
 import { getPrimaryVariantQuantity } from '@/utils/inventory'
@@ -151,28 +153,126 @@ export function toCreateVariantPayload(
   }
 }
 
-const VARIANT_FORM_FIELDS = [
+// Only fields the forms render an error for; the rest go to the fallback.
+const PRODUCT_FORM_FIELDS = [
+  'categoryId',
+  'name',
+  'description',
+  'origin',
+  'processingMethod',
+] as const
+
+const CREATE_VARIANT_FORM_FIELDS = [
   'price',
-  'discountType',
+  'discountValue',
+  'quantity',
+  'weight',
+  'unit',
+] as const
+
+export type ProductImageErrorTarget = 'avatar' | 'gallery'
+
+export type CreateProductErrorTarget =
+  | (typeof PRODUCT_FORM_FIELDS)[number]
+  | (typeof CREATE_VARIANT_FORM_FIELDS)[number]
+  | ProductImageErrorTarget
+
+const isImageErrorTarget = (field: string): field is ProductImageErrorTarget =>
+  field === 'avatar' || field === 'gallery'
+
+/**
+ * Separates the image box errors (kept in the form's own state) from the
+ * react-hook-form field errors.
+ */
+export function splitImageErrors<K extends string>(
+  fieldErrors: ServerFieldError<K>[],
+): {
+  imageErrors: Partial<Record<ProductImageErrorTarget, string>>
+  formErrors: ServerFieldError<Exclude<K, ProductImageErrorTarget>>[]
+} {
+  const imageErrors: Partial<Record<ProductImageErrorTarget, string>> = {}
+  const formErrors: ServerFieldError<Exclude<K, ProductImageErrorTarget>>[] = []
+  for (const { field, message } of fieldErrors) {
+    if (isImageErrorTarget(field)) {
+      imageErrors[field] = message
+    } else {
+      formErrors.push({
+        field: field as Exclude<K, ProductImageErrorTarget>,
+        message,
+      })
+    }
+  }
+  return { imageErrors, formErrors }
+}
+
+const findField = <F extends string>(fields: readonly F[], name?: string) =>
+  fields.find((field) => field === name)
+
+/**
+ * The Avatar box for an image entry the payload sent as primary, else the
+ * Gallery box: `images` (the array itself) or an index not in the payload.
+ */
+export function imageErrorTarget(
+  images: readonly { isPrimary?: boolean }[] | undefined,
+  index?: string,
+): ProductImageErrorTarget {
+  return index !== undefined && images?.[Number(index)]?.isPrimary
+    ? 'avatar'
+    : 'gallery'
+}
+
+/**
+ * The Add form target for an API error path: a field, an image box, or
+ * undefined for the fallback. A duplicate SKU goes to Weight, since the SKU
+ * is built from Weight + Unit.
+ */
+export function createProductErrorTarget(
+  apiField: string,
+  payload: CreateProductPayload,
+): CreateProductErrorTarget | undefined {
+  const [root, index, leaf] = apiField.split('.')
+  if (root === 'sku') return 'weight'
+  if (root === 'images') return imageErrorTarget(payload.images, index)
+  if (root === 'variants') {
+    if (index !== '0') return undefined
+    return leaf === 'sku'
+      ? 'weight'
+      : findField(CREATE_VARIANT_FORM_FIELDS, leaf)
+  }
+  return index === undefined ? findField(PRODUCT_FORM_FIELDS, root) : undefined
+}
+
+const UPDATE_VARIANT_FORM_FIELDS = [
+  'price',
   'discountValue',
   'quantity',
 ] as const
 
-type VariantFormField = (typeof VARIANT_FORM_FIELDS)[number]
+export type UpdateProductErrorTarget = Exclude<
+  CreateProductErrorTarget,
+  'weight' | 'unit'
+>
 
 /**
- * API errors on the first variant's update (`updateVariants.0.<field>`), as
- * the Edit form field they belong to.
+ * The Edit form target for an API error path: a field, an image box, or
+ * undefined for the fallback. Image entries are looked up in the payload sent.
  */
-export function variantFieldErrors(
-  errors: ErrorDetail[],
-): { field: VariantFormField; message: string }[] {
-  return errors.flatMap((error) => {
-    const field = VARIANT_FORM_FIELDS.find(
-      (name) => error.field === `updateVariants.0.${name}`,
-    )
-    return field ? [{ field, message: error.message }] : []
-  })
+export function updateProductErrorTarget(
+  apiField: string,
+  payload: UpdateProductPayload,
+): UpdateProductErrorTarget | undefined {
+  const [root, index, leaf] = apiField.split('.')
+  if (root === 'addImages') return imageErrorTarget(payload.addImages, index)
+  if (root === 'updateImages') {
+    return imageErrorTarget(payload.updateImages, index)
+  }
+  if (root === 'removeImageIds') return 'gallery'
+  if (root === 'updateVariants') {
+    return index === '0'
+      ? findField(UPDATE_VARIANT_FORM_FIELDS, leaf)
+      : undefined
+  }
+  return index === undefined ? findField(PRODUCT_FORM_FIELDS, root) : undefined
 }
 
 export function mapProductToFormValues(product: Product): ProductFormValues {

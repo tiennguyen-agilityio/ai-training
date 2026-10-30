@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 // Types
 
 // Constants
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
+import { SUCCESS_MESSAGES } from '@/constants/messages'
 import { ROUTES } from '@/constants/routes'
 import {
   createCategoryFormSchema,
@@ -17,6 +17,7 @@ import {
 
 // Hooks
 import { useCreateCategory } from '@/hooks/useCategory'
+import { mapServerErrors, setServerFieldErrors } from '@/utils/form'
 
 // Components
 import Breadcrumb from '@/components/Breadcrumb'
@@ -31,6 +32,7 @@ const PageContent = () => {
     handleSubmit,
     reset,
     setError,
+    setFocus,
     clearErrors,
     formState: { errors },
   } = useForm<CreateCategoryFormValues>({
@@ -48,9 +50,11 @@ const PageContent = () => {
         router.push(ROUTES.DASHBOARD_CATEGORIES)
       },
       onError: (error) => {
-        const message =
-          error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR
-        setError('name', { type: 'server', message })
+        const { fieldErrors, unmatched } = mapServerErrors(error, (field) =>
+          field === 'name' ? 'name' : undefined,
+        )
+        setServerFieldErrors(setError, fieldErrors, setFocus)
+        unmatched.forEach((message) => toast.error(message))
       },
     })
   }

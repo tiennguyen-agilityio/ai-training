@@ -1,3 +1,5 @@
+import { VALIDATION_RULES } from '@repo/constants'
+
 export const ERROR_MESSAGES = {
   IDENTIFIER_REQUIRED: 'Enter your email address',
   IDENTIFIER_EMAIL_INVALID: 'Enter a valid email address',
@@ -29,6 +31,23 @@ export const ERROR_MESSAGES = {
   CVC_INVALID: 'Enter a valid CVC',
   PROFILE_SYNC_DELAYED:
     'Saved, but syncing your profile is taking longer than expected. Refresh in a moment to confirm.',
+} as const
+
+// Form validation copy shown by the web forms, in place of the packages'
+// API-style VALIDATION_MESSAGES / DISCOUNT_*_MESSAGE (DTO field names): the
+// label is the one the user sees. The rules themselves come from the packages.
+export const FORM_MESSAGES = {
+  minLength: (label: string, minimum: number) =>
+    `${label} must be at least ${minimum} characters`,
+  maxLength: (label: string, maximum: number) =>
+    `${label} must be at most ${maximum} characters`,
+  min: (label: string, minimum: number | string) =>
+    `${label} must be at least ${minimum}`,
+  max: (label: string, maximum: number | string) =>
+    `${label} must be at most ${maximum}`,
+  isInt: (label: string) => `${label} must be a whole number`,
+  DISCOUNT_PERCENT: `Discount must be less than ${VALIDATION_RULES.DISCOUNT.PERCENT_MAX}%`,
+  DISCOUNT_FIXED: 'Discount must be less than the base price',
 } as const
 
 export const API_FALLBACK_ERRORS = {

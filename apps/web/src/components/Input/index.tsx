@@ -115,6 +115,28 @@ const InputField = React.forwardRef<HTMLElement, InputProps>(
         event.target.value,
         maxDecimalPlaces,
       )
+      // The control is type="text", so the browser never enforces `max`:
+      // drop a keystroke that would go above it and keep the previous value.
+      const maxValue = rest.max === undefined ? NaN : Number(rest.max)
+      if (normalized !== '' && Number(normalized) > maxValue) {
+        // Put the previous text back here, with the caret where it was, so
+        // React's controlled-value restore leaves the caret alone.
+        const input = event.currentTarget
+        const previous = effectiveNumberValue ?? ''
+        const caret = Math.max(
+          0,
+          (input.selectionStart ?? previous.length) -
+            (input.value.length - previous.length),
+        )
+        input.value = previous
+        input.setSelectionRange(caret, caret)
+        ;(
+          event as React.ChangeEvent<HTMLInputElement> & {
+            preventBaseUIHandler?: () => void
+          }
+        ).preventBaseUIHandler?.()
+        return
+      }
       const formatted = formatNumericWithThousands(normalized)
 
       if (!isControlledNumberInput) {

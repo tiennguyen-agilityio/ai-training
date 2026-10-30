@@ -7,6 +7,7 @@ import {
   RoastLevel,
 } from '@repo/constants'
 import type { UpdateProductPayload } from '@repo/schemas'
+import { toast } from 'sonner'
 
 import PageContent from './PageContent'
 import { ROUTES } from '@/constants/routes'
@@ -196,18 +197,20 @@ describe('EditProductForm pricing', () => {
     expect(field('Discount (%)')).toHaveValue('12.34')
   })
 
-  it('blocks a percent discount of 100 without sending', async () => {
+  it('does not accept a percent discount above 99.99', async () => {
     renderPage()
 
     await replaceValue('Discount (%)', '100')
-    await save()
 
-    expect(
-      await screen.findByText(
-        'DiscountValue must be less than 100 when DiscountType is PERCENT',
-      ),
-    ).toBeInTheDocument()
-    expect(mockMutate).not.toHaveBeenCalled()
+    expect(field('Discount (%)')).toHaveValue('10')
+  })
+
+  it('accepts a quantity above 500, since the API has no maximum', async () => {
+    renderPage()
+
+    await replaceValue('Quantity', '501')
+
+    expect(field('Quantity')).toHaveValue('501')
   })
 
   it('blocks a fixed discount equal to the price without sending', async () => {
@@ -219,7 +222,7 @@ describe('EditProductForm pricing', () => {
     await save()
 
     expect(
-      await screen.findByText('Fixed discount must be less than base price'),
+      await screen.findByText('Discount must be less than the base price'),
     ).toBeInTheDocument()
     expect(mockMutate).not.toHaveBeenCalled()
   })
@@ -245,5 +248,118 @@ describe('EditProductForm pricing', () => {
       await screen.findByText('Fixed discount must be less than base price'),
     ).toBeInTheDocument()
     expect(field('Discount (%)')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('shows a variant error and a name error from the same response', async () => {
+    mockMutate.mockImplementation((_input, options: MutateOptions) =>
+      options.onError?.(
+        new ServiceError('Fixed discount must be less than base price', [
+          {
+            errCode: 'maxFixedDiscountValue',
+            field: 'updateVariants.0.discountValue',
+            message: 'Fixed discount must be less than base price',
+          },
+          {
+            errCode: 'productNameExists',
+            field: 'name',
+            message: 'Product name already exists',
+          },
+        ]),
+      ),
+    )
+    renderPage()
+
+    await replaceValue('Quantity', '50')
+    await save()
+
+    expect(
+      await screen.findByText('Fixed discount must be less than base price'),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText('Product name already exists'),
+    ).toBeInTheDocument()
+    expect(field('Product Name')).toHaveAttribute('aria-invalid', 'true')
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('shows an unmatched API error as a toast next to the field errors', async () => {
+    mockMutate.mockImplementation((_input, options: MutateOptions) =>
+      options.onError?.(
+        new ServiceError('Price must not be less than 1', [
+          {
+            errCode: 'min',
+            field: 'updateVariants.0.price',
+            message: 'Price must not be less than 1',
+          },
+          {
+            errCode: 'tooManyImages',
+            field: '',
+            message: 'A product can have at most 10 images',
+          },
+        ]),
+      ),
+    )
+    renderPage()
+
+    await replaceValue('Quantity', '50')
+    await save()
+
+    expect(
+      await screen.findByText('Price must not be less than 1'),
+    ).toBeInTheDocument()
+    expect(toast.error).toHaveBeenCalledWith(
+      'A product can have at most 10 images',
+    )
+  })
+
+  it('updates the Product Name error while typing after the first blur', async () => {
+    renderPage()
+
+    await userEvent.clear(field('Product Name'))
+    await userEvent.tab()
+    expect(
+      await screen.findByText('This field is required'),
+    ).toBeInTheDocument()
+
+    await userEvent.type(field('Product Name'), 'a')
+
+    expect(
+      await screen.findByText('Product name must be at least 2 characters'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('This field is required')).not.toBeInTheDocument()
+  })
+
+  it('focuses Product Name after a server name error', async () => {
+    // The response arrives after a render, while the form is still disabled.
+    mockMutate.mockImplementation((_input, options: MutateOptions) => {
+      setTimeout(() =>
+        options.onError?.(
+          new ServiceError('Product name already exists', [
+            {
+              errCode: 'productNameExists',
+              field: 'name',
+              message: 'Product name already exists',
+            },
+          ]),
+        ),
+      )
+    })
+    renderPage()
+
+    await replaceValue('Product Name', 'coldbrew')
+    await save()
+
+    expect(
+      await screen.findByText('Product name already exists'),
+    ).toBeInTheDocument()
+    await waitFor(() => expect(field('Product Name')).toHaveFocus())
+  })
+
+  it('does not accept a base price above 99,999,999.99', async () => {
+    renderPage()
+
+    await replaceValue('Base Price', '100000000')
+
+    expect(field('Base Price')).toHaveValue('10,000,000')
   })
 })

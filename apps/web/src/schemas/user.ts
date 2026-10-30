@@ -1,12 +1,7 @@
 import { z } from 'zod'
 
-import {
-  VALIDATION_MESSAGES,
-  VALIDATION_RULES,
-  UserRole,
-  UserStatus,
-} from '@repo/constants'
-import { ERROR_MESSAGES } from '@/constants/messages'
+import { VALIDATION_RULES, UserRole, UserStatus } from '@repo/constants'
+import { ERROR_MESSAGES, FORM_MESSAGES } from '@/constants/messages'
 import { formDataEntryToString } from '@/utils/validation'
 
 const { NAME } = VALIDATION_RULES
@@ -15,27 +10,15 @@ const firstNameSchema = z
   .string()
   .trim()
   .min(1, ERROR_MESSAGES.FIRST_NAME_REQUIRED)
-  .min(
-    NAME.MIN_LENGTH,
-    VALIDATION_MESSAGES.minLength('FirstName', NAME.MIN_LENGTH),
-  )
-  .max(
-    NAME.MAX_LENGTH,
-    VALIDATION_MESSAGES.maxLength('FirstName', NAME.MAX_LENGTH),
-  )
+  .min(NAME.MIN_LENGTH, FORM_MESSAGES.minLength('First name', NAME.MIN_LENGTH))
+  .max(NAME.MAX_LENGTH, FORM_MESSAGES.maxLength('First name', NAME.MAX_LENGTH))
 
 const lastNameSchema = z
   .string()
   .trim()
   .min(1, ERROR_MESSAGES.LAST_NAME_REQUIRED)
-  .min(
-    NAME.MIN_LENGTH,
-    VALIDATION_MESSAGES.minLength('LastName', NAME.MIN_LENGTH),
-  )
-  .max(
-    NAME.MAX_LENGTH,
-    VALIDATION_MESSAGES.maxLength('LastName', NAME.MAX_LENGTH),
-  )
+  .min(NAME.MIN_LENGTH, FORM_MESSAGES.minLength('Last name', NAME.MIN_LENGTH))
+  .max(NAME.MAX_LENGTH, FORM_MESSAGES.maxLength('Last name', NAME.MAX_LENGTH))
 
 export const signInCredentialsSchema = z.object({
   identifier: z

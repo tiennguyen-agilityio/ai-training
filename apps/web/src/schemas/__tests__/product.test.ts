@@ -1,5 +1,4 @@
 import { DiscountType, ProductUnit, RoastLevel } from '@repo/constants'
-import { DISCOUNT_FIXED_MESSAGE, DISCOUNT_PERCENT_MESSAGE } from '@repo/schemas'
 
 import {
   createProductFormSchema,
@@ -36,19 +35,25 @@ describe('createProductFormSchema', () => {
     expect(createProductFormSchema.safeParse(valid).success).toBe(true)
   })
 
-  it('uses the API max message with the bound formatted by web for Price', () => {
+  it('rejects an initial quantity above 500', () => {
+    expect(messagesFor({ ...valid, quantity: 501 }, 'quantity')).toContain(
+      'Quantity must be at most 500',
+    )
+  })
+
+  it('uses the screen label and a friendly max message for Base price', () => {
     expect(messagesFor({ ...valid, price: 100000000 }, 'price')).toContain(
-      'Price must not be greater than 99,999,999.99',
+      'Base price must be at most 99,999,999.99',
     )
   })
 
-  it('uses the API min message for Weight', () => {
+  it('uses a friendly min message for Weight', () => {
     expect(messagesFor({ ...valid, weight: 0 }, 'weight')).toContain(
-      'Weight must not be less than 1',
+      'Weight must be at least 1',
     )
   })
 
-  it('uses the API max message for DiscountValue', () => {
+  it('uses the screen label for the Discount max message', () => {
     expect(
       messagesFor(
         {
@@ -58,16 +63,16 @@ describe('createProductFormSchema', () => {
         },
         'discountValue',
       ),
-    ).toContain('DiscountValue must not be greater than 99,999,999.99')
+    ).toContain('Discount must be at most 99,999,999.99')
   })
 
-  it('uses the shared message for a percent discount of 100', () => {
+  it('uses a friendly message for a percent discount of 100', () => {
     expect(
       messagesFor(
         { ...valid, discountType: DiscountType.PERCENT, discountValue: 100 },
         'discountValue',
       ),
-    ).toEqual([DISCOUNT_PERCENT_MESSAGE])
+    ).toEqual(['Discount must be less than 100%'])
   })
 
   it('accepts a percent discount of 99', () => {
@@ -80,13 +85,13 @@ describe('createProductFormSchema', () => {
     ).toBe(true)
   })
 
-  it('uses the shared message for a fixed discount equal to the price', () => {
+  it('uses a friendly message for a fixed discount equal to the price', () => {
     expect(
       messagesFor(
         { ...valid, discountType: DiscountType.FIXED, discountValue: 10 },
         'discountValue',
       ),
-    ).toEqual([DISCOUNT_FIXED_MESSAGE])
+    ).toEqual(['Discount must be less than the base price'])
   })
 })
 
@@ -118,27 +123,31 @@ describe('editProductFormSchema', () => {
     expect(editProductFormSchema.safeParse(validEdit).success).toBe(true)
   })
 
-  it('rejects a percent discount of 100 with the shared message', () => {
+  it('rejects a percent discount of 100 with a friendly message', () => {
     expect(
       editMessagesFor({ ...validEdit, discountValue: 100 }, 'discountValue'),
-    ).toEqual([
-      'DiscountValue must be less than 100 when DiscountType is PERCENT',
-    ])
+    ).toEqual(['Discount must be less than 100%'])
   })
 
-  it('rejects a fixed discount equal to the price with the shared message', () => {
+  it('rejects a fixed discount equal to the price with a friendly message', () => {
     expect(
       editMessagesFor(
         { ...validEdit, discountType: DiscountType.FIXED, discountValue: 120 },
         'discountValue',
       ),
-    ).toEqual(['Fixed discount must be less than base price'])
+    ).toEqual(['Discount must be less than the base price'])
   })
 
-  it('rejects quantity -1 with the API min message', () => {
+  it('rejects quantity -1 with a friendly min message', () => {
     expect(editMessagesFor({ ...validEdit, quantity: -1 }, 'quantity')).toEqual(
-      ['Quantity must not be less than 0'],
+      ['Quantity must be at least 0'],
     )
+  })
+
+  it('accepts a quantity above 500, since the API has no maximum', () => {
+    expect(
+      editProductFormSchema.safeParse({ ...validEdit, quantity: 501 }).success,
+    ).toBe(true)
   })
 
   it('accepts a percent discount of 12.5', () => {

@@ -9,11 +9,19 @@ import { toast } from 'sonner'
 
 import type { Product } from '@/types/product'
 import type { UpdateProductPayload } from '@repo/schemas'
-import { DiscountType, ProductStatus, RoastLevel } from '@repo/constants'
+import {
+  DiscountType,
+  ProductStatus,
+  RoastLevel,
+  VALIDATION_RULES,
+} from '@repo/constants'
 
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { CATEGORY_QUERY_OPTIONS } from '@/constants/category'
-import { DISCOUNT_TYPE_OPTIONS } from '@/constants/product'
+import {
+  DISCOUNT_TYPE_OPTIONS,
+  PERCENT_DISCOUNT_INPUT_MAX,
+} from '@/constants/product'
 import { ROUTES, dashboardProductEditPath } from '@/constants/routes'
 
 import { useCategories } from '@/hooks/useCategory'
@@ -42,8 +50,8 @@ import BrainIcon from '@/components/icon/BrainIcon'
 import DollarIcon from '@/components/icon/DollarIcon'
 import { Spinner } from '@/components/ui/spinner'
 
+import { mapServerErrors, setServerFieldErrors } from '@/utils/form'
 import { normalizeNumericInput } from '@/utils/number'
-import { ServiceError } from '@/utils/query'
 import { cn } from '@/utils/styles'
 import { getCategoryOptions } from '@/utils/common'
 import {
@@ -52,8 +60,9 @@ import {
   buildVariantUpdates,
   mapProductToEditFormValues,
   parseTastingNotesString,
+  splitImageErrors,
   splitProductImagesForGallery,
-  variantFieldErrors,
+  updateProductErrorTarget,
 } from '@/utils/product'
 
 interface LocalImage {
@@ -181,6 +190,7 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
     handleSubmit,
     clearErrors,
     setError,
+    setFocus,
     trigger,
     reset,
     setValue,
@@ -189,7 +199,7 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
   } = useForm<EditProductFormValues>({
     resolver: zodResolver(editProductFormSchema),
     defaultValues: EDIT_FORM_DEFAULTS,
-    mode: 'onBlur',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
   })
 
@@ -424,22 +434,14 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
           router.push(ROUTES.DASHBOARD_PRODUCTS)
         },
         onError: (error) => {
-          const fieldErrors =
-            error instanceof ServiceError
-              ? variantFieldErrors(error.errors)
-              : []
-          if (fieldErrors.length) {
-            for (const { field, message } of fieldErrors) {
-              setError(field, { type: 'server', message })
-            }
-            finish()
-            return
-          }
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : ERROR_MESSAGES.NETWORK_ERROR,
+          const { fieldErrors, unmatched } = mapServerErrors(error, (field) =>
+            updateProductErrorTarget(field, updatePayload),
           )
+          const { imageErrors: serverImageErrors, formErrors } =
+            splitImageErrors(fieldErrors)
+          setImageErrors((prev) => ({ ...prev, ...serverImageErrors }))
+          setServerFieldErrors(setError, formErrors, setFocus)
+          unmatched.forEach((message) => toast.error(message))
           finish()
         },
       },
@@ -652,6 +654,8 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
                       inputMode="decimal"
                       placeholder="e.g. 24.95"
                       startIcon={<DollarIcon className="size-4" />}
+                      min={VALIDATION_RULES.PRICE.MIN}
+                      max={VALIDATION_RULES.PRICE.MAX}
                       maxDecimalPlaces={2}
                       disabled={isSubmitting}
                       errorMessage={errors.price?.message}
@@ -727,7 +731,11 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
                       }
                       type="number"
                       min={0}
-                      max={isPercentDiscount ? 100 : undefined}
+                      max={
+                        isPercentDiscount
+                          ? PERCENT_DISCOUNT_INPUT_MAX
+                          : undefined
+                      }
                       step={0.01}
                       maxDecimalPlaces={2}
                       endIcon={

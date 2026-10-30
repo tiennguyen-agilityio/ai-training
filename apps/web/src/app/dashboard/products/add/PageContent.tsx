@@ -23,7 +23,12 @@ import {
 // Constants
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { EMPTY_IMAGE } from '@/constants/images'
-import { DISCOUNT_TYPE_OPTIONS, UNIT_OPTIONS } from '@/constants/product'
+import {
+  DISCOUNT_TYPE_OPTIONS,
+  PERCENT_DISCOUNT_INPUT_MAX,
+  QUANTITY_MAX,
+  UNIT_OPTIONS,
+} from '@/constants/product'
 
 // Hooks
 import { useCategories } from '@/hooks/useCategory'
@@ -55,7 +60,12 @@ import BrainIcon from '@/components/icon/BrainIcon'
 import { normalizeNumericInput } from '@/utils/number'
 import { cn } from '@/utils/styles'
 import { getCategoryOptions, renderProductSku } from '@/utils/common'
-import { toCreateVariantPayload } from '@/utils/product'
+import { mapServerErrors, setServerFieldErrors } from '@/utils/form'
+import {
+  createProductErrorTarget,
+  splitImageErrors,
+  toCreateVariantPayload,
+} from '@/utils/product'
 
 const { PRICE } = VALIDATION_RULES
 
@@ -145,6 +155,8 @@ const PageContent = () => {
     control,
     handleSubmit,
     clearErrors,
+    setError,
+    setFocus,
     reset,
     setValue,
     watch,
@@ -153,7 +165,7 @@ const PageContent = () => {
   } = useForm<ProductFormValues>({
     resolver: zodResolver(createProductFormSchema),
     defaultValues: PRODUCT_FORM_DEFAULT_VALUES,
-    mode: 'onBlur',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
   })
 
@@ -364,9 +376,14 @@ const PageContent = () => {
         router.push(ROUTES.DASHBOARD_PRODUCTS)
       },
       onError: (error) => {
-        const message =
-          error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR
-        toast.error(message)
+        const { fieldErrors, unmatched } = mapServerErrors(error, (field) =>
+          createProductErrorTarget(field, payload),
+        )
+        const { imageErrors: serverImageErrors, formErrors } =
+          splitImageErrors(fieldErrors)
+        setImageErrors((prev) => ({ ...prev, ...serverImageErrors }))
+        setServerFieldErrors(setError, formErrors, setFocus)
+        unmatched.forEach((message) => toast.error(message))
         setIsUploadingImages(false)
       },
     })
@@ -603,6 +620,7 @@ const PageContent = () => {
                   label="Initial Quantity"
                   type="number"
                   min={0}
+                  max={QUANTITY_MAX}
                   step={1}
                   maxDecimalPlaces={0}
                   disabled={isSubmitting}
@@ -649,9 +667,11 @@ const PageContent = () => {
                     }
                     type="number"
                     min={0}
-                    max={isPercentDiscount ? 100 : undefined}
-                    step={isPercentDiscount ? 1 : 0.01}
-                    maxDecimalPlaces={isPercentDiscount ? 0 : 2}
+                    max={
+                      isPercentDiscount ? PERCENT_DISCOUNT_INPUT_MAX : undefined
+                    }
+                    step={0.01}
+                    maxDecimalPlaces={2}
                     endIcon={
                       isPercentDiscount ? (
                         <span className="text-sm">%</span>

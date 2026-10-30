@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { ROUTES, dashboardCategoryEditRoute } from '@/constants/routes'
 import { useCategoryById, useUpdateCategory } from '@/hooks/useCategory'
+import { mapServerErrors, setServerFieldErrors } from '@/utils/form'
 import {
   createCategoryFormSchema,
   type CreateCategoryFormValues,
@@ -34,6 +35,7 @@ const EditCategory = () => {
     handleSubmit,
     reset,
     setError,
+    setFocus,
     clearErrors,
     formState: { errors, isDirty },
   } = useForm<CreateCategoryFormValues>({
@@ -59,11 +61,11 @@ const EditCategory = () => {
           router.push(ROUTES.DASHBOARD_CATEGORIES)
         },
         onError: (error) => {
-          const message =
-            error instanceof Error
-              ? error.message
-              : ERROR_MESSAGES.NETWORK_ERROR
-          setError('name', { type: 'server', message })
+          const { fieldErrors, unmatched } = mapServerErrors(error, (field) =>
+            field === 'name' ? 'name' : undefined,
+          )
+          setServerFieldErrors(setError, fieldErrors, setFocus)
+          unmatched.forEach((message) => toast.error(message))
         },
       },
     )

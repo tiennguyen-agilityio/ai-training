@@ -1,4 +1,4 @@
-import { createRef } from 'react'
+import { createRef, useState } from 'react'
 
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -97,5 +97,66 @@ describe('shared Input', () => {
     const ids = input.getAttribute('aria-describedby')?.split(/\s+/) ?? []
     expect(ids.some((id) => id.endsWith('-description'))).toBe(true)
     expect(ids.some((id) => id.endsWith('-error'))).toBe(true)
+  })
+
+  it('ignores a typed number above max', async () => {
+    const onChange = jest.fn()
+    render(
+      <Input
+        label="Discount"
+        type="number"
+        max={99.99}
+        maxDecimalPlaces={2}
+        onChange={onChange}
+      />,
+    )
+    const input = screen.getByLabelText('Discount')
+
+    await userEvent.type(input, '100')
+
+    expect(input).toHaveValue('10')
+    expect(onChange).toHaveBeenCalledTimes(2)
+  })
+
+  it('ignores a typed number above max when controlled', async () => {
+    const received: string[] = []
+    const ControlledInput = () => {
+      const [value, setValue] = useState('')
+      return (
+        <Input
+          label="Quantity"
+          type="number"
+          max={500}
+          value={value}
+          onValueChange={(next: string) => {
+            received.push(next)
+            setValue(next)
+          }}
+        />
+      )
+    }
+    render(<ControlledInput />)
+    const input = screen.getByLabelText('Quantity')
+
+    await userEvent.type(input, '501')
+
+    expect(input).toHaveValue('50')
+    expect(received.every((next) => Number(next) <= 500)).toBe(true)
+  })
+
+  it('keeps the caret where it was when a keystroke is rejected', async () => {
+    const user = userEvent.setup()
+    render(<Input label="Quantity" type="number" max={500} />)
+    const input = screen.getByLabelText('Quantity')
+    if (!(input instanceof HTMLInputElement)) throw new Error('input')
+    await user.type(input, '45')
+
+    await user.type(input, '9', {
+      initialSelectionStart: 0,
+      initialSelectionEnd: 0,
+    })
+
+    expect(input).toHaveValue('45')
+    expect(input.selectionStart).toBe(0)
   })
 })

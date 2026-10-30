@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
-import { VALIDATION_MESSAGES, VALIDATION_RULES } from '@repo/constants'
-import { ERROR_MESSAGES } from '@/constants/messages'
+import { VALIDATION_RULES } from '@repo/constants'
+import { ERROR_MESSAGES, FORM_MESSAGES } from '@/constants/messages'
 import { formDataEntryToString } from '@/utils/validation'
 
 const { NAME } = VALIDATION_RULES
@@ -12,10 +12,10 @@ export const createCategoryFormSchema = z.object({
     .trim()
     .min(1, { message: ERROR_MESSAGES.FIELD_REQUIRED })
     .min(NAME.MIN_LENGTH, {
-      message: VALIDATION_MESSAGES.minLength('Name', NAME.MIN_LENGTH),
+      message: FORM_MESSAGES.minLength('Category name', NAME.MIN_LENGTH),
     })
     .max(NAME.MAX_LENGTH, {
-      message: VALIDATION_MESSAGES.maxLength('Name', NAME.MAX_LENGTH),
+      message: FORM_MESSAGES.maxLength('Category name', NAME.MAX_LENGTH),
     }),
 })
 
