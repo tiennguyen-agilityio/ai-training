@@ -1,17 +1,8 @@
 'use client'
 
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import {
-  LIST_QUERY_GC_MS,
-  LIST_QUERY_STALE_MS,
-  PAGE_SIZE,
-} from '@/constants/common'
+import { PAGE_SIZE } from '@/constants/common'
 import {
   createProduct,
   deleteProduct,
@@ -23,7 +14,13 @@ import {
 import type { ResponseMeta } from '@/types/api'
 import type { CreateProductPayload, UpdateProductPayload } from '@repo/schemas'
 import type { Product } from '@/types/product'
-import { getQueryErrorMessage, throwIfServiceFailed } from '@/utils/query'
+import {
+  detailQueryOptions,
+  listQueryOptions,
+  removeFromCachedLists,
+  throwIfServiceFailed,
+  toQueryResult,
+} from '@/utils/query'
 
 export interface UseProductsResult {
   products: Product[]
@@ -36,17 +33,6 @@ export interface UseProductsResult {
 }
 
 const productsQueryRoot = ['products'] as const
-
-const listQueryOptions = {
-  staleTime: LIST_QUERY_STALE_MS,
-  gcTime: LIST_QUERY_GC_MS,
-  placeholderData: keepPreviousData,
-} as const
-
-const detailQueryOptions = {
-  staleTime: LIST_QUERY_STALE_MS,
-  gcTime: LIST_QUERY_GC_MS,
-} as const
 
 export function productDetailQueryKey(id: string) {
   return ['products', 'detail', id] as const
@@ -85,13 +71,7 @@ export const useProducts = (params: ProductOptions = {}): UseProductsResult => {
   return {
     products: query.data?.products ?? [],
     meta: query.data?.meta ?? null,
-    isLoading: !query.data && query.isFetching,
-    isFetching: query.isFetching,
-    isError: query.isError,
-    errorMessage: getQueryErrorMessage(query),
-    refetch: async () => {
-      await query.refetch()
-    },
+    ...toQueryResult(query),
   }
 }
 
@@ -110,11 +90,6 @@ export function useCreateProduct() {
   })
 }
 
-interface ProductsListCache {
-  products: Product[]
-  meta: ResponseMeta | null
-}
-
 export function useDeleteProduct() {
   const queryClient = useQueryClient()
 
@@ -124,20 +99,11 @@ export function useDeleteProduct() {
       if (!result.ok) throwIfServiceFailed(result)
     },
     onSuccess: async (_result, deletedId) => {
-      queryClient.setQueriesData<ProductsListCache>(
+      removeFromCachedLists(
+        queryClient,
         { queryKey: ['products', 'list'] },
-        (old) => {
-          if (!old) return old
-          const products = old.products.filter((p) => p.id !== deletedId)
-          if (products.length === old.products.length) return old
-          const meta = old.meta
-            ? {
-                ...old.meta,
-                totalCount: Math.max(0, old.meta.totalCount - 1),
-              }
-            : null
-          return { products, meta }
-        },
+        'products',
+        deletedId,
       )
       await queryClient.invalidateQueries({ queryKey: productsQueryRoot })
     },
@@ -164,15 +130,9 @@ export function useProductById(id: string): UseProductByIdResult {
     ...detailQueryOptions,
   })
 
-  return {
-    product: query.data ?? null,
-    isLoading: !query.data && query.isFetching,
-    isError: query.isError,
-    errorMessage: getQueryErrorMessage(query),
-    refetch: async () => {
-      await query.refetch()
-    },
-  }
+  const { isFetching: _isFetching, ...state } = toQueryResult(query)
+
+  return { product: query.data ?? null, ...state }
 }
 
 export function useUpdateProduct() {
