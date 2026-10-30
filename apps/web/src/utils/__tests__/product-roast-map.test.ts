@@ -32,6 +32,7 @@ describe('mapProductToRoastCollection', () => {
       images: [],
       createdAt: null,
       updatedAt: null,
+      deletedAt: null,
     }
 
     const item = mapProductToRoastCollection(product, PLACEHOLDER)
@@ -74,6 +75,7 @@ describe('mapProductToRoastCollection', () => {
       images: [],
       createdAt: null,
       updatedAt: null,
+      deletedAt: null,
     }
 
     const item = mapProductToRoastCollection(product, PLACEHOLDER)

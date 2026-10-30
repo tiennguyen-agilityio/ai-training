@@ -29,7 +29,6 @@ import { cn } from '@/utils/styles'
 import { useUrlState } from '@/hooks/useUrlState'
 import { useDebouncedUrlSearch } from '@/hooks/useDebouncedUrlSearch'
 import { Select } from '@/components/Select'
-import { ProductStatus } from '@repo/constants'
 import { type Product } from '@/types/product'
 import Loading from '@/components/Loading'
 
@@ -80,6 +79,7 @@ export const PageContent = () => {
     errorMessage,
     refetch,
   } = useProducts({
+    asAdmin: true,
     page,
     limit,
     search: search.trim(),
@@ -271,7 +271,7 @@ export const PageContent = () => {
               isStackedOnMobile
               getRowKey={(product, index) => product.id ?? `product-${index}`}
               resolveRowClassName={(product) =>
-                product.status === ProductStatus.ARCHIVED
+                product.deletedAt
                   ? 'border-b border-border bg-muted-foreground/20'
                   : ''
               }

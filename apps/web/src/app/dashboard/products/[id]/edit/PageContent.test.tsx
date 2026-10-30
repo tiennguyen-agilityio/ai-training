@@ -10,6 +10,7 @@ import type { UpdateProductPayload } from '@repo/schemas'
 import { toast } from 'sonner'
 
 import PageContent from './PageContent'
+import { NOTICE_MESSAGES } from '@/constants/messages'
 import { ROUTES } from '@/constants/routes'
 import { useCategories } from '@/hooks/useCategory'
 import { useProductById, useUpdateProduct } from '@/hooks/useProduct'
@@ -91,6 +92,7 @@ const product = (
   ],
   createdAt: null,
   updatedAt: null,
+  deletedAt: null,
 })
 
 function renderPage(variantOverrides: Partial<ProductVariantSummary> = {}) {
@@ -361,5 +363,87 @@ describe('EditProductForm pricing', () => {
     await replaceValue('Base Price', '100000000')
 
     expect(field('Base Price')).toHaveValue('10,000,000')
+  })
+})
+
+describe('EditProductPage access and status', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    jest.mocked(useCategories).mockReturnValue({
+      categories: [{ id: 'category-1', name: 'Coffee' }],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useCategories>)
+    jest.mocked(useUpdateProduct).mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateProduct>)
+  })
+
+  const renderProduct = (value: Product) => {
+    jest.mocked(useProductById).mockReturnValue({
+      product: value,
+      isLoading: false,
+      isError: false,
+      errorMessage: null,
+      refetch: jest.fn(),
+    })
+    return render(<PageContent />)
+  }
+
+  it('reads the product as admin', () => {
+    renderProduct(product())
+
+    expect(useProductById).toHaveBeenCalledWith('product-1', {
+      asAdmin: true,
+    })
+  })
+
+  it('prefills the form for a DRAFT product', () => {
+    renderProduct({
+      ...product(),
+      name: 'Draft Roast',
+      status: ProductStatus.DRAFT,
+    })
+
+    expect(field('Product Name')).toHaveValue('Draft Roast')
+    expect(field('Base Price')).toHaveValue('100')
+  })
+
+  it.each([ProductStatus.INACTIVE, ProductStatus.ARCHIVED])(
+    'prefills the form for INACTIVE and ARCHIVED products (%s)',
+    (status) => {
+      renderProduct({ ...product(), name: `${status} Roast`, status })
+
+      expect(field('Product Name')).toHaveValue(`${status} Roast`)
+      expect(field('Base Price')).toHaveValue('100')
+    },
+  )
+
+  it('keeps ARCHIVED when saving with Listed on Storefront off', async () => {
+    renderProduct({ ...product(), status: ProductStatus.ARCHIVED })
+
+    await replaceValue('Base Price', '120')
+    await save()
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+    expect(sentBody().status).toBe(ProductStatus.ARCHIVED)
+  })
+
+  it('shows a deleted notice instead of the form', () => {
+    renderProduct({
+      ...product(),
+      status: ProductStatus.ARCHIVED,
+      deletedAt: '2026-10-30T00:00:00.000Z',
+    })
+
+    expect(
+      screen.getByText(NOTICE_MESSAGES.PRODUCT_DELETED.MESSAGE),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', {
+        name: NOTICE_MESSAGES.PRODUCT_DELETED.ACTION,
+      }),
+    ).toHaveAttribute('href', ROUTES.DASHBOARD_PRODUCTS)
+    expect(screen.queryByLabelText('Product Name')).not.toBeInTheDocument()
   })
 })

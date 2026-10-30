@@ -114,6 +114,7 @@ const productsFixture: Product[] = [
     images: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
+    deletedAt: null,
   },
   {
     id: 'product-2',
@@ -141,6 +142,7 @@ const productsFixture: Product[] = [
     images: [],
     createdAt: '2026-01-02T00:00:00.000Z',
     updatedAt: '2026-01-02T00:00:00.000Z',
+    deletedAt: null,
   },
   {
     id: 'product-3',
@@ -168,6 +170,7 @@ const productsFixture: Product[] = [
     images: [],
     createdAt: '2026-01-03T00:00:00.000Z',
     updatedAt: '2026-01-03T00:00:00.000Z',
+    deletedAt: null,
   },
 ]
 
@@ -280,6 +283,42 @@ describe('Dashboard products page', () => {
     expect(screen.getByText('Ethiopian Yirgacheffe')).toBeInTheDocument()
     expect(screen.getByText('The Chemist Brewer')).toBeInTheDocument()
     expect(screen.queryByText('Midnight Blend')).not.toBeInTheDocument()
+  })
+
+  it('requests products as admin', () => {
+    mockUseProducts.mockClear()
+
+    renderProductsPage()
+
+    expect(mockUseProducts).toHaveBeenCalled()
+    for (const [params] of mockUseProducts.mock.calls) {
+      expect(params?.asAdmin).toBe(true)
+    }
+  })
+
+  it('greys deleted rows', () => {
+    const deleted: Product = {
+      ...productsFixture[0],
+      status: ProductStatus.ARCHIVED,
+      deletedAt: '2026-10-30T00:00:00.000Z',
+    }
+    const liveArchived: Product = {
+      ...productsFixture[1],
+      status: ProductStatus.ARCHIVED,
+    }
+    mockUseProducts.mockImplementation((params) => ({
+      ...mockProductsByApiParams(params),
+      products: [deleted, liveArchived],
+    }))
+
+    renderProductsPage()
+
+    expect(screen.getByText('Ethiopian Yirgacheffe').closest('tr')).toHaveClass(
+      'bg-muted-foreground/20',
+    )
+    expect(
+      screen.getByText('The Chemist Brewer').closest('tr'),
+    ).not.toHaveClass('bg-muted-foreground/20')
   })
 
   it('requests categories without deleted rows', () => {

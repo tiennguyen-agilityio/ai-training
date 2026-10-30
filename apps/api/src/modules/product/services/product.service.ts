@@ -31,6 +31,11 @@ import { findDiscountRuleViolation } from '../../product-variant/utils/discount-
 
 type VariantPatch = NonNullable<UpdateProductInput['updateVariants']>[number];
 
+/** `activeOnly`: a product that is not ACTIVE reads as not found (shoppers). */
+export interface ProductReadOptions extends FindOptions {
+  activeOnly?: boolean;
+}
+
 @Injectable()
 export class ProductService {
   constructor(
@@ -96,9 +101,13 @@ export class ProductService {
     return this.productRepository.findAll(query, filters, options);
   }
 
-  async findOne(id: string, options?: FindOptions): Promise<Product> {
-    const product = await this.productRepository.findById(id, options);
-    if (!product) {
+  async findOne(id: string, options?: ProductReadOptions): Promise<Product> {
+    const { activeOnly, ...findOptions } = options ?? {};
+    const product = await this.productRepository.findById(id, findOptions);
+    if (
+      !product ||
+      (activeOnly && (product.status as ProductStatus) !== ProductStatus.ACTIVE)
+    ) {
       throw new ItemNotFoundException({
         errCode: ERROR_CODES.PRODUCT.NOT_FOUND,
         field: 'id',

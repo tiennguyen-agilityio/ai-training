@@ -80,7 +80,7 @@ export function ProductTableRow({
   const roastLevel = formatRoastLevel(product.roastLevel)
   const origin = product.origin?.trim() || 'Unknown origin'
   const status = product.status ?? ProductStatus.DRAFT
-  const isArchived = status === ProductStatus.ARCHIVED
+  const isDeleted = Boolean(product.deletedAt)
   const stock = readProductStock(product)
   const price = getProductListPrice(product)
   const imageUrl = getProductPrimaryImageUrl(product)
@@ -156,12 +156,12 @@ export function ProductTableRow({
             href={dashboardEditPath(ROUTES.DASHBOARD_PRODUCTS, product.id)}
             className={cn(
               buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
-              (!product.id || isArchived) && 'pointer-events-none opacity-50',
+              (!product.id || isDeleted) && 'pointer-events-none opacity-50',
             )}
             aria-label={`Edit ${productName}`}
-            aria-disabled={!product.id || isArchived}
+            aria-disabled={!product.id || isDeleted}
             onClick={(e) => {
-              if (!product.id || isArchived) e.preventDefault()
+              if (!product.id || isDeleted) e.preventDefault()
             }}
           >
             <Pencil className="size-4" aria-hidden />
@@ -171,9 +171,9 @@ export function ProductTableRow({
             size="icon-xs"
             variant="ghost"
             aria-label={`Delete ${productName}`}
-            disabled={!onRequestDelete || !product.id || isArchived}
+            disabled={!onRequestDelete || !product.id || isDeleted}
             onClick={() => {
-              if (!product.id || !onRequestDelete || isArchived) return
+              if (!product.id || !onRequestDelete || isDeleted) return
               onRequestDelete(product)
             }}
           >

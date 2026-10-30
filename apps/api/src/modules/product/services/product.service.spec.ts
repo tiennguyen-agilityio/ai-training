@@ -158,7 +158,7 @@ describe('ProductService', () => {
       });
       expect(productRepository.findById).toHaveBeenCalledWith(
         'product-id-1',
-        undefined,
+        {},
       );
       expect(result).toBe(refetched);
     });
@@ -323,6 +323,58 @@ describe('ProductService', () => {
           ERROR_CODES.PRODUCT.NOT_FOUND,
         );
       }
+    });
+
+    it('throws ItemNotFoundException for a DRAFT product when activeOnly', async () => {
+      productRepository.findById.mockResolvedValue(
+        buildProduct({ status: ProductStatus.DRAFT }),
+      );
+      expect.assertions(2);
+
+      try {
+        await service.findOne('product-id-1', { activeOnly: true });
+      } catch (error) {
+        expect(error).toBeInstanceOf(ItemNotFoundException);
+        expect((error as ItemNotFoundException).getErrors()[0]).toMatchObject({
+          errCode: ERROR_CODES.PRODUCT.NOT_FOUND,
+          field: 'id',
+        });
+      }
+    });
+
+    it('returns an ACTIVE product when activeOnly', async () => {
+      const product = buildProduct({ status: ProductStatus.ACTIVE });
+      productRepository.findById.mockResolvedValue(product);
+
+      const result = await service.findOne('product-id-1', {
+        activeOnly: true,
+      });
+
+      expect(result).toBe(product);
+    });
+
+    it('returns a DRAFT product when activeOnly is not set', async () => {
+      const product = buildProduct({ status: ProductStatus.DRAFT });
+      productRepository.findById.mockResolvedValue(product);
+
+      const result = await service.findOne('product-id-1');
+
+      expect(result).toBe(product);
+    });
+
+    it('does not pass activeOnly to the repository', async () => {
+      productRepository.findById.mockResolvedValue(
+        buildProduct({ status: ProductStatus.ACTIVE }),
+      );
+
+      await service.findOne('product-id-1', {
+        includeDeleted: false,
+        activeOnly: true,
+      });
+
+      expect(productRepository.findById).toHaveBeenCalledWith('product-id-1', {
+        includeDeleted: false,
+      });
     });
   });
 

@@ -13,6 +13,7 @@ import { ProductImageService } from './../../src/modules/product-image/services/
 import { ProductVariantService } from './../../src/modules/product-variant/services/product-variant.service.js';
 import {
   UserRole,
+  UserStatus,
   DiscountType,
   ProductUnit,
   ProductStatus,
@@ -60,6 +61,7 @@ describe('ProductController (e2e)', () => {
     productVariantService = app.get(ProductVariantService);
   });
 
+  // Each user removal calls Clerk, which fails slowly against test keys.
   afterAll(async () => {
     await RequestContext.create(orm.em, async () => {
       for (const id of createdProductIds) {
@@ -73,7 +75,7 @@ describe('ProductController (e2e)', () => {
       }
     });
     await app.close();
-  });
+  }, 30_000);
 
   beforeEach(() => {
     (getAuth as Mock).mockReturnValue({ userId: null });
@@ -113,10 +115,13 @@ describe('ProductController (e2e)', () => {
     price: 12.5,
   });
 
-  const createTestUser = async (role: UserRole): Promise<User> =>
+  const createTestUser = async (
+    role: UserRole,
+    status?: UserStatus,
+  ): Promise<User> =>
     RequestContext.create(orm.em, async () => {
       const clerkId = `clerk-e2e-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const user = await userService.create({
+      let user = await userService.create({
         clerkId,
         email: `${clerkId}@example.com`,
         firstName: 'E2E',
@@ -124,6 +129,9 @@ describe('ProductController (e2e)', () => {
         role,
       });
       createdUserIds.push(user.id);
+      if (status && status !== (user.status as UserStatus)) {
+        user = await userService.update(user.id, { status });
+      }
       return user;
     });
 
@@ -162,6 +170,7 @@ describe('ProductController (e2e)', () => {
       productService.create({
         categoryId: category.id,
         name: uniqueName('Priced Product E2E'),
+        status: ProductStatus.ACTIVE,
         ...requiredProductFields(),
         images: [],
         variants: [
@@ -210,6 +219,7 @@ describe('ProductController (e2e)', () => {
         productService.create({
           categoryId: category.id,
           name,
+          status: ProductStatus.ACTIVE,
           ...requiredProductFields(),
           images: [],
           variants: [],
@@ -240,6 +250,7 @@ describe('ProductController (e2e)', () => {
         productService.create({
           categoryId: category.id,
           name: uniqueName('Variant Read E2E'),
+          status: ProductStatus.ACTIVE,
           ...requiredProductFields(),
           images: [],
           variants: [
@@ -372,6 +383,7 @@ describe('ProductController (e2e)', () => {
         RequestContext.create(orm.em, () =>
           productService.create({
             ...requiredProductFields(),
+            status: ProductStatus.ACTIVE,
             images: [],
             variants: [],
             ...data,
@@ -506,6 +518,9 @@ describe('ProductController (e2e)', () => {
       body.data.map((p) => p.id);
 
     it('filters by categoryId', async () => {
+      // An active admin, since the category also holds an INACTIVE product.
+      const admin = await createTestUser(UserRole.ADMIN);
+      mockSessionFor(admin.clerkId);
       const response = await request(app.getHttpServer())
         .get(`${API_BASE_PATH}/products`)
         .query({ categoryId: filterCategory.id, limit: 50 })
@@ -1537,6 +1552,157 @@ describe('ProductController (e2e)', () => {
 
       const body = response.body as { data: { id: string } };
       expect(body.data.id).toBe(product.id);
+    });
+  });
+
+  describe('visibility by caller', () => {
+    let category: Category;
+    let pActive: Product;
+    let pDraft: Product;
+    let pInactive: Product;
+    let pArchived: Product;
+    let pDeleted: Product;
+    let customer: User;
+    let inactiveAdmin: User;
+    let activeAdmin: User;
+    const namePart = uniqueName('Visibility');
+
+    const createWithStatus = async (
+      label: string,
+      status: ProductStatus,
+      quantity = 0,
+    ): Promise<Product> => {
+      const product = await RequestContext.create(orm.em, () =>
+        productService.create({
+          categoryId: category.id,
+          name: `${namePart} ${label}`,
+          status,
+          ...requiredProductFields(),
+          images: [],
+          variants: [{ ...validVariant(`SKU-VIS-${label}`), quantity }],
+        }),
+      );
+      createdProductIds.push(product.id);
+      return product;
+    };
+
+    const listIds = async (query = ''): Promise<string[]> => {
+      const response = await request(app.getHttpServer())
+        .get(
+          `${API_BASE_PATH}/products?categoryId=${category.id}&limit=50${query}`,
+        )
+        .expect(200);
+      return (response.body as { data: Array<{ id: string }> }).data.map(
+        (p) => p.id,
+      );
+    };
+
+    beforeAll(async () => {
+      category = await createTestCategory();
+      pActive = await createWithStatus('A', ProductStatus.ACTIVE, 37);
+      pDraft = await createWithStatus('B', ProductStatus.DRAFT);
+      pInactive = await createWithStatus('C', ProductStatus.INACTIVE);
+      pArchived = await createWithStatus('D', ProductStatus.ARCHIVED);
+      pDeleted = await createWithStatus('E', ProductStatus.ACTIVE);
+      await RequestContext.create(orm.em, () =>
+        productService.remove(pDeleted.id),
+      );
+      customer = await createTestUser(UserRole.USER);
+      inactiveAdmin = await createTestUser(UserRole.ADMIN, UserStatus.INACTIVE);
+      activeAdmin = await createTestUser(UserRole.ADMIN);
+    });
+
+    it('lists only the Active product for a visitor', async () => {
+      mockSessionFor(null);
+      expect(await listIds()).toEqual([pActive.id]);
+    });
+
+    it('lists only the Active product for a visitor asking for DRAFT', async () => {
+      mockSessionFor(null);
+      expect(
+        await listIds(
+          `&status=${ProductStatus.DRAFT}&search=${encodeURIComponent(namePart)}`,
+        ),
+      ).toEqual([pActive.id]);
+    });
+
+    it('lists only the Active product for a signed-in customer', async () => {
+      mockSessionFor(customer.clerkId);
+      expect(await listIds()).toEqual([pActive.id]);
+    });
+
+    it('lists only the Active product for an inactive admin', async () => {
+      mockSessionFor(inactiveAdmin.clerkId);
+      expect(await listIds()).toEqual([pActive.id]);
+    });
+
+    it('lists every status for an active admin, and only B for DRAFT', async () => {
+      mockSessionFor(activeAdmin.clerkId);
+
+      expect(await listIds()).toEqual(
+        expect.arrayContaining([
+          pActive.id,
+          pDraft.id,
+          pInactive.id,
+          pArchived.id,
+          pDeleted.id,
+        ]),
+      );
+      expect(await listIds(`&status=${ProductStatus.DRAFT}`)).toEqual([
+        pDraft.id,
+      ]);
+    });
+
+    it('answers 404 to a visitor reading the Draft product', async () => {
+      mockSessionFor(null);
+      const missing = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/products/00000000-0000-4000-8000-000000000000`)
+        .expect(404);
+
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/products/${pDraft.id}`)
+        .expect(404);
+
+      expect((response.body as { errors: unknown }).errors).toEqual(
+        (missing.body as { errors: unknown }).errors,
+      );
+    });
+
+    it('answers 404 to a visitor reading the deleted product', async () => {
+      mockSessionFor(null);
+      await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/products/${pDeleted.id}`)
+        .expect(404);
+    });
+
+    it('lists and reads the deleted product for an active admin, with deletedAt', async () => {
+      mockSessionFor(activeAdmin.clerkId);
+
+      const list = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/products?categoryId=${category.id}&limit=50`)
+        .expect(200);
+      const listed = (
+        list.body as { data: Array<{ id: string; deletedAt: string | null }> }
+      ).data.find((p) => p.id === pDeleted.id);
+      expect(listed?.deletedAt).not.toBeNull();
+
+      const read = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/products/${pDeleted.id}`)
+        .expect(200);
+      expect(
+        (read.body as { data: { deletedAt: string | null } }).data.deletedAt,
+      ).not.toBeNull();
+    });
+
+    it('returns the exact variant quantity to a visitor', async () => {
+      mockSessionFor(null);
+      const response = await request(app.getHttpServer())
+        .get(`${API_BASE_PATH}/products/${pActive.id}`)
+        .expect(200);
+      expect(
+        (response.body as { data: { variants: Array<{ quantity: number }> } })
+          .data.variants[0].quantity,
+      ).toBe(37);
     });
   });
 });

@@ -35,6 +35,7 @@ const fixture: Product = {
   images: [],
   createdAt: null,
   updatedAt: null,
+  deletedAt: null,
 }
 
 describe('ProductDetailSpecGrid', () => {

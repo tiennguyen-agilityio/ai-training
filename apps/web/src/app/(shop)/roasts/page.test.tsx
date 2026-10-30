@@ -72,6 +72,7 @@ const shopProductFixture: Product[] = [
     ],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
+    deletedAt: null,
   },
 ]
 
@@ -107,5 +108,17 @@ describe('Roasts route page', () => {
       screen.getByRole('heading', { name: 'The Sensory Brew Shop' }),
     ).toBeInTheDocument()
     expect(screen.getByText('Ethiopian Yirgacheffe')).toBeInTheDocument()
+  })
+
+  it('lists products without asAdmin', () => {
+    mockUseProducts.mockClear()
+
+    render(<RoastsPage />)
+
+    expect(mockUseProducts).toHaveBeenCalled()
+    for (const [params] of mockUseProducts.mock.calls) {
+      expect(params).not.toHaveProperty('asAdmin')
+      expect(params?.status).toBe(ProductStatus.ACTIVE)
+    }
   })
 })
