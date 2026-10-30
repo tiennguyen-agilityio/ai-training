@@ -12,7 +12,7 @@ import { formatPrice } from '@/utils/common'
 import { getProductListPrice, getProductPrimaryImageUrl } from '@/utils/product'
 import { cn } from '@/utils/styles'
 import { type OptionItem } from '@/types/common'
-import { dashboardProductEditPath } from '@/constants/routes'
+import { ROUTES, dashboardEditPath } from '@/constants/routes'
 import { buttonVariants } from '@/components/ui/button'
 
 type ProductWithCategoryName = Product & {
@@ -153,7 +153,7 @@ export function ProductTableRow({
       <td data-label="Actions" className="px-6 py-4 align-middle">
         <div className="flex justify-end gap-1">
           <Link
-            href={dashboardProductEditPath(product.id)}
+            href={dashboardEditPath(ROUTES.DASHBOARD_PRODUCTS, product.id)}
             className={cn(
               buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
               (!product.id || isDeleted) && 'pointer-events-none opacity-50',

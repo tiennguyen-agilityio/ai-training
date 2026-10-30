@@ -27,7 +27,7 @@ import {
   DISCOUNT_TYPE_OPTIONS,
   PERCENT_DISCOUNT_INPUT_MAX,
 } from '@/constants/product'
-import { ROUTES, dashboardProductEditPath } from '@/constants/routes'
+import { ROUTES, dashboardEditPath } from '@/constants/routes'
 
 import { useCategories } from '@/hooks/useCategory'
 import { useProductById, useUpdateProduct } from '@/hooks/useProduct'
@@ -456,7 +456,7 @@ const EditProductForm = ({ product, productId }: EditProductFormProps) => {
       label: 'Edit Product',
       href:
         productId !== ''
-          ? dashboardProductEditPath(productId)
+          ? dashboardEditPath(ROUTES.DASHBOARD_PRODUCTS, productId)
           : ROUTES.DASHBOARD_PRODUCTS,
     },
   ]

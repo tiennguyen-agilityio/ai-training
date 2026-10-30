@@ -17,12 +17,8 @@ export const ROUTES = {
   USER_PROFILE: '/profile',
 }
 
-export function dashboardProductEditPath(productId: string): string {
-  return `${ROUTES.DASHBOARD_PRODUCTS}/${encodeURIComponent(productId)}/edit`
-}
-
-export function dashboardCategoryEditRoute(categoryId: string): string {
-  return `${ROUTES.DASHBOARD_CATEGORIES}/${encodeURIComponent(categoryId)}/edit`
+export function dashboardEditPath(base: string, id: string): string {
+  return `${base}/${encodeURIComponent(id)}/edit`
 }
 
 export function shopRoastDetailPath(roastId: string): string {

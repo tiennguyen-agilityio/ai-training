@@ -1,19 +1,9 @@
 'use client'
 
 import { useAuth } from '@clerk/nextjs'
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import {
-  CLERK_SESSION_TEMPLATE,
-  LIST_QUERY_GC_MS,
-  LIST_QUERY_STALE_MS,
-  PAGE_SIZE,
-} from '@/constants/common'
+import { CLERK_SESSION_TEMPLATE, PAGE_SIZE } from '@/constants/common'
 import {
   createProduct,
   deleteProduct,
@@ -26,7 +16,13 @@ import type { ResponseMeta } from '@/types/api'
 import type { CreateProductPayload, UpdateProductPayload } from '@repo/schemas'
 import type { Product } from '@/types/product'
 import { ProductStatus } from '@repo/constants'
-import { getQueryErrorMessage, throwIfServiceFailed } from '@/utils/query'
+import {
+  detailQueryOptions,
+  listQueryOptions,
+  removeFromCachedLists,
+  throwIfServiceFailed,
+  toQueryResult,
+} from '@/utils/query'
 
 export interface UseProductsResult {
   products: Product[]
@@ -39,17 +35,6 @@ export interface UseProductsResult {
 }
 
 const productsQueryRoot = ['products'] as const
-
-const listQueryOptions = {
-  staleTime: LIST_QUERY_STALE_MS,
-  gcTime: LIST_QUERY_GC_MS,
-  placeholderData: keepPreviousData,
-} as const
-
-const detailQueryOptions = {
-  staleTime: LIST_QUERY_STALE_MS,
-  gcTime: LIST_QUERY_GC_MS,
-} as const
 
 export function productDetailQueryRoot(id: string) {
   return ['products', 'detail', id] as const
@@ -121,13 +106,9 @@ export const useProducts = (params: ProductOptions = {}): UseProductsResult => {
   return {
     products: query.data?.products ?? [],
     meta: query.data?.meta ?? null,
+    ...toQueryResult(query),
+    // An admin list waits for Clerk, so it is loading until Clerk is ready.
     isLoading: !query.data && (query.isFetching || (asAdmin && !isLoaded)),
-    isFetching: query.isFetching,
-    isError: query.isError,
-    errorMessage: getQueryErrorMessage(query),
-    refetch: async () => {
-      await query.refetch()
-    },
   }
 }
 
@@ -182,20 +163,11 @@ export function useDeleteProduct() {
         { queryKey: productDetailQueryRoot(deletedId) },
         (old) => (old ? markDeleted(old) : old),
       )
-      queryClient.setQueriesData<ProductsListCache>(
+      removeFromCachedLists(
+        queryClient,
         { queryKey: ['products', 'list', false] },
-        (old) => {
-          if (!old) return old
-          const products = old.products.filter((p) => p.id !== deletedId)
-          if (products.length === old.products.length) return old
-          const meta = old.meta
-            ? {
-                ...old.meta,
-                totalCount: Math.max(0, old.meta.totalCount - 1),
-              }
-            : null
-          return { products, meta }
-        },
+        'products',
+        deletedId,
       )
       await queryClient.invalidateQueries({ queryKey: productsQueryRoot })
     },
@@ -236,14 +208,12 @@ export function useProductById(
     ...detailQueryOptions,
   })
 
+  const { isFetching: _isFetching, ...state } = toQueryResult(query)
+
   return {
     product: query.data ?? null,
+    ...state,
     isLoading: !query.data && (query.isFetching || (asAdmin && !isLoaded)),
-    isError: query.isError,
-    errorMessage: getQueryErrorMessage(query),
-    refetch: async () => {
-      await query.refetch()
-    },
   }
 }
 

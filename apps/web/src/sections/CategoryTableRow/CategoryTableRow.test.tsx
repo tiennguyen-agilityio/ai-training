@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import { dashboardCategoryEditRoute } from '@/constants/routes'
+import { ROUTES, dashboardEditPath } from '@/constants/routes'
 import { CategoryTableRow } from '@/sections/CategoryTableRow'
 
 const activeCategory = {
@@ -123,7 +123,10 @@ describe('CategoryTableRow', () => {
 
     expect(
       screen.getByRole('link', { name: /edit espresso/i }),
-    ).toHaveAttribute('href', dashboardCategoryEditRoute('cat-1'))
+    ).toHaveAttribute(
+      'href',
+      dashboardEditPath(ROUTES.DASHBOARD_CATEGORIES, 'cat-1'),
+    )
   })
 
   it('disables Restore when the category has no id', async () => {
