@@ -18,13 +18,14 @@ import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
 import { useAuth } from '@/hooks/useAuth'
 import { updateProfileSchema, type UpdateProfileValues } from '@/schemas/user'
 import { useUserStore } from '@/store/useUserStore'
+import { getErrorMessage } from '@/utils/form'
 
 interface EditProfileFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-function getErrorMessage(error: unknown): string {
+function getProfileErrorMessage(error: unknown): string {
   if (isClerkAPIResponseError(error)) {
     return (
       error.errors[0]?.longMessage ??
@@ -32,7 +33,7 @@ function getErrorMessage(error: unknown): string {
       ERROR_MESSAGES.NETWORK_ERROR
     )
   }
-  return error instanceof Error ? error.message : ERROR_MESSAGES.NETWORK_ERROR
+  return getErrorMessage(error)
 }
 
 interface CachedProfileFields {
@@ -180,7 +181,7 @@ export function EditProfileForm({ open, onOpenChange }: EditProfileFormProps) {
         },
       )
     } catch (error) {
-      setFormError(getErrorMessage(error))
+      setFormError(getProfileErrorMessage(error))
     } finally {
       setIsSubmitting(false)
     }

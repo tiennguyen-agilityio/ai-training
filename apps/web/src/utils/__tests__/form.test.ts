@@ -1,5 +1,9 @@
 import { ERROR_MESSAGES } from '@/constants/messages'
-import { mapServerErrors, setServerFieldErrors } from '@/utils/form'
+import {
+  getErrorMessage,
+  mapServerErrors,
+  setServerFieldErrors,
+} from '@/utils/form'
 import { ServiceError } from '@/utils/query'
 
 const resolve = (field: string) => {
@@ -152,5 +156,22 @@ describe('setServerFieldErrors', () => {
 
     expect(setFocus.mock.calls).toEqual([['name']])
     jest.useRealTimers()
+  })
+})
+
+describe('getErrorMessage', () => {
+  it('returns the error message', () => {
+    expect(getErrorMessage(new Error('Boom'))).toBe('Boom')
+  })
+
+  it('falls back to NETWORK_ERROR for a blank message', () => {
+    expect(getErrorMessage(new Error(''))).toBe(ERROR_MESSAGES.NETWORK_ERROR)
+    expect(getErrorMessage(new Error('   '))).toBe(ERROR_MESSAGES.NETWORK_ERROR)
+  })
+
+  it('falls back to NETWORK_ERROR for a non-Error', () => {
+    expect(getErrorMessage('boom')).toBe(ERROR_MESSAGES.NETWORK_ERROR)
+    expect(getErrorMessage(undefined)).toBe(ERROR_MESSAGES.NETWORK_ERROR)
+    expect(getErrorMessage({ message: 'x' })).toBe(ERROR_MESSAGES.NETWORK_ERROR)
   })
 })

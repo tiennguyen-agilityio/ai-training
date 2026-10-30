@@ -3,15 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Download, Plus, Printer } from 'lucide-react'
-import { toast } from 'sonner'
 
-import AlertDialog from '@/components/AlertDialog'
+import ConfirmActionDialog from '@/components/ConfirmActionDialog'
 import Breadcrumb from '@/components/Breadcrumb'
 import { PaginationBar } from '@/components/Pagination'
 import { SearchInput } from '@/components/SearchInput'
 import Table from '@/components/Table'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
+import { SUCCESS_MESSAGES } from '@/constants/messages'
 import {
   PRODUCT_STATUS_OPTIONS,
   PRODUCTS_TABLE_COLUMNS,
@@ -28,9 +27,10 @@ import { productUrlSchema } from '@/utils/url'
 import { cn } from '@/utils/styles'
 import { useUrlState } from '@/hooks/useUrlState'
 import { useDebouncedUrlSearch } from '@/hooks/useDebouncedUrlSearch'
+import { usePageClamp } from '@/hooks/usePageClamp'
 import { Select } from '@/components/Select'
 import { type Product } from '@/types/product'
-import Loading from '@/components/Loading'
+import ListBody from '@/components/ListBody'
 
 const ALL_CATEGORIES_VALUE = 'all-categories'
 
@@ -42,9 +42,6 @@ export const PageContent = () => {
     updateUrl,
   )
   const [pendingDelete, setPendingDelete] = useState<Product | null>(null)
-  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(
-    null,
-  )
   const { mutate: deleteProductMutate, isPending: isDeletePending } =
     useDeleteProduct()
 
@@ -91,6 +88,8 @@ export const PageContent = () => {
   const totalCount = meta?.totalCount ?? products.length
   const showingCount = products.length
 
+  usePageClamp({ meta, page, totalPages, updateUrl })
+
   const handleQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInput(event.target.value)
   }
@@ -112,44 +111,21 @@ export const PageContent = () => {
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <AlertDialog
+      <ConfirmActionDialog
         data-testid="modal-confirm-delete-product"
-        open={pendingDelete !== null}
-        isLoading={isDeletePending}
-        errorMessage={deleteErrorMessage}
-        onOpenChange={(open) => {
-          if (!open && !isDeletePending) {
-            setPendingDelete(null)
-            setDeleteErrorMessage(null)
-          }
-        }}
+        item={pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        mutate={deleteProductMutate}
+        isPending={isDeletePending}
+        successMessage={SUCCESS_MESSAGES.PRODUCT_DELETED}
         title="Delete Product?"
-        description={
+        renderDescription={(product) => (
           <p>
-            Are you sure you want to delete <b>{pendingDelete?.name}</b>? This
-            action cannot be undone.
+            Are you sure you want to delete <b>{product?.name}</b>? This action
+            cannot be undone.
           </p>
-        }
+        )}
         textAction="Delete"
-        onClickAction={() => {
-          const id = pendingDelete?.id
-          if (!id) return
-          setDeleteErrorMessage(null)
-          deleteProductMutate(id, {
-            onSuccess: () => {
-              toast.success(SUCCESS_MESSAGES.PRODUCT_DELETED)
-              setPendingDelete(null)
-              setDeleteErrorMessage(null)
-            },
-            onError: (error) => {
-              setDeleteErrorMessage(
-                error instanceof Error
-                  ? error.message
-                  : ERROR_MESSAGES.NETWORK_ERROR,
-              )
-            },
-          })
-        }}
       >
         {pendingDelete && (
           <ProductDeletePreview
@@ -158,7 +134,7 @@ export const PageContent = () => {
             price={getProductListPrice(pendingDelete)}
           />
         )}
-      </AlertDialog>
+      </ConfirmActionDialog>
 
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-3">
@@ -242,50 +218,33 @@ export const PageContent = () => {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="px-6 py-12 text-center text-muted-foreground">
-            <Loading />
-          </div>
-        ) : isError ? (
-          <div className="flex flex-col items-center gap-4 px-6 py-12 text-center">
-            <p className="text-muted-foreground">{errorMessage}</p>
-            <Button
-              className="w-fit px-6"
-              variant="destructive"
-              size="sm"
-              onClick={() => void refetch()}
-            >
-              Retry
-            </Button>
-          </div>
-        ) : (
-          <div className="relative">
-            {isFetching && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/60 backdrop-blur-[1px]">
-                <Loading size="sm" />
-              </div>
+        <ListBody
+          isLoading={isLoading}
+          isError={isError}
+          errorMessage={errorMessage}
+          isFetching={isFetching}
+          onRetry={() => void refetch()}
+        >
+          <Table
+            columns={PRODUCTS_TABLE_COLUMNS}
+            data={products}
+            isStackedOnMobile
+            getRowKey={(product, index) => product.id ?? `product-${index}`}
+            resolveRowClassName={(product) =>
+              product.deletedAt
+                ? 'border-b border-border bg-muted-foreground/20'
+                : ''
+            }
+            renderRow={(product) => (
+              <ProductTableRow
+                product={product}
+                categoryOptions={categoryOptions}
+                onRequestDelete={(p) => setPendingDelete(p)}
+              />
             )}
-            <Table
-              columns={PRODUCTS_TABLE_COLUMNS}
-              data={products}
-              isStackedOnMobile
-              getRowKey={(product, index) => product.id ?? `product-${index}`}
-              resolveRowClassName={(product) =>
-                product.deletedAt
-                  ? 'border-b border-border bg-muted-foreground/20'
-                  : ''
-              }
-              renderRow={(product) => (
-                <ProductTableRow
-                  product={product}
-                  categoryOptions={categoryOptions}
-                  onRequestDelete={(p) => setPendingDelete(p)}
-                />
-              )}
-              emptyMessage="No products found."
-            />
-          </div>
-        )}
+            emptyMessage="No products found."
+          />
+        </ListBody>
 
         <footer className="border-t border-outline-variant/30 px-6 py-4">
           <PaginationBar

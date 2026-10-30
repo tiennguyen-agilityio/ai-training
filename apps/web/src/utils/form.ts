@@ -13,7 +13,8 @@ export interface ServerFieldError<K extends string> {
   message: string
 }
 
-const fallbackMessage = (error: unknown) =>
+/** The error's own message, or NETWORK_ERROR when it has none to show. */
+export const getErrorMessage = (error: unknown): string =>
   error instanceof Error && error.message.trim()
     ? error.message
     : ERROR_MESSAGES.NETWORK_ERROR
@@ -48,7 +49,7 @@ export function mapServerErrors<K extends string>(
   }
 
   if (!fieldErrors.length && !unmatched.length) {
-    unmatched.push(fallbackMessage(error))
+    unmatched.push(getErrorMessage(error))
   }
   return { fieldErrors, unmatched }
 }

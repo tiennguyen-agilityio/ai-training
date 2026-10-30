@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Download, Printer } from 'lucide-react'
 import { toast } from 'sonner'
 
-import AlertDialog from '@/components/AlertDialog'
+import ConfirmActionDialog from '@/components/ConfirmActionDialog'
 import Breadcrumb from '@/components/Breadcrumb'
 import Table from '@/components/Table'
 import { PaginationBar } from '@/components/Pagination'
@@ -12,7 +12,7 @@ import { SearchInput } from '@/components/SearchInput'
 import { Select } from '@/components/Select'
 import StatsCards from '@/components/StatsCards'
 import { Button } from '@/components/ui/button'
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/constants/messages'
+import { SUCCESS_MESSAGES } from '@/constants/messages'
 import {
   ALL_ORDER_STATUSES_VALUE,
   // ALL_SHIPPING_STATUS_VALUE,
@@ -30,11 +30,13 @@ import {
 import type { ORDER_STATUS, Order, SHIPPING_STATUS } from '@/types/order'
 import { useUrlState } from '@/hooks/useUrlState'
 import { useDebouncedUrlSearch } from '@/hooks/useDebouncedUrlSearch'
+import { usePageClamp } from '@/hooks/usePageClamp'
 import { OrderDetailModal } from '@/sections/OrderDetailModal'
 import { OrderTableRow } from '@/sections/OrderTableRow'
 import { buildOrderDashboardStats } from '@/utils/order'
 import { ordersUrlSchema } from '@/utils/url'
-import Loading from '@/components/Loading'
+import { getErrorMessage } from '@/utils/form'
+import ListBody from '@/components/ListBody'
 
 export default function OrdersPageContent() {
   const { state, update: updateUrl } = useUrlState(ordersUrlSchema)
@@ -50,9 +52,6 @@ export default function OrdersPageContent() {
   >(null)
   const [pendingShippingStatusOrderId, setPendingShippingStatusOrderId] =
     useState<string | null>(null)
-  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(
-    null,
-  )
   const { mutate: deleteOrderMutate, isPending: isDeletePending } =
     useDeleteOrder()
   const { mutate: updateOrderStatusMutate } = useUpdateOrderStatus()
@@ -79,11 +78,7 @@ export default function OrdersPageContent() {
   const totalCount = meta?.totalCount ?? orders.length
   const showingCount = orders.length
 
-  useEffect(() => {
-    if (meta && page > totalPages) {
-      updateUrl({ page: totalPages })
-    }
-  }, [meta, page, totalPages, updateUrl])
+  usePageClamp({ meta, page, totalPages, updateUrl })
 
   const handleStatusChange = (value: unknown) => {
     if (typeof value !== 'string') return
@@ -115,11 +110,7 @@ export default function OrdersPageContent() {
           toast.success(SUCCESS_MESSAGES.ORDER_STATUS_UPDATED)
         },
         onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : ERROR_MESSAGES.NETWORK_ERROR,
-          )
+          toast.error(getErrorMessage(error))
         },
         onSettled: () => {
           setPendingStatusOrderId((current) =>
@@ -143,11 +134,7 @@ export default function OrdersPageContent() {
           toast.success(SUCCESS_MESSAGES.ORDER_SHIPPING_STATUS_UPDATED)
         },
         onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : ERROR_MESSAGES.NETWORK_ERROR,
-          )
+          toast.error(getErrorMessage(error))
         },
         onSettled: () => {
           setPendingShippingStatusOrderId((current) =>
@@ -182,44 +169,21 @@ export default function OrdersPageContent() {
         }}
       />
 
-      <AlertDialog
+      <ConfirmActionDialog
         data-testid="modal-confirm-delete-order"
-        open={pendingDelete !== null}
-        isLoading={isDeletePending}
-        errorMessage={deleteErrorMessage}
-        onOpenChange={(open) => {
-          if (!open && !isDeletePending) {
-            setPendingDelete(null)
-            setDeleteErrorMessage(null)
-          }
-        }}
+        item={pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        mutate={deleteOrderMutate}
+        isPending={isDeletePending}
+        successMessage={SUCCESS_MESSAGES.ORDER_DELETED}
         title="Delete order?"
-        description={
+        renderDescription={() => (
           <p>
             Are you sure you want to delete <b>{pendingOrderLabel}</b>?. This
             action cannot be undone.
           </p>
-        }
+        )}
         textAction="Delete"
-        onClickAction={() => {
-          const id = pendingDelete?.id
-          if (!id) return
-          setDeleteErrorMessage(null)
-          deleteOrderMutate(id, {
-            onSuccess: () => {
-              toast.success(SUCCESS_MESSAGES.ORDER_DELETED)
-              setPendingDelete(null)
-              setDeleteErrorMessage(null)
-            },
-            onError: (error) => {
-              setDeleteErrorMessage(
-                error instanceof Error
-                  ? error.message
-                  : ERROR_MESSAGES.NETWORK_ERROR,
-              )
-            },
-          })
-        }}
       />
 
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -293,66 +257,45 @@ export default function OrdersPageContent() {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="px-6 py-12 text-center text-muted-foreground">
-            <Loading />
-          </div>
-        ) : isError ? (
-          <div className="flex flex-col items-center gap-4 px-6 py-12 text-center">
-            <p className="text-muted-foreground">{errorMessage}</p>
-            <Button
-              className="w-fit px-6"
-              variant="destructive"
-              size="sm"
-              onClick={() => void refetch()}
-            >
-              Retry
-            </Button>
-          </div>
-        ) : (
-          <div className="relative">
-            {isFetching && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/60 backdrop-blur-[1px]">
-                <Loading size="sm" />
-              </div>
+        <ListBody
+          isLoading={isLoading}
+          isError={isError}
+          errorMessage={errorMessage}
+          isFetching={isFetching}
+          onRetry={() => void refetch()}
+        >
+          <Table
+            columns={ORDERS_TABLE_COLUMNS}
+            data={orders}
+            getRowKey={(order, index) => order.id ?? `order-${index}`}
+            resolveRowClassName={(order) =>
+              order.deletedAt
+                ? 'border-b border-border bg-muted-foreground/20'
+                : ''
+            }
+            renderRow={(order) => (
+              <OrderTableRow
+                order={order}
+                isDeleteDisabled={isDeletePending || Boolean(order.deletedAt)}
+                isStatusDisabled={
+                  pendingStatusOrderId === order.id || Boolean(order.deletedAt)
+                }
+                isShippingStatusDisabled={
+                  pendingShippingStatusOrderId === order.id
+                }
+                onRequestDelete={(nextOrder) => {
+                  setPendingDelete(nextOrder)
+                }}
+                onRequestView={(nextOrder) => {
+                  setSelectedOrder(nextOrder)
+                }}
+                onRequestStatusChange={handleOrderStatusUpdate}
+                onRequestShippingStatusChange={handleOrderShippingStatusUpdate}
+              />
             )}
-            <Table
-              columns={ORDERS_TABLE_COLUMNS}
-              data={orders}
-              getRowKey={(order, index) => order.id ?? `order-${index}`}
-              resolveRowClassName={(order) =>
-                order.deletedAt
-                  ? 'border-b border-border bg-muted-foreground/20'
-                  : ''
-              }
-              renderRow={(order) => (
-                <OrderTableRow
-                  order={order}
-                  isDeleteDisabled={isDeletePending || Boolean(order.deletedAt)}
-                  isStatusDisabled={
-                    pendingStatusOrderId === order.id ||
-                    Boolean(order.deletedAt)
-                  }
-                  isShippingStatusDisabled={
-                    pendingShippingStatusOrderId === order.id
-                  }
-                  onRequestDelete={(nextOrder) => {
-                    setDeleteErrorMessage(null)
-                    setPendingDelete(nextOrder)
-                  }}
-                  onRequestView={(nextOrder) => {
-                    setSelectedOrder(nextOrder)
-                  }}
-                  onRequestStatusChange={handleOrderStatusUpdate}
-                  onRequestShippingStatusChange={
-                    handleOrderShippingStatusUpdate
-                  }
-                />
-              )}
-              emptyMessage="No orders found."
-            />
-          </div>
-        )}
+            emptyMessage="No orders found."
+          />
+        </ListBody>
 
         <footer className="border-t border-outline-variant/30 px-6 py-4">
           <PaginationBar
