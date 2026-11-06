@@ -7,7 +7,7 @@
 //   init <spec> <card url> <branch>     create <spec>/state.json (flow 2)
 //   rename <spec> <new spec> <branch>   rewrite the spec dir and branch fields
 //                                       (Gate 1 option C; move the dir after)
-//   flow <spec> <step>                  2 3 gate1 5 6 7 8 gate2 10 gate3 12 closed
+//   flow <spec> <step>                  2 3 gate1 5 6 7 8 9 10 11 12 closed
 //   base <spec> <commit> [<branch>]     the base commit and branch (step 5;
 //                                       branch defaults to develop)
 //   at <spec> <task> <step>             steps before <step> are done, <step> is
@@ -66,9 +66,9 @@ export const FLOW_STEPS = [
   '6',
   '7',
   '8',
-  'gate2',
+  '9',
   '10',
-  'gate3',
+  '11',
   '12',
   'closed',
 ];
@@ -97,7 +97,13 @@ export function repoRoot(cwd = process.cwd()) {
 export function readState(specDir) {
   const path = join(specDir, STATE);
   if (!existsSync(path)) return null;
-  return JSON.parse(readFileSync(path, 'utf8'));
+  const state = JSON.parse(readFileSync(path, 'utf8'));
+  // Names saved before 2026-11-06, when steps 9 and 11 were Gates 2 and 3.
+  // Their questions no longer exist, so a saved one is dropped.
+  const renamed = { gate2: '9', gate3: '11' };
+  if (Object.hasOwn(renamed, state.flow)) state.flow = renamed[state.flow];
+  if (Object.hasOwn(renamed, state.awaiting?.gate ?? '')) state.awaiting = null;
+  return state;
 }
 
 export function writeState(specDir, state) {
@@ -284,9 +290,9 @@ const FLOW_LABELS = {
   6: 'Implement',
   7: 'Code review',
   8: 'Verify',
-  gate2: 'Gate 2',
+  9: 'Commit',
   10: 'Security review',
-  gate3: 'Gate 3',
+  11: 'Push + PR',
   12: 'Card to REVIEW',
   closed: 'Closed',
 };
@@ -297,7 +303,7 @@ const TASK_WORDS = {
   review_gap: 'review gap',
   review_pass: 'review passed',
 };
-const ROUND_LIMIT = 2;
+const ROUND_LIMIT = 3;
 const flowAt = (step) => FLOW_STEPS.indexOf(step);
 
 // Paths the workflow itself writes, never flagged as outside the plan
@@ -353,13 +359,15 @@ function nextTaskAction(state, facts) {
   }
 }
 
-const SECURITY_FIX =
-  'use the Resume table: a step 10 security fix is in progress';
-
 // The one action a resumed session takes next. Pure: `facts` are read from
 // git and the files by status().
 export function nextAction(state, facts) {
-  const flow = state.flow;
+  // Once the card's commit exists, steps 7 to 9 come back only inside the
+  // step 10 security fix (and in a status saved before 2026-11-06).
+  const flow =
+    facts.commitsAfterBase && ['7', '8', '9'].includes(state.flow)
+      ? '10'
+      : state.flow;
   if (flow === 'closed') return 'nothing: card closed';
   if (
     facts.currentBranch !== state.branch &&
@@ -372,22 +380,10 @@ export function nextAction(state, facts) {
     }
     return `stop: on ${where} with uncommitted changes; the card's branch is ${state.branch}`;
   }
-  // After the commit, flows 7, 8 and gate2 come back only for a step 10
-  // security fix. A clean gate2 is the commit made before `flow 10` (R8);
-  // anything else is a security fix in progress, which the Resume table
-  // handles (status exits 3).
-  if (facts.commitsAfterBase && ['7', '8', 'gate2'].includes(flow)) {
-    if (flow === 'gate2' && !facts.dirty && !state.awaiting)
-      return 'run step 10';
-    return SECURITY_FIX;
-  }
   if (state.awaiting) {
     const changed = facts.changedSinceAwaiting;
     if (changed.length) {
       return `ask the user: files changed while waiting at ${state.awaiting.gate}: ${changed.join(', ')}`;
-    }
-    if (state.awaiting.gate === 'gate3') {
-      return 'check the PR (gh pr view); if there is none, ask again: gate3';
     }
     return `ask again: ${state.awaiting.gate}`;
   }
@@ -429,12 +425,14 @@ export function nextAction(state, facts) {
     }
     case '8':
       return 'run step 8';
-    case 'gate2':
-      return 'ask Gate 2';
+    case '9':
+      return 'run step 9 (commit)';
     case '10':
-      return 'run step 10';
-    case 'gate3':
-      return 'check the PR (gh pr view); if there is none, ask Gate 3';
+      return facts.dirty
+        ? 'finish the step 10 security fix: code-review on it, step 8, amend, then security-review (same round)'
+        : 'run step 10';
+    case '11':
+      return 'check the PR (gh pr view); if there is none, run step 11';
     default:
       return 'check the PR, then move the card and close';
   }
@@ -629,11 +627,6 @@ function statusOf(root, spec, state, { brief }) {
     ...facts,
     ledgerComplete: facts.ledger.complete,
   });
-  if (next === SECURITY_FIX)
-    return {
-      code: 3,
-      text: `${fallback} (${next.slice(next.indexOf(':') + 2)})`,
-    };
   const lines = [
     `Card: ${state.card} (#${cardNumber(state.card)})`,
     `Spec: ${relative(root, spec)}`,

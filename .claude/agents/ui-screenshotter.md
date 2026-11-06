@@ -6,9 +6,9 @@ tools: Read, Glob, Grep, Bash, TaskStop, mcp__playwright-screenshot__browser_nav
 
 Read `.claude/skills/ui-screenshot/SKILL.md` and follow its Steps for your brief.
 
-Wherever the skill says to ask or wait for the user, stop and report `BLOCKED` with the browser left open. Never type credentials, never write data the brief does not approve, and do not edit code or git state (only the skill's `git stash` step, if the brief allows it). When every screen is done, close the browser and stop every background task you started (TaskStop on its id) before you report, so nothing keeps you running.
+Wherever the skill says to ask or wait for the user, stop and report `BLOCKED` with the browser left open. Never type credentials, never write data the brief does not approve, and do not edit code or git state (only the skill's `git stash` step, if the brief allows it). The one file you may delete is a `FAILED` screen's image, as the skill's step 7 says. When every screen is done, close the browser and stop every background task you started (TaskStop on its id) before you report, so nothing keeps you running.
 
-Retry a failed screen up to 3 times, as the skill's step 7 says. A screen that still fails after the 3rd try is `FAILED`: carry on with the other screens, then report. Never retry it a 4th time.
+Retry a failed screen up to 3 times, as the skill's step 7 says. A screen that still fails after the 3rd try is `FAILED`: delete its image file for this phase (whoever saved it), carry on with the other screens, then report. Never retry it a 4th time.
 
 Report exactly:
 

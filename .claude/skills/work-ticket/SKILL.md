@@ -23,7 +23,7 @@ Follow `.claude/rules/workflow.md` for every superpowers step; it overrides thei
   - D is the tool's "Other" field, for the user's own input.
   - Wait for the answer.
 - A 🛑 **Gate** is a question whose options name exactly what will happen. Without approval, stop.
-- No commit, push or PR happens outside a gate. Moving the card is the exception, approved by invoking `/work-ticket`:
+- After Gate 1, the run goes on without a gate: the commit (step 9), the amend of a security fix (step 10), the push and the draft PR (step 11) are approved by Gate 1. Moving the card is approved by invoking `/work-ticket`:
   - step 1 moves it from **TODO** to **IN PROGRESS**;
   - step 12 moves it to **REVIEW** right after the PR is created;
   - `.github/workflows/trello.yml` moves it to **DONE** when the PR is merged;
@@ -37,7 +37,7 @@ Follow `.claude/rules/workflow.md` for every superpowers step; it overrides thei
 From step 2 on, the card's status lives in `<spec dir>/state.json` (workflow rule 1), and only `node .claude/scripts/ticket-state.mjs <command> <spec dir> …` writes it (usage in the script's header). A resume reads it instead of the spec files.
 
 - Bookkeeping rides along with work: chain each command onto the step's own Bash call (`… && node .claude/scripts/ticket-state.mjs at <spec dir> 3 2`); give it a call of its own only when the step has no command.
-- `flow <step>` at the start of each step and gate (`2 3 gate1 5 6 7 8 gate2 10 gate3 12`).
+- `flow <step>` at the start of each step and gate (`2 3 gate1 5 6 7 8 9 10 11 12`). Steps 7 and 8 called from step 10 run no `flow`: the run stays at `10`.
 - Before every AskUserQuestion once `state.json` exists: pipe the exact tool input as JSON into `await <spec dir> <gate>` (a heredoc: `await` saves it), ask, then `answered` right after the answer.
 - With no `state.json` (a spec started before it existed), every command does nothing and exits 0.
 
@@ -73,41 +73,39 @@ From step 2 on, the card's status lives in `<spec dir>/state.json` (workflow rul
    - No gap → `review pass` and the plugin's `task-done` in one Bash call (workflow rule 6: `task-done` only after the review).
    - A deviation from the plan → workflow rule 6. One that changes what Gate 1 approved is a 🛑 **plan-change gate**: stop before making it and ask with the options in rule 6. An "unapproved deviation" from `plan-reviewer` goes to the same gate. Any other deviation is only recorded, in the plan's `## Deviations` before `plan-reviewer` runs, and in the ledger.
    After the last task, run the autofix on the whole change (workflow rule 7: `lint-staged --diff=<base commit> --no-hide-partially-staged`, with `boundary` after every autofix in the same call), run the rebuild precondition (workflow rule 7), then, for each changed app (workflow rule 0), from `apps/<app>/`, run `pnpm run build` and `pnpm run test`; both must pass before step 7. No changed app → only the autofix runs here.
-7. **Code review.** Run the autofix (workflow rule 7; it includes `git add -N` on the untracked files), then invoke the `code-review` skill at `medium`. Per workflow rule 8, name the target (the working tree against the base commit) and the rules files. When it returns, save its findings with `findings <spec dir>`, JSON on stdin (`[{ "id", "summary" }]`, `[]` for none), then `finding fixed|left <id>` as each one is handled, and `round pre` for each round. Handle findings per rule 8:
+7. **Code review.** Run the autofix (workflow rule 7; it includes `git add -N` on the untracked files), then invoke the `code-review` skill at `medium`. Per workflow rule 8, name the target (the working tree against the base commit) and the rules files. When it returns, save its findings with `findings <spec dir>`, JSON on stdin (`[{ "id", "summary" }]`, `[]` for none), then `finding fixed|left <id>` as each one is handled, and `round pre` for each round, once when its fix starts. Called from step 10, run no `flow`, and the round is step 10's `round post`. Handle findings per rule 8:
    - A bug or a rules violation → fix, run the related tests and the autofix, then `code-review` on the fix. Round limit: workflow rule 8.
    - A fix that deviates from the plan (workflow rule 6) goes through the plan-change gate first. This also covers the fixes that step 8 and step 10 send back here.
    - A cleanup or a false positive → do not fix; keep one line for `report.md`.
 8. **Verify + test report + `report.md`.** Run the autofix again and the rebuild precondition (workflow rule 7), then, for each changed app (workflow rule 0), from `apps/<app>/`, read and run `apps/<app>/.claude/skills/verify/SKILL.md` with the unit gate on `test:cov`, and write `test-report.md` from `.claude/templates/test-report.md`, with each app's rows and Coverage block. Every gate must PASS, or be SKIPPED or n/a with a reason. No changed app → run the plan's `## Plan checks` instead and write their results in the report's "Plan checks" section.
    - Verify runs before the after screenshots: a verify build can overwrite the dev server's output (`next build` rewrites `.next`), so start the dev server again for the screenshots.
    - On a failure, the notification names `test-report.md`. A fix that changes logic in `src/` goes back to step 7 for that fix; a test, lint or format fix reruns this step. This overrides the `verify` skill's step 4 ("Fix and rerun") for logic fixes.
-   - Round limit: workflow rule 8 (shared with step 7 before the commit); each rerun is a `round pre`.
-   - When it passes:
-     - every plan checkbox is `[x]`;
-     - every `R<n>` in the design's `## Requirements from card` has a row in the plan's `## Card requirements` table;
-     - every row has one evidence type from workflow rule 9: `PASS`, `PASS (screenshot, manual)`, `PASS (plan check)` or `Not verified`. An AC without a test, or whose test is in a SKIPPED gate (e.g. the API's e2e skipped by the database guard), is Not verified with the reason, never PASS, and does not send you back to step 6;
-     - anything open → back to step 6.
-   - Tick each `R<n>` in the design's `## Requirements from card` whose row is `PASS`, `PASS (screenshot, manual)` or `PASS (plan check)`; a Not verified `R<n>` stays unticked. Then write `report.md` (rule 9) with `Security: pending`. A rerun from step 10 keeps the existing Security line and its findings.
-   - If the plan has `## Screens`, dispatch the `ui-screenshotter` agent for the after shots once verify passes, without asking, with phase `after` and the same rows. Handle its report as in **Screenshot report**.
+   - Round limit: workflow rule 8 (shared with step 7 before the commit); each rerun is a `round pre`. Called from step 10, run no `flow`, and the rerun belongs to step 10's `round post`.
+   - When it passes, check that every plan checkbox is `[x]` and every `R<n>` in the design's `## Requirements from card` has a row in the plan's `## Card requirements` table. Anything open → back to step 6.
+   - Then, if the plan has `## Screens`, dispatch the `ui-screenshotter` agent for the after shots, on every run of this step (also from step 10), without asking, with phase `after` and the same rows. Handle its report as in **Screenshot report**.
+   - File check: every `## Screens` row needs `<screen>-before.<ext>` and `<screen>-after.<ext>` in `screenshot.dir` of `.claude/apps.json`. A missing file counts as a failed screen; no new screenshot run.
+   - `report.md` lists each failed screen as `No screenshot: <screen>: <before|after|before and after> image missing`: the reason is which image the file check found missing, nothing else.
+   - Evidence: every row gets one type from workflow rule 9: `PASS`, `PASS (screenshot, manual)`, `PASS (plan check)` or `Not verified`. An AC without a test, or whose test is in a SKIPPED gate (e.g. the API's e2e skipped by the database guard), is Not verified with the reason, never PASS, and does not send you back to step 6.
+   - A row whose evidence is a failed screen is `Not verified`, with that screen's `No screenshot:` line as its reason (one per failed screen); a row proven by a passing test keeps `PASS`.
+   - Tick each `R<n>` in the design's `## Requirements from card` from this run only: `PASS`, `PASS (screenshot, manual)` or `PASS (plan check)` → ticked; Not verified → unticked, also when an earlier run ticked it. Then write `report.md` (rule 9) with `Security: pending`. A rerun from step 10 keeps the existing Security line and its findings.
    - **Screenshot report** (steps 5 and 8). The agent retries each screen up to 3 times.
      - `DONE` → read the saved files and go on.
-     - `FAILED` → notify, show each failed screen with the cause of each try, and ask: A "Try again" (Recommended; the user's fix in D); B "Go on without this screenshot": its R row becomes `Not verified` (no screenshot) and is unticked, and the PR description gets a `<TODO: screenshot>`; C "Stop here".
+     - `FAILED` → no question: the agent deleted each failed screen's image; go on. At step 8 the file check marks those screens.
      - `BLOCKED` → relay what it needs to the user, then continue the same agent with SendMessage.
      - `PARTIAL` → continue it with SendMessage for what is left.
-9. 🛑 **Gate 2: commit.** Run `git add -A`, then show `git diff --cached --stat`, the R coverage, the plan's `## Deviations` (or "none"), a short verify / code-review summary, the after screenshots of every `PASS (screenshot, manual)` row, and one commit message per workflow rule 11. Approving the commit confirms those screenshots. A screenshot the user reports wrong in D goes back to step 7 for its fix, then step 8, and Gate 2 asks again (workflow rule 8 round limit). Nothing is ticked on Trello. After approval, commit. If the user declines, run `git reset` to unstage (the changes stay in the working tree) and stop. If a hook fails, fix the cause; never use `--no-verify`.
+9. **Commit.** Run `git add -A`, then commit with one message per workflow rule 11, without asking. Nothing is ticked on Trello. If a hook fails, fix the cause; never use `--no-verify`.
 10. **Security review.** Check `<base commit>..HEAD` against the areas listed in workflow rule 8 (access control, config or secrets, dependencies, and the paths in each app's `security` list in `.claude/apps.json`). None touched → replace `Security: pending` in `report.md` with `Security: skipped, no security-relevant change` and go to step 11. Otherwise invoke the `security-review` skill:
     - No finding → `Security: no findings`.
     - A finding → fix it, then `code-review` on the fix (step 7), then step 8; that rerun keeps the Security line.
-    - Then 🛑 Gate 2 again: `git add -A`, show `git diff --cached --stat`, and after approval `git commit --amend --no-edit`.
-    - Then rerun `security-review`. Round limit: workflow rule 8 (2 rounds after the commit); each round is a `round post`.
+    - Then `git add -A` and `git commit --amend --no-edit`, without asking: nothing is pushed yet.
+    - Then rerun `security-review`. Round limit: workflow rule 8 (3 rounds after the commit); each round is one `round post`, run when its fix starts. Finishing a fix that a stopped run left half done is the same round.
     - When it is clean, write `Security: findings fixed` with each finding and its fix.
-11. 🛑 **Gate 3: push + open PR.** Follow workflow rule 10:
-    - The `pr-description` skill drafts `pr-description.md`; show its title, body and TODOs.
-    - This gate's options are A "Push and create the PR with this description" (Recommended) and B "Keep the branch as-is".
-    - Nothing is pushed before the user picks A.
-    - A → push and `gh pr create`, per rule 10.
-    - B → report the branch name and stop: skip steps 12 and 13.
+11. **Push + draft PR.** Follow workflow rule 10, without asking:
+    - The `pr-description` skill drafts `pr-description.md`; it is not shown.
+    - `git push -u origin <branch>`, then `gh pr create --draft`, per rule 10.
+    - A failed push or `gh pr create` → stop and notify; a resume runs this step again.
 12. **Card → REVIEW.** No gate: right after `gh pr create` succeeds, dispatch `trello-manager` with the card URL, the source list `IN PROGRESS` and the target list `REVIEW` (skip if B was chosen at step 1). State that the move is the workflow's own, approved by invoking `/work-ticket`. If the move fails, stop and notify. After the move, run `close <spec dir>`.
-13. **Report.** Send the completion notification, then a short summary with the PR link, the card link (in REVIEW; `.github/workflows/trello.yml` moves it to DONE when the PR is merged, and if that run fails, `/work-ticket <card URL> done` is the fallback), and the local paths of `report.md`, `test-report.md`, `pr-description.md`, `design.md` and `plan.md`. The details live in `report.md`; do not repeat them.
+13. **Report.** Send the completion notification, then a short summary with the PR link (a draft: the developer reviews it on GitHub and marks it ready, which starts the Claude Code Review action; never run `gh pr ready`), the card link (in REVIEW; `.github/workflows/trello.yml` moves it to DONE when the PR is merged, and if that run fails, `/work-ticket <card URL> done` is the fallback), and the local paths of `report.md`, `test-report.md`, `pr-description.md`, `design.md` and `plan.md`. The details live in `report.md`; do not repeat them.
 
 ## Resume
 
@@ -121,7 +119,7 @@ The spec dir is the directory of the matched `design.md`; every later file is re
    - `ask the user: …` → show what differs and ask: A "Continue: the change goes through the plan-change gate" (Recommended) or B "Stop: I sort the changes out myself".
    - `check out <branch>` → `git checkout <branch>`, then run `status` again.
    - `stop: …` → report it and stop.
-   - `check the PR …` → `gh pr view <branch>`; a PR exists → step 12 (its `trello-manager` move only happens from IN PROGRESS), then `close`; none → ask the saved Gate 3 payload again when `state.json` has one (`ask again: gate3`), otherwise run Gate 3.
+   - `check the PR …` → `gh pr view <branch>`; a PR exists → step 12 (its `trello-manager` move only happens from IN PROGRESS), then `close`; none → run step 11.
 4. Exit 3 (`No saved status`) → use the table below.
 
 **Without a saved status:** re-read the spec files: `design.md`, `plan.md`, `report.md`, `test-report.md` and `pr-description.md`. Do not redo finished steps.
@@ -139,8 +137,8 @@ Where to continue (the first matching row wins):
 | feature branch missing | step 5 |
 | Base commit differs from `git merge-base <feature branch> origin/<base>` (after `git fetch origin <base>`) | finish step 5: set Base commit from that merge-base, then capture the baseline |
 | a changed app without a baseline | finish step 5: capture its baseline (workflow rule 7), unless `node .claude/scripts/changed-apps.mjs <base commit>` already lists that app: its code has changed, so note "no clean baseline" for it instead (rule 7). Classify the changed apps with `node .claude/scripts/changed-apps.mjs --files <the plan's files>`, not from `git diff`: the diff is empty on a fresh branch and partial mid-work. An existing `coverage-baseline.json` is the API baseline. No changed app → no baseline needed |
-| commits after the base commit, `Security: pending` in `report.md` and uncommitted changes | a security fix in progress: finish step 10 from its step 7 → step 8 → Gate 2 amend |
-| feature branch exists | the first unfinished step from the plan checkboxes, `test-report.md`, `report.md`, commits after the base commit (Gate 2 done), a Security line in `report.md` other than `Security: pending` (step 10 done) and `gh pr view <branch>` (Gate 3 done). The code review leaves no record: with every checkbox ticked and no `report.md`, continue at step 7 (a finished review may run once more) |
+| commits after the base commit, `Security: pending` in `report.md` and uncommitted changes | a security fix in progress: finish step 10 from its step 7 → step 8 → amend |
+| feature branch exists | the first unfinished step from the plan checkboxes, `test-report.md`, `report.md`, commits after the base commit (step 9 done), a Security line in `report.md` other than `Security: pending` (step 10 done) and `gh pr view <branch>` (step 11 done). The code review leaves no record: with every checkbox ticked and no `report.md`, continue at step 7 (a finished review may run once more) |
 
 Before continuing, act on git:
 

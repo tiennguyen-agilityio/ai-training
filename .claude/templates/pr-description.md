@@ -22,7 +22,7 @@
 
 ## Screenshots
 
-<!-- Only when the PR changes UI files (an app's `ui` globs in .claude/apps.json, test files excluded: `*.test.*`, `*.spec.*` and `**/__tests__/**`); otherwise delete this section. Images live in screenshot.dir of .claude/apps.json (default docs/images/<feature-name>/) as <screen>-before.<ext> and <screen>-after.<ext>, committed with the code, and are embedded as ![<screen> after](https://github.com/<owner>/<repo>/blob/<commit sha>/<screenshot dir>/<screen>-after.<ext>?raw=true). One row per changed screen. Never use images for test results. -->
+<!-- Only when the PR changes UI files (an app's `ui` globs in .claude/apps.json, test files excluded: `*.test.*`, `*.spec.*` and `**/__tests__/**`); otherwise delete this section. Images live in screenshot.dir of .claude/apps.json (default docs/images/<feature-name>/) as <screen>-before.<ext> and <screen>-after.<ext>, committed with the code, and are embedded as ![<screen> after](https://github.com/<owner>/<repo>/blob/<commit sha>/<screenshot dir>/<screen>-after.<ext>?raw=true). One row per screen of the plan's `## Screens` (without one, per changed screen); a missing image's cell is `No image: image missing`. Never use images for test results. -->
 
 | Screen | Before | After |
 | --- | --- | --- |
@@ -49,9 +49,9 @@
 | --- | --- | --- |
 |  |  |  |
 
-With no spec dir, use one row instead: | Verify | Not applicable: no app code changed |. With a spec dir whose test-report.md has no Plan checks section yet: <TODO: run the plan checks>.
+With no spec dir, use one row instead: | Verify | Not applicable: no app code changed |. With a spec dir whose test-report.md has no Plan checks section yet: Plan checks not run.
 
-Requirements shown as `PASS (screenshot, manual)` or `PASS (plan check)` in report.md go in their own list here, apart from the test results. -->
+Requirements shown as `PASS (screenshot, manual)`, `PASS (plan check)` or `Not verified` with a `No screenshot:` reason in report.md go in their own list here, apart from the test results. -->
 
 <!-- Optional, for failing or unusual runs: the test runner's summary lines as text.
 <details><summary>Test output</summary>

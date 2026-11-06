@@ -26,7 +26,7 @@ The changed apps decide which rules, `verify` skill, coverage baseline and secur
 - Report (end of review): `docs/specs/YYYY-MM-DD/<feature-name>/report.md`
 - Test report (every verify run): `docs/specs/YYYY-MM-DD/<feature-name>/test-report.md`
 - Coverage baseline (before any code change): `docs/specs/YYYY-MM-DD/<feature-name>/coverage-baseline-<app>.json`, one per changed app (rule 0), none with no changed app. A spec started before per-app baselines may hold `coverage-baseline.json`: it is the API baseline.
-- PR description (Gate 3): `docs/specs/YYYY-MM-DD/<feature-name>/pr-description.md`
+- PR description (step 11 of `/work-ticket`, or the `pr-description` skill): `docs/specs/YYYY-MM-DD/<feature-name>/pr-description.md`
 - Saved status (`/work-ticket`, from step 2): `state.json` in the spec dir, written only by `node .claude/scripts/ticket-state.mjs`; its `status` and `task-diff` print, they write no file. Its fingerprints are local refs under `refs/work-ticket/<feature-name>/`, never pushed; `close` deletes them. A spec without `state.json` (started before it existed) resumes from the `/work-ticket` Resume table.
 - Screenshots (UI changes only: a file in a changed app's `ui` globs, test files excluded: `*.test.*`, `*.spec.*`, `**/__tests__/**`): `<screen>-before.<ext>` and `<screen>-after.<ext>` in `screenshot.dir` of `.claude/apps.json` (default `docs/images/<feature-name>/`). They are committed with the code and embedded in the PR description. The `ui-screenshot` skill takes them.
 - `test-report.md` has Overview rows and a Coverage block per changed app, or a "Plan checks" section with no changed app (rule 7, `.claude/templates/test-report.md`); `report.md` has one `verify` table per changed app (rule 9).
@@ -146,9 +146,9 @@ When the plan's files give no changed app (rule 0, `--files`), add `## Plan chec
 
 The plan's Global Constraints come from the rules of each changed app (rule 0, with `--files` on the plan's files): `apps/<app>/.claude/rules/coding.md` and `testing.md`. Read them while planning, even if no `src/` file has been opened yet, and cite the rules that apply. With no changed app, they come from the conventions of the files the plan touches (for example the format of the rules or skills it edits).
 
-## 6. No commits or hand-offs until approval
+## 6. Commits and hand-offs
 
-Tasks end at "run the tests, expect PASS". Commits happen only after the user approves them (Gate 2 in `/work-ticket`, or when the user asks).
+Tasks end at "run the tests, expect PASS". In `/work-ticket`, step 9 commits once step 8 passes; otherwise commits happen only when the user asks.
 
 - No worktree: the feature branch in the main checkout is the workspace; do not invoke `using-git-worktrees` and do not run its setup or baseline steps (dependencies are installed; the coverage baseline at step 5 is the baseline run).
 - `brainstorming` in `/work-ticket`:
@@ -224,14 +224,14 @@ The acceptance criteria were already checked per task (rule 6). Handle each find
 
 After fixing a bug, run the related tests and the autofix (rule 7), then `code-review` on the fix. In `/work-ticket`, a fix that changes logic in `src/` after a failed verify also goes back to the code review for that fix, instead of the `verify` skill's step 4 ("Fix and rerun").
 
-**Round limit.** A round is one fix plus the check that follows it: `code-review` on a logic fix, or a `verify` rerun for a test, lint or format fix. The first review of the whole change is not a round. At most 2 rounds before the commit (code review and verify together) and 2 more after it (the security review, where one round is a finding's fix → code review → verify → amend → rerun). Then stop, notify and ask the user. A screenshot the user reports wrong at Gate 2 goes back to the code review (for its fix) and verify, then Gate 2 asks again; that counts as a round. With a saved status, findings and rounds are saved with `ticket-state.mjs` (`findings`, `finding fixed|left`, `round pre|post`), so a resume fixes only the open findings and keeps counting rounds.
+**Round limit.** A round is one fix plus the check that follows it: `code-review` on a logic fix, or a `verify` rerun for a test, lint or format fix. The first review of the whole change is not a round. At most 3 rounds before the commit (code review and verify together) and 3 more after it (the security review, where one round is a finding's fix → code review → verify → amend → rerun). Then stop, notify and ask the user. A round is counted once, when its fix starts: finishing a fix that a stopped run left half done is the same round. With a saved status, findings and rounds are saved with `ticket-state.mjs` (`findings`, `finding fixed|left`, `round pre|post`), so a resume fixes only the open findings and keeps counting rounds.
 
 **Security review, after the commit and before the push.** Run it when the committed change (`<base commit>..HEAD`) touches access control (guards, a role or auth decorator added to or removed from any route, authentication and its tokens), config or secrets (`.env*`, CORS, Docker, CI workflows), dependencies (`package.json`, the lockfile, the `catalog:`), or a path in an app's `security` list in `.claude/apps.json`. Otherwise skip it.
 
 Invoke the built-in `security-review` skill. It runs `git diff origin/HEAD...`, the committed branch diff against origin's default branch (`develop`), so it needs the commit but no PR. First check `git rev-parse --abbrev-ref origin/HEAD`. If it fails, or is not `origin/<base branch>` from the plan, that diff is not this change's diff: tell the user and ask before running it. A missing `origin/HEAD` is set with `git remote set-head origin -a`. A finding:
 1. fix it, then run the code review on the fix;
 2. run `verify` (rule 7);
-3. `git add -A`, show `git diff --cached --stat`, and amend the commit after the user approves Gate 2 again;
+3. `git add -A` and amend the commit: in `/work-ticket` without asking (nothing is pushed yet), otherwise after the user approves;
 4. rerun `security-review`.
 
 The round limit above applies. Nothing is pushed yet, so no force-push is needed.
@@ -240,14 +240,15 @@ The multi-agent `/claude-security` scan is not part of this flow. The user runs 
 
 ## 9. Report
 
-Before asking to commit, write `report.md` with:
+Before the commit, write `report.md` with:
 
 - a link to `test-report.md` and one `verify` table per changed app (with no changed app, the plan checks);
 - an `R → test → result` table from the final verify run. Each row has one evidence type:
   - `PASS`: a test passed in the final verify run;
-  - `PASS (screenshot, manual)`: a UI requirement (an app's `ui` globs) shown by the after screenshot the row links. These rows are listed apart from the test PASS rows, never counted with them, and confirmed by the user at Gate 2;
+  - `PASS (screenshot, manual)`: a UI requirement (an app's `ui` globs) shown by the after screenshot the row links, with both its before and after images saved. These rows are listed apart from the test PASS rows, never counted with them; whether the images are right is the PR reviewer's call;
   - `PASS (plan check)`: a check from the plan's `## Plan checks`, with its command or steps and the observed result. Only when there is no changed app;
-  - `Not verified`, with the reason, for the user to check, never PASS: an AC with no test, a test in a SKIPPED gate (e.g. e2e skipped by the database guard), or a test that only a package runs ("package tests run only in pre-push");
+  - `Not verified`, with the reason, for the user to check, never PASS: an AC with no test, a test in a SKIPPED gate (e.g. e2e skipped by the database guard), a test that only a package runs ("package tests run only in pre-push"), or a UI requirement with a missing before or after image (reason `No screenshot: <screen>: <before|after|before and after> image missing`, one per failed screen);
+- each `## Screens` screen (rule 4) with a missing before or after image, as `No screenshot: <screen>: <before|after|before and after> image missing`, also when its requirement keeps `PASS` from a test;
 - the code-review result: findings fixed, and findings left with their reason (cleanup or false positive);
 - one Security line. Step 8 writes `Security: pending`. Step 10 of `/work-ticket`, after the commit, replaces it with `no findings`, `findings fixed` (plus each finding and its fix) or `skipped, no security-relevant change`. A rerun of step 8 during step 10 keeps the Security line and its findings as they are;
 - the plan's `## Deviations`, or "none";
@@ -257,10 +258,12 @@ Before asking to commit, write `report.md` with:
 
 No `superpowers:finishing-a-development-branch`, and no verify rerun: the last verify run produced the report, and pre-push runs `turbo run build test --affected`.
 
-- Run the `pr-description` skill, which saves the draft to `<spec dir>/pr-description.md`. Show the title, the body and its TODOs.
-- Then ask A "Push and create the PR with this description" (Recommended) or B "Keep the branch as-is". There is no local merge option: this repo merges through GitHub PRs with a merge commit. Nothing is pushed before the user picks A.
-- To change the draft, the user answers in D (Other); edit `pr-description.md`, show it again and ask again. Every `<TODO>` is resolved before A runs; a missing screenshot is added under `screenshot.dir` of `.claude/apps.json` and the commit amended once the user approves.
-- Option A: `git push -u origin <branch>`, then `gh pr create --base <PR target> --head <branch> --title "<title>" --body-file <spec dir>/pr-description.md`. The base branch and the PR target come from the plan's Git section. In `/work-ticket`, step 12 then moves the card to REVIEW; `.github/workflows/trello.yml` moves the card on the description's `**Ticket:**` line to DONE when the PR is merged.
+- Run the `pr-description` skill, which saves the draft to `<spec dir>/pr-description.md`.
+- There is no local merge option: this repo merges through GitHub PRs with a merge commit.
+- In `/work-ticket` (step 11): no question. `git push -u origin <branch>`, then `gh pr create --draft --base <PR target> --head <branch> --title "<title>" --body-file <spec dir>/pr-description.md`. A failed push or `gh pr create` stops and notifies. The developer reviews the draft on GitHub and marks it ready.
+- Otherwise show the title and the body, then ask A "Push and create the PR with this description" (Recommended) or B "Keep the branch as-is". Nothing is pushed before the user picks A. To change the draft, the user answers in D (Other); edit `pr-description.md`, show it again and ask again. Option A runs the same push and `gh pr create`, without `--draft`.
+- The base branch and the PR target come from the plan's Git section.
+- In `/work-ticket`, step 12 then moves the card to REVIEW; `.github/workflows/trello.yml` moves the card on the description's `**Ticket:**` line to DONE when the PR is merged.
 
 ## 11. Commit
 

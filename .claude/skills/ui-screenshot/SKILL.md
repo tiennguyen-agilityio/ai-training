@@ -22,7 +22,7 @@ Before and after must differ only by the change, so every shot uses the same fix
 6. **Shoot:** hover a neutral element (the page heading) so no button keeps its hover style, then take the screenshot straight into `<dir>/<screen>-<phase>.<ext>` (the filename resolves against the repo root).
 7. **Check:** read the image. Does it show what it should? Show each after next to its before.
    - A try fails when the page or a step errors, the file is not saved, or the image does not show what it should. Retry from step 4 with the cause fixed (wait longer, reload, restart the dev server).
-   - At most 3 tries per screen. After the 3rd failure, give up on that screen, keep going with the others, and report the cause of each try (`FAILED`).
+   - At most 3 tries per screen. After the 3rd failure, give up on that screen: delete `<dir>/<screen>-<phase>.<ext>` if it exists (saved by a try of this run or left by an earlier run), so no wrong or stale image is committed. Keep going with the others, and report the cause of each try (`FAILED`).
    - Something only the user can do (sign in, approve a data write) is not a try: stop and ask (`BLOCKED`).
 8. **Clean up:** close the browser and stop every dev server you started by stopping its background task (TaskStop). Killing the port's process can leave a watcher and the task alive.
 
