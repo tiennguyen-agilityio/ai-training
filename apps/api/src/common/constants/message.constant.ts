@@ -22,7 +22,7 @@ export const ERROR_MESSAGES = {
   },
   CATEGORY: {
     NOT_FOUND: 'Category not found',
-    NAME_EXISTS: 'Category name already exists',
+    NAME_EXISTS: 'Category Name already exists',
     HAS_PRODUCTS: 'Category still has products',
     NOT_DELETED: 'Category is not deleted',
   },

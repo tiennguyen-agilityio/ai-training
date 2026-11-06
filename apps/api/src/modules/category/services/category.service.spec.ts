@@ -86,6 +86,22 @@ describe('CategoryService', () => {
       );
       expect(categoryRepository.create).not.toHaveBeenCalled();
     });
+
+    it('create rejects a taken name with the message "Category Name already exists"', async () => {
+      categoryRepository.findByName.mockResolvedValue(buildCategory());
+
+      const error = await service
+        .create({ name: 'Espresso' })
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DuplicateResourceException);
+      expect((error as DuplicateResourceException).getErrors()).toEqual([
+        expect.objectContaining({
+          field: 'name',
+          message: 'Category Name already exists',
+        }),
+      ]);
+    });
   });
 
   describe('findAll', () => {
@@ -172,6 +188,26 @@ describe('CategoryService', () => {
         service.update('category-id-1', { name: 'Cold Brew' }),
       ).rejects.toBeInstanceOf(DuplicateResourceException);
       expect(categoryRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('update rejects a taken name with the message "Category Name already exists"', async () => {
+      categoryRepository.findById.mockResolvedValue(buildCategory());
+      categoryRepository.findByName.mockResolvedValue(
+        buildCategory({ id: 'other-category-id', name: 'Cold Brew' }),
+      );
+
+      const error = await service
+        .update('category-id-1', { name: 'Cold Brew' })
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DuplicateResourceException);
+      expect(categoryRepository.save).not.toHaveBeenCalled();
+      expect((error as DuplicateResourceException).getErrors()).toEqual([
+        expect.objectContaining({
+          field: 'name',
+          message: 'Category Name already exists',
+        }),
+      ]);
     });
 
     it('does not throw when the colliding row is the category being updated itself', async () => {
