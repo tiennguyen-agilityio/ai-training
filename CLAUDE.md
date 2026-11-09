@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-pnpm + Turborepo monorepo: `apps/api` (NestJS, ESM), `apps/web` (Next.js), shared `packages/`. App guidance: `apps/api/CLAUDE.md`, `apps/web/CLAUDE.md`. Feature or bug task: `.claude/rules/workflow.md` (loaded automatically); a Trello card: `/work-ticket <card URL>`.
+pnpm + Turborepo monorepo: `apps/api` (NestJS, ESM), `apps/web` (Next.js), shared `packages/`. App guidance: `apps/api/CLAUDE.md`, `apps/web/CLAUDE.md`. Feature or bug task: the turbo-workflow plugin rules (named in the session context); a Trello card: `/turbo-workflow:work-ticket <card URL>`.
 
 ## Commands
 
