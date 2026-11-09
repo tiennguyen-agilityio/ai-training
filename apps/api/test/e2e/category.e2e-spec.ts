@@ -317,10 +317,44 @@ describe('CategoryController (e2e)', () => {
       mockSessionFor(admin.clerkId);
       const category = await createTestCategory(uniqueName('Duplicate E2E'));
 
-      await request(app.getHttpServer())
+      const response = await request(app.getHttpServer())
         .post(`${API_BASE_PATH}/categories`)
         .send({ name: category.name })
         .expect(409);
+
+      const body = response.body as { message: string; errors: unknown[] };
+      expect(body.message).toBe('Conflict');
+      expect(body.errors).toEqual([
+        {
+          errCode: ERROR_CODES.CATEGORY.NAME_EXISTS,
+          field: 'name',
+          message: 'Category Name already exists',
+          description: 'A category with this name already exists.',
+        },
+      ]);
+    });
+
+    it('PATCH /categories/:id responds 409 when renaming to a name another category has', async () => {
+      const admin = await createTestUser(UserRole.ADMIN);
+      mockSessionFor(admin.clerkId);
+      const source = await createTestCategory(uniqueName('Rename Source E2E'));
+      const taken = await createTestCategory(uniqueName('Rename Taken E2E'));
+
+      const response = await request(app.getHttpServer())
+        .patch(`${API_BASE_PATH}/categories/${source.id}`)
+        .send({ name: taken.name })
+        .expect(409);
+
+      const body = response.body as { message: string; errors: unknown[] };
+      expect(body.message).toBe('Conflict');
+      expect(body.errors).toEqual([
+        {
+          errCode: ERROR_CODES.CATEGORY.NAME_EXISTS,
+          field: 'name',
+          message: 'Category Name already exists',
+          description: 'A category with this name already exists.',
+        },
+      ]);
     });
 
     it('PATCH /categories/:id responds 200 and updates the category', async () => {

@@ -78,12 +78,21 @@ describe('CategoryService', () => {
       expect(result).toBe(created);
     });
 
-    it('throws DuplicateResourceException when the name already exists, including soft-deleted rows', async () => {
+    it('throws DuplicateResourceException with the message "Category Name already exists" when the name already exists, including soft-deleted rows', async () => {
       categoryRepository.findByName.mockResolvedValue(buildCategory());
 
-      await expect(service.create({ name: 'Espresso' })).rejects.toBeInstanceOf(
-        DuplicateResourceException,
-      );
+      const error = await service
+        .create({ name: 'Espresso' })
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DuplicateResourceException);
+      expect(
+        (error as DuplicateResourceException).getErrors()[0],
+      ).toMatchObject({
+        errCode: ERROR_CODES.CATEGORY.NAME_EXISTS,
+        field: 'name',
+        message: 'Category Name already exists',
+      });
       expect(categoryRepository.create).not.toHaveBeenCalled();
     });
   });
@@ -161,16 +170,25 @@ describe('CategoryService', () => {
       expect(category.slug).toBe('espresso');
     });
 
-    it('throws DuplicateResourceException when the new name collides with another category', async () => {
+    it('throws DuplicateResourceException with the message "Category Name already exists" when the new name collides with another category', async () => {
       const category = buildCategory();
       categoryRepository.findById.mockResolvedValue(category);
       categoryRepository.findByName.mockResolvedValue(
         buildCategory({ id: 'other-category-id', name: 'Cold Brew' }),
       );
 
-      await expect(
-        service.update('category-id-1', { name: 'Cold Brew' }),
-      ).rejects.toBeInstanceOf(DuplicateResourceException);
+      const error = await service
+        .update('category-id-1', { name: 'Cold Brew' })
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DuplicateResourceException);
+      expect(
+        (error as DuplicateResourceException).getErrors()[0],
+      ).toMatchObject({
+        errCode: ERROR_CODES.CATEGORY.NAME_EXISTS,
+        field: 'name',
+        message: 'Category Name already exists',
+      });
       expect(categoryRepository.save).not.toHaveBeenCalled();
     });
 
