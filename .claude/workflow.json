@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "packageManager": "pnpm",
+  "git": {
+    "remote": "origin",
+    "baseBranch": "develop",
+    "protected": ["develop", "main"]
+  },
+  "tracker": {
+    "type": "trello",
+    "board": "https://trello.com/b/CLZ3hKm2/claude-training",
+    "lists": {
+      "todo": "TODO",
+      "inProgress": "IN PROGRESS",
+      "review": "REVIEW",
+      "done": "DONE"
+    }
+  },
+  "autofix": "lint-staged",
+  "specsDir": "docs/specs",
+  "apps": {
+    "api": {
+      "dir": "apps/api",
+      "runner": "Vitest",
+      "coverage": "pnpm run test:cov --coverage.reporter=json-summary --coverage.reporter=text-summary",
+      "e2e": true,
+      "planChanges": [],
+      "security": [
+        "src/main.ts",
+        "src/app.module.ts",
+        "src/common/guards/",
+        "src/configs/",
+        "src/modules/webhook/",
+        "Dockerfile",
+        ".env*"
+      ],
+      "ui": []
+    },
+    "web": {
+      "dir": "apps/web",
+      "runner": "Jest",
+      "coverage": "pnpm run test:cov --coverageReporters=json-summary --coverageReporters=text-summary",
+      "e2e": false,
+      "planChanges": [],
+      "security": [
+        "src/middleware.ts",
+        "next.config.ts",
+        "vercel.json",
+        ".env*"
+      ],
+      "ui": [
+        "src/{app,components,sections,layouts}/**",
+        "public/**",
+        "tailwind.config.ts"
+      ],
+      "screenshot": {
+        "dir": "docs/images/{feature}",
+        "format": "png",
+        "themeStorageKey": "node-brew-theme",
+        "devCommand": "pnpm --filter web dev",
+        "url": "http://localhost:3301"
+      }
+    }
+  },
+  "shared": [
+    "packages/constants",
+    "packages/eslint-config",
+    "packages/prettier-config",
+    "packages/schemas",
+    "packages/typescript-config",
+    "pnpm-workspace.yaml"
+  ]
+}

@@ -12,5 +12,16 @@
         ]
       }
     ]
+  },
+  "extraKnownMarketplaces": {
+    "claude-turbo-workflow": {
+      "source": {
+        "source": "github",
+        "repo": "tiennguyen-agilityio/claude-turbo-workflow"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "turbo-workflow@claude-turbo-workflow": true
   }
 }
