@@ -1,6 +1,6 @@
 ---
 name: pr-description
-description: Draft a GitHub PR title and description for the current branch from .claude/templates/pr-description.md, using only facts from the diff, the spec files and the verify result. Use when the user asks for a PR description or wants to open a PR, and at step 11 of /work-ticket.
+description: Draft a GitHub PR title and description for the current branch from .claude/templates/pr-description.md, using only facts from the diff, the spec files and the verify result. Use when the user asks for a PR description or wants to open a PR, and at step 12 of /work-ticket.
 argument-hint: [base branch, default develop]
 ---
 
@@ -17,7 +17,7 @@ Arguments: `$ARGUMENTS` — optionally a base branch (default `develop`). Run fr
 2. **Draft.** Dispatch the `pr-writer` subagent with the branch, base commit, PR target, spec dir (or "none") and the template path `.claude/templates/pr-description.md`.
 3. **Save.** Write the body it returns to `<spec dir>/pr-description.md`, or to `.superpowers/pr-description.md` when there is no spec dir. Both paths are gitignored. Keep the title for `gh pr create --title`.
 4. **Show.** Inside `/work-ticket`, do not show the draft. Otherwise show the title and the body.
-5. **Next.** Inside `/work-ticket`, go back to step 11 (push and `gh pr create --draft`). Otherwise ask with AskUserQuestion: A "Push and create the PR with this description" (Recommended), B "Keep the draft only". On A:
+5. **Next.** Inside `/work-ticket`, go back to step 12 (push and `gh pr create --draft`). Otherwise ask with AskUserQuestion: A "Push and create the PR with this description" (Recommended), B "Keep the draft only". On A:
    - `git push -u origin <branch>`, then `gh pr create --base <PR target> --head <branch> --title "<title>" --body-file <draft path>`;
    - report the PR URL.
 
